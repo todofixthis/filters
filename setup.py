@@ -24,7 +24,7 @@ setup(
     description = 'Validation and data pipelines made easy!',
     url         = 'https://filters.readthedocs.io/',
 
-    version = '2.0.1',
+    version = '2.0.2',
 
     packages = ['filters'],
 
@@ -39,8 +39,8 @@ setup(
 
     extras_require = {
         # Extensions
-        'django':['filters-django'],
-        'iso': ['filters-iso'],
+        'django':['phx-filters-django'],
+        'iso': ['phx-filters-iso'],
 
         # Utilities for Project Maintainers
         'docs-builder': ['sphinx', 'sphinx_rtd_theme'],
