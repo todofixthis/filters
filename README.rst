@@ -122,19 +122,11 @@ The following extensions are available:
 
 Running Unit Tests
 ------------------
-To run unit tests after installing from source::
-
-  python setup.py test
-
-This project is also compatible with `tox`_, which will run the unit tests in
-different virtual environments (one for each supported version of Python).
-
 Install the package with the ``test-runner`` extra to set up the necessary
 dependencies, and then you can run the tests with the ``tox`` command::
 
-  pip install -e .[test-runner]
-  tox -p all
-
+   pip install -e .[test-runner]
+   tox -p all
 
 Documentation
 -------------
