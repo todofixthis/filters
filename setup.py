@@ -13,7 +13,6 @@ with open(join(cwd, 'README.rst'), 'r', 'utf-8') as f: # type: StreamReader
 
 tests_require = [
     'tox >= 3.7',
-    'nose',
 ]
 
 
@@ -46,10 +45,6 @@ setup(
         'docs-builder': ['sphinx', 'sphinx_rtd_theme'],
         'test-runner': tests_require,
     },
-
-    test_suite    = 'test',
-    test_loader   = 'nose.loader:TestLoader',
-    tests_require = tests_require,
 
     license = 'MIT',
 

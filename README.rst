@@ -83,16 +83,15 @@ Parse a JSON string and check that it has correct structure:
 
 Requirements
 ------------
-Filters is compatible with the following Python versions:
+Filters is known to be compatible with the following Python versions:
 
-- 3.8
-- 3.7
-- 3.6
-- 3.5
+- 3.11
+- 3.10
+- 3.9
 
 .. note::
-  Filters is **not** compatible with Python 2.
-
+   Filters code is pretty simple, so it's likely to be compatible with versions
+   not listed here; there's just no test coverage to prove it 😇
 
 Installation
 ------------
