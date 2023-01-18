@@ -1,5 +1,3 @@
-.. image:: https://travis-ci.org/todofixthis/filters.svg?branch=master
-   :target: https://travis-ci.org/todofixthis/filters
 .. image:: https://readthedocs.org/projects/filters/badge/?version=latest
    :target: http://filters.readthedocs.io/
 
@@ -126,7 +124,6 @@ The following extensions are available:
 
       pip install phx-filters[django,iso]
 
-
 Running Unit Tests
 ------------------
 Install the package with the ``test-runner`` extra to set up the necessary
@@ -217,8 +214,8 @@ Steps to build releases are based on `Packaging Python Projects Tutorial`_
 #. Click ``Publish release``.
 
 .. _Create a PyPI API token: https://pypi.org/manage/account/token/
-.. _Django Filters: https://pypi.python.org/pypi/filters-django
-.. _ISO Filters: https://pypi.python.org/pypi/filters-iso
+.. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
+.. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
 .. _Packaging Python Projects Tutorial: https://packaging.python.org/en/latest/tutorials/packaging-projects/
 .. _ReadTheDocs: https://filters.readthedocs.io/
 .. _Releases page for the repo: https://github.com/todofixthis/filters/releases
