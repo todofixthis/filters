@@ -1196,16 +1196,166 @@ These filters are covered in more detail in :doc:`/complex_filters`.
    When initialising the filter, you must provide a dict that tells the
    FilterMapper which filters to apply to each key in the incoming dict.
 
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ = f.FilterMapper({
+          'id':      f.Int,
+          'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
+      })
+
+      runner = f.FilterRunner(filter_, {
+          'id':      '42',
+          'subject': 'Hello, world!',
+      })
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {
+          'id':      42,
+          'subject': 'Hello, world!',
+      }
+
+      runner = f.FilterRunner(filter_, {
+          'id':      [3, 14],
+          'subject': 'Did you know that Albert Einstein was born on Pi Day?',
+      })
+      assert runner.is_valid() is False
+
    By default, the FilterMapper will ignore missing/unexpected keys, but you
    can configure this via the filter initialiser as well.
 
-   This filter is often chained with :py:class:`filters.JsonDecode`.
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ = f.FilterMapper(
+          {
+              'id':      f.Int,
+              'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
+          },
+
+          # Only allow keys that we are expecting.
+          allow_extra_keys = False,
+
+          # All keys are required.
+          allow_missing_keys = False,
+      )
+
+      runner = f.FilterRunner(filter_, {
+          'id':      '42',
+          'subject': 'Hello, world!',
+      })
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {
+          'id':      42,
+          'subject': 'Hello, world!',
+      }
+
+      runner = f.FilterRunner(filter_, {
+          'id':          -1,
+          'attachment':  'virus.exe',
+      })
+      assert runner.is_valid() is False
+
+   You can also provide explicit key names for allowed extra/missing parameters:
+
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ = f.FilterMapper(
+          {
+              'id':      f.Int,
+              'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
+          },
+
+          # Ignore `attachment` if present,
+          # but other extra keys are invalid.
+          allow_extra_keys = {'attachment'},
+
+          # Only `subject` is optional.
+          allow_missing_keys = {'subject'},
+      )
+
+      runner = f.FilterRunner(filter_, {
+          'id': 42,
+          'attachment': 'signature.asc',
+      })
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {
+          'id': 42,
+          'subject': None,
+          'attachment': 'signature.asc',
+      }
+
+      runner = f.FilterRunner(filter_, {
+          'from':        'admin@facebook.com',
+          'attachment':  'virus.exe',
+      })
+      assert runner.is_valid() is False
+
+   .. tip::
+
+      This filter is often chained with :py:class:`filters.JsonDecode`, when
+      parsing a JSON object into a ``dict``.
 
 :py:class:`filters.FilterRepeater`
    Applies filters to every value in an incoming iterable (e.g., ``list``).
 
+   Invalid values in the iterable will be replaced with ``None``.
+
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ = f.FilterRepeater(f.Int | f.Required)
+
+      runner = f.FilterRunner(filter_, ['42', 86.0, 99])
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == [42, 86, 99]
+
+      runner = f.FilterRunner(
+          filter_,
+          ['42', 98.6, 'not even close', 99, {12, 34}, None],
+      )
+      assert runner.is_valid() is False
+      assert runner.cleaned_data ==\
+          [42, None, None, 99, None, None]
+
    ``FilterRepeater`` can also process mappings (e.g., ``dict``); it will apply
    the filters to every value in the mapping, preserving the keys.
+
+   Invalid values in the mapping will be replaced with ``None``.
+
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ = f.FilterRepeater(f.Int | f.Required)
+
+      runner = f.FilterRunner(filter_, {
+          'alpha':   '42',
+          'bravo':   86.0,
+          'charlie': 99,
+      })
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {
+          'alpha':   42,
+          'bravo':   86,
+          'charlie': 99,
+      }
+
+      runner = f.FilterRunner(filter_, {
+          'alpha':   None,
+          'bravo':   86.1,
+          'charlie': 99
+      })
+      assert runner.is_valid() is False
+      assert runner.cleaned_data == {
+          'alpha':   None,
+          'bravo':   None,
+          'charlie': 99,
+      }
 
 :py:class:`filters.FilterSwitch`
    Conditionally invokes a filter based on the output of a function.
@@ -1252,6 +1402,57 @@ These filters are covered in more detail in :doc:`/complex_filters`.
       # Applies the default filter:
       switch.apply({'name': 'mfg', 'value': 'Acme Widget Co.'})
 
+Filterception
+~~~~~~~~~~~~~
+
+Just like any other filter, complex filters can be chained with other filters.
+
+For example, to decode a JSON string that describes an address book card, the
+filter chain might look like this:
+
+   .. code-block:: python
+
+      import filters as f
+
+      filter_ =\
+         f.Unicode | f.Required | f.JsonDecode | f.Type(dict) | f.FilterMapper(
+             {
+                 'name': f.Unicode | f.Strip | f.Required,
+                 'type': f.Unicode | f.Strip | f.Optional('person') |
+                     f.Choice({'business', 'person'}),
+
+                 # Each person may have multiple phone numbers, which must be
+                 # structured a particular way.
+                 'phone_numbers': f.Array | f.FilterRepeater(
+                     f.FilterMapper(
+                         {
+                             'label': f.Unicode | f.Required,
+                             'country_code': f.Int,
+                             'number': f.Int | f.Required,
+                         },
+                         allow_extra_keys=False,
+                         allow_missing_keys=('country_code',),
+                     ),
+                 ),
+             },
+             allow_extra_keys=False,
+             allow_missing_keys=False,
+         )
+
+      runner = f.FilterRunner(
+          filter_,
+          '{"name": "Ghostbusters", "type": "business", "phone_numbers": '
+          '[{"label": "office", "number": 5552368}]}'
+      )
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {
+          'name': 'Ghostbusters',
+          'type': 'business',
+          'phone_numbers': [
+              {'label': 'office', 'country_code': None, 'number': 5552368},
+          ],
+      }
+
 Extensions
 ==========
 The following filters are provided by the
@@ -1260,7 +1461,7 @@ The following filters are provided by the
 Note that extension filters are located in a different namespace; use
 ``filters.ext`` to use them instead of ``filters``.  For example:
 
-.. code:: python
+.. code-block:: python
 
    import filters as f
 
@@ -1290,7 +1491,9 @@ Adds filters for Django-specific features.  To install this extension::
 
    Here's an example:
 
-   .. code:: python
+   .. code-block:: python
+
+      import filters as f
 
       filter_ = f.ext.Model(
         # Find a Post record with a ``slug`` that matches the input.
@@ -1319,29 +1522,31 @@ extension::
 
 :py:class:`filters.ext.Country`
    Interprets the incoming value as an
-   `ISO 3166-1 alpha-2 or alpha-3 <https://en.wikipedia.org/wiki/ISO_3166-1>`_
-   country code.
+   `ISO 3166-1 alpha-2 or alpha-3 country code`_.
 
    The resulting value is a :py:class:`iso3166.Country` object (provided by the
-   `iso3166 <https://pypi.python.org/pypi/iso3166>`_ library).
+   `iso3166 library`_).
 
 :py:class:`filters.ext.Currency`
-   Interprets the incoming value as an
-   `ISO 4217 <https://en.wikipedia.org/wiki/ISO_4217>`_ currency code.
+   Interprets the incoming value as an `ISO 4217 currency code`_.
 
    The resulting value is a :py:class:`moneyed.Currency` object (provided by
-   the `py-moneyed <https://pypi.python.org/pypi/py-moneyed>`_ library).
+   the `py-moneyed library`_).
 
 :py:class:`filters.ext.Locale`
-   Interprets the incoming value as an
-   `IETF Language Tag <https://en.wikipedia.org/wiki/IETF_language_tag>`_
-   (also known as BCP 47).
+   Interprets the incoming value as an `IETF Language Tag`_ (also known as BCP
+   47).
 
    The resulting value is a :py:class:`language_tags.Tag.Tag` object (provided
-   by the `language_tags <https://pypi.python.org/pypi/language-tags>`_
-   library).
+   by the `language_tags library`_).
 
 .. _floating-point precision: https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems
+.. _IETF Language Tag: https://en.wikipedia.org/wiki/IETF_language_tag
+.. _ISO 3166-1 alpha-2 or alpha-3 country code: https://en.wikipedia.org/wiki/ISO_3166-1
+.. _ISO 4217 currency code: https://en.wikipedia.org/wiki/ISO_4217
+.. _iso3166 library: https://pypi.python.org/pypi/iso3166
+.. _py-moneyed library: https://pypi.python.org/pypi/py-moneyed
 .. _Python's UUID class: https://docs.python.org/3/library/uuid.html#uuid.UUID
+.. _language_tags library: https://pypi.python.org/pypi/language-tags
 .. _rounding mode: https://docs.python.org/3/library/decimal.html#rounding-modes
 .. _unit tests: https://github.com/todofixthis/filters/tree/master/test

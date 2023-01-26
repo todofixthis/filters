@@ -4,7 +4,6 @@ Contents
    :maxdepth: 1
 
    getting_started
-   complex_filters
    List of Filters <filters_list>
    writing_filters
    extensions
