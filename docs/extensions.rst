@@ -3,7 +3,7 @@ Extending the Filters Namespace
 Once you've :doc:`written your own filters </writing_filters>`, you can start
 using them right away!
 
-.. code:: python
+.. code-block:: python
 
    In [1]: from filters_iso import Currency
 
@@ -19,7 +19,7 @@ your custom filters explicitly.
 However, sometimes all those imports start to get unwieldy, especially if you
 have to use namespaces in order to keep them all straight:
 
-.. code:: python
+.. code-block:: python
 
    import filters as f
    import filters_iso as iso_filters
@@ -39,7 +39,7 @@ For those of you who fall into the latter group, the Filters library provides an
 extensions framework that allows you to add your filters to the (nearly)
 top-level ``filters.ext`` namespace:
 
-.. code:: python
+.. code-block:: python
 
    import filters as f
 
@@ -69,16 +69,25 @@ Prerequisites
 =============
 In order to register your filters with the Extensions framework, your project
 must use `setuptools <https://setuptools.readthedocs.io/en/latest/>`_ and have
-a valid ``setup.py`` file.
+a valid ``pyproject.toml`` or ``setup.py`` file.
 
 Registering Your Filters
 ========================
 To add custom filters to the ``filters.ext`` namespace, register them as entry
 points using the ``filters.extensions`` key.
 
-Here's an example:
+Here's an example using ``pyproject.toml``:
 
-.. code:: python
+.. code-block:: toml
+
+   [project.entry-points."filters.extensions"]
+   Country = "filters_iso:Country"
+   Currency = "filters_iso:Currency"
+   Locale = "filters_iso:Locale"
+
+If your project is using ``setup.py``, it looks like this instead:
+
+.. code-block:: python
 
    from setuptools import setup
 
@@ -93,7 +102,7 @@ Here's an example:
      },
    )
 
-Note in the example above that you can register as many filters as you want.
+Note in the examples above that you can register as many filters as you want.
 
 .. tip::
    The name that you assign to each entry point is used as the attribute name
@@ -101,20 +110,14 @@ Note in the example above that you can register as many filters as you want.
 
    To use an absurd example, if you register a filter like this:
 
-   .. code:: python
+   .. code-block:: toml
 
-      setup(
-        ...
-        entry_points = {
-          'filters.extensions': [
-            'HelloWorld = filters_iso:Currency',
-          ],
-        },
-      )
+      [project.entry-points."filters.extensions"]
+      HelloWorld = "filters_iso:Currency"
 
    Then it will be registered like this:
 
-   .. code:: python
+   .. code-block:: python
 
       In [1]: import filters as f
 
@@ -129,9 +132,6 @@ Conflicts
 In the event that two filters are registered with the same name, one of them
 will replace the other.  The order that entry points are processed is not
 defined, so it is not predictable which filter will "win".
-
-Future versions of the Filters library may provide more elegant ways to resolve
-these conflicts.
 
 Troubleshooting
 ---------------

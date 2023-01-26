@@ -221,7 +221,7 @@ Note that the incoming value was missing the ``subject`` key, and it contained
 the extra key ``attachment``, but the FilterMapper ignored these issues.
 
 If you want ``FilterMapper`` to check that the incoming value has the correct
-keys, there are two additional parameters you can set in the filter initializer:
+keys, there are two additional parameters you can set in the filter initialiser:
 ``allow_extra_keys`` and ``allow_missing_keys``.
 
 .. code-block:: python

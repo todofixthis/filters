@@ -1,7 +1,6 @@
 import json
 import socket
 import typing
-import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
 from collections import OrderedDict
 from decimal import Decimal as DecimalType
@@ -10,6 +9,7 @@ from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
 import regex
+import unicodedata
 
 from filters.base import BaseFilter, Type
 from filters.simple import MaxLength
@@ -262,7 +262,8 @@ class MaxBytes(BaseFilter):
         :param prefix:
             Prefix to apply to truncated values.
 
-            Ignored when ``truncate`` is ``False``.
+            Ignored when the incoming value is short enough, or when
+            ``truncate`` is ``False``.
 
         :param encoding:
             The character encoding to check against.
@@ -326,10 +327,10 @@ class MaxBytes(BaseFilter):
                 replacement=replacement,
 
                 context={
-                    'encoding':  self.encoding,
+                    'encoding': self.encoding,
                     'max_bytes': self.max_bytes,
-                    'prefix':    self.prefix,
-                    'truncate':  self.truncate,
+                    'prefix': self.prefix,
+                    'truncate': self.truncate,
                 },
             )
 
@@ -738,10 +739,10 @@ class Unicode(BaseFilter):
                     # Remove non-printables.
                     self.npr.sub('', decoded)
                 )
-                    # Normalize line endings.
-                    # http://stackoverflow.com/a/1749887
-                    .replace('\r\n', '\n')
-                    .replace('\r', '\n')
+                # Normalize line endings.
+                # http://stackoverflow.com/a/1749887
+                .replace('\r\n', '\n')
+                .replace('\r', '\n')
             )
         else:
             return decoded
@@ -822,7 +823,7 @@ class Uuid(BaseFilter):
         CODE_INVALID: 'This value is not a well-formed UUID.',
 
         CODE_WRONG_VERSION:
-                      'v{incoming} UUID not allowed (expected v{expected}).',
+            'v{incoming} UUID not allowed (expected v{expected}).',
     }
 
     def __init__(self, version: typing.Optional[int] = None) -> None:
