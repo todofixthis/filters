@@ -14,8 +14,8 @@ You can also :doc:`write your own filters </writing_filters>`.
 Simple Filters
 --------------
 Simple filters operate on one value at a time.
-This is in contrast to :ref:`Complex Filters <complex-filters>`, which operate
-on collections of values.
+This is in contrast to :ref:`complex-filters`, which operate on collections of
+values.
 
 String Filters
 ^^^^^^^^^^^^^^
@@ -127,7 +127,7 @@ These filters are designed to operate on (or convert to) string values.
       runner = f.FilterRunner(filter_, 'Shemp')
       assert runner.is_valid() is False
 
-    .. note::
+   .. note::
 
        The comparison is case-sensitive; chain this filter with
        :py:class:`filters.CaseFold` for case-insensitive comparison (but note
@@ -1188,8 +1188,6 @@ Complex Filters
 ---------------
 Complex filters are used to apply other filters to collections of values.
 
-These filters are covered in more detail in :doc:`/complex_filters`.
-
 :py:class:`filters.FilterMapper`
    Applies filters to an incoming mapping (e.g., ``dict``).
 
@@ -1375,17 +1373,20 @@ These filters are covered in more detail in :doc:`/complex_filters`.
    Example of a ``FilterSwitch`` that selects the correct filter to use based
    upon the incoming value's ``name`` value:
 
-   .. code-block:: py
+   .. code-block:: python
 
-      switch = f.FilterSwitch(
+      import filters as f
+      from operator import itemgetter
+
+      filter_ = f.FilterSwitch(
           # This function will extract the comparison value.
-          getter=lambda value: value['name'],
+          getter=itemgetter('name'),
 
           # These are the cases that the comparison value might
           # match.
           cases={
               'price': f.FilterMapper({'value': f.Int | f.Min(0)}),
-              'color': f.FilterMapper({'value': f.Choice({'r', 'g', 'b'})}),
+              'colour': f.FilterMapper({'value': f.Choice({'r', 'g', 'b'})}),
               # etc.
           },
 
@@ -1394,13 +1395,19 @@ These filters are covered in more detail in :doc:`/complex_filters`.
       )
 
       # Applies the 'price' filter:
-      switch.apply({'name': price, 'value': 42})
+      runner = f.FilterRunner(filter_, {'name': 'price', 'value': '995'})
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {'name': 'price', 'value': 995}
 
-      # Applies the 'color' filter:
-      switch.apply({'name': color, 'value': 'b'})
+      # Applies the 'colour' filter:
+      runner = f.FilterRunner(filter_, {'name': 'colour', 'value': 'b'})
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {'name': 'colour', 'value': 'b'}
 
       # Applies the default filter:
-      switch.apply({'name': 'mfg', 'value': 'Acme Widget Co.'})
+      runner = f.FilterRunner(filter_, {'name': 'size', 'value': 42})
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == {'name': 'size', 'value': '42'}
 
 Filterception
 ~~~~~~~~~~~~~

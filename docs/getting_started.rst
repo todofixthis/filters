@@ -105,11 +105,3 @@ See :doc:`/filters_list` for a list of the filters that come bundled with the
 Filters library.
 
 You can also :doc:`write your own filters </writing_filters>`.
-
-Sequences and Mappings
-======================
-The Filters library also provides two "complex filters" that you can use to
-apply filters to the contents of sequences (e.g., ``list``) and mappings (e.g.,
-``dict``).
-
-These are covered in a separate section: :doc:`/complex_filters`.
