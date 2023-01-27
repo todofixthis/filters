@@ -73,7 +73,7 @@ author = 'Phoenix Zerin'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en-NZ'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -119,7 +119,6 @@ pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
-
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -245,21 +244,21 @@ htmlhelp_basename = 'Filtersdoc'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-     # The paper size ('letterpaper' or 'a4paper').
-     #
-     # 'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    #
+    # 'papersize': 'letterpaper',
 
-     # The font size ('10pt', '11pt' or '12pt').
-     #
-     # 'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    #
+    # 'pointsize': '10pt',
 
-     # Additional stuff for the LaTeX preamble.
-     #
-     # 'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    #
+    # 'preamble': '',
 
-     # Latex figure (float) alignment
-     #
-     # 'figure_align': 'htbp',
+    # Latex figure (float) alignment
+    #
+    # 'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -267,7 +266,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'Filters.tex', 'Filters Documentation',
-     'Phoenix Zerin', 'manual'),
+    'Phoenix Zerin', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -309,7 +308,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     (master_doc, 'filters', 'Filters Documentation',
-     [author], 1)
+    [author], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -324,8 +323,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'Filters', 'Filters Documentation',
-     author, 'Filters', 'One line description of project.',
-     'Miscellaneous'),
+    author, 'Filters', 'One line description of project.',
+    'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.

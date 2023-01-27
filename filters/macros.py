@@ -17,7 +17,7 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
 
     Important:  Use ``issubclass``, not ``isinstance``!
 
-    .. code:: python
+    .. code-block:: python
 
        @filter_macro
        def MyMacro():

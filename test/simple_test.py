@@ -149,9 +149,10 @@ class ByteArrayTestCase(BaseFilterTestCase):
             b'|\xa8\xc1.8\xbd4\xd5s\x1e\xa6%+\xea!6',
 
             # Note that "numeric" characters like "8" and "6" are NOT
-            # interpreted literally.
-            # This matches the behavior of Python's built-in bytearray
-            # class.
+            # interpreted literally (e.g., "8" is ASCII code point 58, so it
+            # gets converted to ``58`` in the resulting ``bytearray``, not
+            # ``8``).  This matches the behaviour of Python's built-in
+            # ``bytearray`` type.
             bytearray([
                 124, 168, 193, 46, 56, 189, 52, 213,
                 115, 30, 166, 37, 43, 234, 33, 54,
@@ -306,6 +307,7 @@ class CallTestCase(BaseFilterTestCase):
 
         Use ``Required | Call`` if you want to reject null values.
         """
+
         def always_fail(value):
             raise ValueError('{value} is not valid!'.format(value=value))
 
@@ -317,6 +319,7 @@ class CallTestCase(BaseFilterTestCase):
         """
         The callable runs successfully.
         """
+
         def is_odd(value):
             return value % 2
 
@@ -334,6 +337,7 @@ class CallTestCase(BaseFilterTestCase):
         """
         The callable raises a :py:class:`FilterError`.
         """
+
         def even_only(value):
             if value % 2:
                 raise f.FilterError('value is not even!')
@@ -349,6 +353,7 @@ class CallTestCase(BaseFilterTestCase):
         The callable raises a :py:class:`FilterError` with a custom
         error code.
         """
+
         def even_only(value):
             if value % 2:
                 # If you find yourself doing this, you would probably be
@@ -368,6 +373,7 @@ class CallTestCase(BaseFilterTestCase):
         The callable raises an exception other than a
         :py:class:`FilterError`.
         """
+
         def even_only(value):
             if value % 2:
                 raise ValueError('{value} is not even!')

@@ -12,32 +12,32 @@ class.  This class provides an interface very similar to a Django form.
    data = u'1879-03-14'
 
    # Initialize the FilterRunner.
-   input = f.FilterRunner(f.Date, data)
+   runner = f.FilterRunner(f.Date, data)
 
-   if input.is_valid():
+   if runner.is_valid():
      # Input is valid; do something with the filtered data.
-     cleaned_data = input.cleaned_data
+     cleaned_data = runner.cleaned_data
      assert cleaned_data == datetime.date(1879, 3, 14)
 
    else:
-     # Input is not valid; display error message(s).
-     for key, errors in input.errors.items():
+     # Input is not valid; display error message(s) for each incoming value.
+     for key, errors in runner.errors.items():
        print('{key}:'.format(key=key))
        for error in errors:
          print('  - ({error[code]}) {error[message]}'.format(error=error))
 
 ``FilterRunner`` provides a few key attributes to make it easy to apply filters:
 
-- ``is_valid()``:  Returns whether the value is valid.
-- ``cleaned_data``:  If the value is valid, this property holds the filtered
+* ``is_valid()``:  Returns whether the value is valid.
+* ``cleaned_data``:  If the value is valid, this property holds the filtered
   value(s).
-- ``errors``:  If the value is not valid, this property holds the validation
+* ``errors``:  If the value is not valid, this property holds the validation
   errors.
 
 Chaining Filters
 ================
 The filters library conforms to the unix philosophy of,
-`"Do One Thing, and Do It Well" <https://en.wikipedia.org/wiki/Unix_philosophy#Do_One_Thing_and_Do_It_Well>`_.
+"`Do One Thing, and Do It Well`_".
 
 Each filter provides a specific transformation and/or validation feature.  This
 alone can be useful, but the real power of the filters library lies in its
@@ -53,63 +53,65 @@ Here's an example:
 
    import filters as f
 
-   data = 'Остерегайтесь Дуга'
+   # Convert to unicode, strip leading and trailing whitespace, reject empty
+   # string, fold case and split into words.
+   filter_ = f.Unicode | f.Strip | f.NotEmpty | f.CaseFold | f.Split(r'\W+')
 
-   input = f.FilterRunner(
-     # Convert to unicode, reject empty string, fold case
-     # and split into words.
-     f.Unicode | f.NotEmpty | f.CaseFold | f.Split(r'\W+'),
-     data,
-   )
+   runner = f.FilterRunner(filter_, '   Остерегайтесь Дуга   ')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['остерегайтесь', 'дуга']
 
-   assert input.is_valid()
-   print(input.cleaned_data) # ['остерегайтесь', 'дуга']
+   runner = f.FilterRunner(filter_, '\r\n')
+   assert runner.is_valid() is False
+
+.. _none-is-special:
 
 Much Ado About None
 ===================
-``None`` is a special value to the Filters library.  By default, it passes
-every filter, no matter how strictly configured.
+``None`` is a special value to the Filters library.  By default, it passes every
+filter, no matter how strictly configured.
 
 For example:
 
 .. code-block:: python
 
-   data = None
+   import filters as f
 
-   input = f.FilterRunner(
-     # Convert to unicode, reject empty string, fold case
-     # and split into words.
-     f.Unicode | f.NotEmpty | f.CaseFold | f.Split(r'\W+'),
-     data,
-   )
+   # Convert to unicode, strip leading and trailing whitespace, reject empty
+   # string, fold case and split into words.
+   filter_ = f.Unicode | f.Strip | f.NotEmpty | f.CaseFold | f.Split(r'\W+')
 
-   input.is_valid() # Returns True!
+   runner = f.FilterRunner(filter_, None)
+   assert runner.is_valid() is True
+   assert runner.cleaned_data is None
 
 If you want to reject ``None``, add the ``Required`` filter to your chain:
 
 .. code-block:: python
 
-   data = None
+   import filters as f
 
-   input = f.FilterRunner(
-     # Note that we replace NotEmpty with Required.
-     f.Unicode | f.Required | f.CaseFold | f.Split(r'\W+'),
-     data,
-   )
+   # Note that we replace ``NotEmpty`` with ``Required``.
+   filter_ = f.Unicode | f.Strip | f.Required | f.CaseFold | f.Split(r'\W+')
 
-   input.is_valid() # False
+   runner = f.FilterRunner(filter_, None)
 
-List of Filters
-===============
-See :doc:`/filters_list` for a list of the filters that come bundled with the
-Filters library.
+   assert runner.is_valid() is False
 
-You can also :doc:`write your own filters </writing_filters>`.
+Next Steps
+==========
+See :doc:`/simple_filters` for a list of all the filters that come bundled with
+the Filters library (and its official extensions).
 
-Sequences and Mappings
-======================
-The Filters library also provides two "complex filters" that you can use to
-apply filters to the contents of sequences (e.g., ``list``) and mappings (e.g.,
-``dict``).
+Be sure to pay special attention to :doc:`/complex_filters`, which lists filters
+designed exclusively to work with other filters, allowing you to construct
+powerful data schemas and transformation pipelines.
 
-These are covered in a separate section: :doc:`/complex_filters`.
+There are also several :doc:`/extension_filters` that you can install, to add
+even more filters to work with.
+
+Once you've gotten the hang of working with filters, you'll want to
+:doc:`write your own filters and macros </writing_filters>`, so that you can
+reduce code duplication and inject your own functionality into filter pipelines.
+
+.. _Do One Thing, and Do It Well: https://en.wikipedia.org/wiki/Unix_philosophy#Do_One_Thing_and_Do_It_Well

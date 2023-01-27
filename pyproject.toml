@@ -1,0 +1,55 @@
+# :see: https://peps.python.org/pep-0621/
+
+[project]
+name = "phx-filters"
+version = "3.0.0"
+description = "Validation and data pipelines made easy!"
+readme = "README.rst"
+requires-python = ">= 3"
+license = { file = "LICENCE.txt" }
+authors = [
+    { email = "Phoenix Zerin <phx@phx.nz>" }
+]
+
+keywords = [
+    "data processing",
+    "pipeline",
+    "transformation",
+    "validation",
+]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    'Topic :: Text Processing :: Filters',
+]
+
+dependencies = [
+    "phx-class-registry",
+    "python-dateutil",
+    "pytz",
+    "regex >= 2018.8.17",
+]
+
+[project.optional-dependencies]
+# Extensions
+"django" = ["phx-filters-django"]
+"iso" = ["phx-filters-iso"]
+
+# Utilities for Project Maintainers
+"build-system" = ["build", "twine"]
+"docs-builder" = ["sphinx", "sphinx_rtd_theme"]
+"test-runner" = ["tox"]
+
+[project.urls]
+Documentation = "https://filters.readthedocs.io/"
+Changelog = "https://github.com/todofixthis/filters/releases"
+Issues = "https://github.com/todofixthis/filters/issues"
+Repository = "https://github.com/todofixthis/filters"

@@ -1,337 +1,351 @@
 Complex Filters
 ===============
-Two common use cases for filters are:
+Complex filters are filters that work in tandem with other filters, allowing you
+to create complex data schemas and transformation pipelines.
 
-- Process a sequence (e.g., ``list``) of values, applying the same set of
-  filters to each value.
-- Process a mapping (e.g., ``dict``) of values, applying a different set of
-  filters to each value, depending on the key.
+FilterMapper
+------------
+Applies filters to an incoming mapping (e.g., ``dict``).
 
-The Filters library provides two "complex filters" designed to address these
-use cases.
+When initialising the FilterMapper, provide a dict that assigns a filter chain
+to apply to each item.
 
-Working with Sequences
-----------------------
-When you need to apply the same set of filters to a sequence of values, use
-:py:class:`filters.FilterRepeater`.
+When the FilterMapper gets applied to a mapping, the filter chain for each key
+is applied to the corresponding value in the mapping.  A new mapping is returned
+containing the filtered values.
 
-``FilterRepeater`` accepts a filter chain, and when applied to an iterable
-value, it applies that filter chain to every value in the iterable.
-
-Here's a simple example that ensures that every value in an incoming list is
-converted to an int:
+Invalid values in the result will be replaced with ``None`` (with a few
+exceptions, such as :py:class:`filters.MaxBytes` which can be configured to
+return a truncated version of the incoming string instead of ``None``).
 
 .. code-block:: python
 
    import filters as f
 
-   data = ['42', 86.0, 99]
-
-   input = f.FilterRunner(
-     f.FilterRepeater(f.Int | f.Required),
-     data,
-   )
-
-   assert input.is_valid() is True
-   assert input.cleaned_data == [42, 86, 99]
-
-If there are any invalid values in the incoming iterable, ``FilterRepeater``
-will capture all filter errors:
-
-.. code-block:: python
-
-   from pprint import pprint
-   import filters as f
-
-   data = ['42', 98.6, 'not even close', 99, {12, 34}, None]
-
-   input = f.FilterRunner(
-     f.FilterRepeater(f.Int | f.Required),
-     data,
-   )
-
-   assert input.is_valid() is False
-   pprint(input.errors)
-
-The output of the above code is::
-
-   {'1': [{'code': 'not_int', 'message': 'Integer value expected.'}],
-    '2': [{'code': 'not_numeric', 'message': 'Numeric value expected.'}],
-    '4': [{'code': 'wrong_type',
-      'message': 'set is not valid (allowed types: Decimal, float, int, list, str, tuple).'}],
-    '5': [{'code': 'empty', 'message': 'This value is required.'}]}
-
-Note that each key in ``input.errors`` corresponds to the index of the invalid
-value that it describes.
-
-Using FilterRepeater on Mappings
---------------------------------
-You can also use ``FilterRepeater`` on a mapping (e.g., ``dict``).  It will
-apply the same filters to every value in the mapping, ensuring that keys are
-preserved:
-
-.. code-block:: python
-
-   import filters as f
-
-   data = {
-     'alpha':   '42',
-     'bravo':   86.0,
-     'charlie': 99,
-   }
-
-   input = f.FilterRunner(
-     f.FilterRepeater(f.Int | f.Required),
-     data,
-   )
-
-   assert input.is_valid() is True
-   assert input.cleaned_data == {
-     'alpha':   42,
-     'bravo':   86,
-     'charlie': 99,
-   }
-
-Note what happens if the incoming mapping contains invalid values:
-
-.. code-block:: python
-
-   from pprint import pprint
-   import filters as f
-
-   data = {
-     'alpha':   '42',
-     'bravo':   98.6,
-     'charlie': 'not even close',
-     'delta':   99,
-     'echo':    {12, 34},
-     'foxtrot': None,
-   }
-
-   input = f.FilterRunner(
-     f.FilterRepeater(f.Int | f.Required),
-     data,
-   )
-
-   assert input.is_valid() is False
-   pprint(input.errors)
-
-The output of the above code is::
-
-   {'bravo': [{'code': 'not_int', 'message': 'Integer value expected.'}],
-    'charlie': [{'code': 'not_numeric', 'message': 'Numeric value expected.'}],
-    'echo': [{'code': 'wrong_type',
-              'message': 'set is not valid (allowed types: Decimal, float, int, '
-                         'list, str, tuple).'}],
-    'foxtrot': [{'code': 'empty', 'message': 'This value is required.'}]}
-
-
-Working with Mappings
----------------------
-Often when working with mappings (e.g., ``dict``), you want to apply a different
-filter chain to each value, depending on the corresponding key.
-:py:class:`FilterMapper` was designed for exactly this situation.
-
-``FilterMapper`` accepts a mapping of filter chains.  When processing an
-incoming value, it will "map" its filter chains accordingly.
-
-Here's a simple example:
-
-.. code-block:: python
-
-   import filters as f
-
-   data = {
-     'id':      '42',
-     'subject': 'Hello, world!',
-   }
-
-   mapper = f.FilterMapper({
-     'id':      f.Int,
-     'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
-   })
-
-   input = f.FilterRunner(mapper, data)
-
-   assert input.is_valid() is True
-   assert input.cleaned_data == {
-     'id':      42,
-     'subject': 'Hello, world!',
-   }
-
-When one or more values are invalid, ``FilterMapper`` collects all of the
-filter errors, just like ``FilterRepeater``:
-
-.. code-block:: python
-
-   from pprint import pprint
-   import filters as f
-
-   data = {
-     'id':      [3, 14],
-     'subject': 'Did you know that Albert Einstein was born on Pi Day?',
-   }
-
-   mapper = f.FilterMapper({
-     'id':      f.Int,
-     'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
-   })
-
-   input = f.FilterRunner(mapper, data)
-
-   assert input.is_valid() is False
-   pprint(input.errors)
-
-The output of the above code is::
-
-   {'id': [{'code': 'not_numeric', 'message': 'Numeric value expected.'}],
-    'subject': [{'code': 'too_long',
-                 'message': 'Value is too long (length must be < 16).'}]}
-
-
-Validating Keys
----------------
-By default, ``FilterMapper`` is very lenient about what keys the incoming value
-can contain:
-
-.. code-block:: python
-
-   import filters as f
-
-   data = {
-     'id':          -1,
-     'attachment':  'virus.exe',
-   }
-
-   mapper = f.FilterMapper({
-     'id':      f.Int,
-     'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
-   })
-
-   input = f.FilterRunner(mapper, data)
-
-   assert input.is_valid() is True
-   assert input.cleaned_data == {
-     'id':          -1,
-     'subject':     None,
-     'attachment':  'virus.exe',
-   }
-
-Note that the incoming value was missing the ``subject`` key, and it contained
-the extra key ``attachment``, but the FilterMapper ignored these issues.
-
-If you want ``FilterMapper`` to check that the incoming value has the correct
-keys, there are two additional parameters you can set in the filter initializer:
-``allow_extra_keys`` and ``allow_missing_keys``.
-
-.. code-block:: python
-
-   from pprint import pprint
-   import filters as f
-
-   data = {
-     'id':          -1,
-     'attachment':  'virus.exe',
-   }
-
-   mapper = f.FilterMapper(
-     {
+   filter_ = f.FilterMapper({
        'id':      f.Int,
        'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
-     },
+   })
 
-     # Only allow keys that we are expecting.
-     allow_extra_keys = False,
+   # Incoming value is 100% valid.
+   runner = f.FilterRunner(filter_, {
+       'id':      '42',
+       'subject': 'Hello, world!',
+   })
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {
+       'id':      42,
+       'subject': 'Hello, world!',
+   }
 
-     # All keys are required.
-     allow_missing_keys = False,
-   )
+   # Incoming value contains invalid items.
+   runner = f.FilterRunner(filter_, {
+       'id':      '42',
+       'subject': 'Did you know that Albert Einstein was born on Pi Day?',
+   })
+   assert runner.is_valid() is False
+   assert runner.cleaned_data == {
+       'id':      42,
+       'subject': None,
+   }
 
-   input = f.FilterRunner(mapper, data)
-
-   assert input.is_valid() is False
-   pprint(input.errors)
-
-The output of the above code is::
-
-   {'attachment': [{'code': 'unexpected',
-                    'message': 'Unexpected key "attachment".'}],
-    'subject': [{'code': 'missing', 'message': 'subject is required.'}]}
-
-You can also provide explicit key names for these parameters:
+By default, the FilterMapper will ignore missing/unexpected keys, but you can
+configure this via the filter initialiser as well.
 
 .. code-block:: python
 
-   from pprint import pprint
    import filters as f
 
-   data = {
-     'from':        'admin@facebook.com',
-     'attachment':  'virus.exe',
-   }
+   filter_ = f.FilterMapper(
+       {
+           'id':      f.Int,
+           'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
+       },
 
-   mapper = f.FilterMapper(
-     {
-       'id':      f.Int,
-       'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
-     },
+       # Only allow keys that we are expecting.
+       allow_extra_keys = False,
 
-     # Ignore `attachment` if present,
-     # but other extra keys are invalid.
-     allow_extra_keys = {'attachment'},
-
-     # Only `subject` is optional.
-     allow_missing_keys = {'subject'},
+       # All keys are required.
+       allow_missing_keys = False,
    )
 
-   input = f.FilterRunner(mapper, data)
+   # Incoming value is valid.
+   runner = f.FilterRunner(filter_, {
+       'id':      '42',
+       'subject': 'Hello, world!',
+   })
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {
+       'id':      42,
+       'subject': 'Hello, world!',
+   }
 
-   assert input.is_valid() is False
-   pprint(input.errors)
+   # Incoming value is missing required key and contains unexpected extra key.
+   runner = f.FilterRunner(filter_, {
+       'id':          -1,
+       'attachment':  'virus.exe',
+   })
+   assert runner.is_valid() is False
+   assert runner.cleaned_data == {
+       'id':      -1,
+       'subject': None,
+   }
 
-The output of the above code is::
+You can also provide explicit key names for allowed extra/missing parameters:
 
-   {'from': [{'code': 'unexpected', 'message': 'Unexpected key "from".'}],
-    'id': [{'code': 'missing', 'message': 'id is required.'}]}
+.. code-block:: python
 
-Note that the ``FilterMapper`` ignored the extra ``attachment`` and missing
-``subject``, but the extra ``from`` and missing ``id`` were still treated as
-invalid.
+   import filters as f
+
+   filter_ = f.FilterMapper(
+       {
+           'id':      f.Int,
+           'subject': f.Unicode | f.NotEmpty | f.MaxLength(16),
+       },
+
+       # Ignore `attachment` if present; any other extra keys are invalid.
+       allow_extra_keys = {'attachment'},
+
+       # Only `subject` is optional.
+       allow_missing_keys = {'subject'},
+   )
+
+   # Incoming value is valid.
+   runner = f.FilterRunner(filter_, {
+       'id': 42,
+       'attachment': 'signature.asc',
+   })
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {
+       'id': 42,
+       'subject': None,
+       'attachment': 'signature.asc',
+   }
+
+   # Incoming value is missing required key and contains unexpected extra key.
+   runner = f.FilterRunner(filter_, {
+       'from':        'admin@facebook.com',
+       'attachment':  'virus.exe',
+   })
+   assert runner.is_valid() is False
+   assert runner.cleaned_data == {
+       'id':         None,
+       'subject':    None,
+       'attachment': 'virus.exe'
+   }
+
+.. tip::
+
+   This filter is often chained with :py:class:`filters.JsonDecode`, when
+   parsing a JSON object into a ``dict``.
+
+FilterRepeater
+--------------
+Applies a filter chain to every value in an incoming iterable (e.g., ``list``)
+or mapping (e.g., ``dict``).
+
+When initialising the FilterRepeater, provide a filter chain to apply to each
+item.
+
+When the FilterRepeater gets applied to an iterable or mapping, the filter chain
+gets applied to each value, and a new iterable or mapping of the same type is
+returned which contains the filtered values.
+
+Invalid values in the result will be replaced with ``None`` (with a few
+exceptions, such as :py:class:`filters.MaxBytes` which can be configured to
+return a truncated version of the incoming string instead of ``None``).
+
+.. code-block:: python
+
+   import filters as f
+
+   filter_ = f.FilterRepeater(f.Int | f.Required)
+
+   # Incoming value is 100% valid.
+   runner = f.FilterRunner(filter_, ['42', 86.0, 99])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == [42, 86, 99]
+
+   # Incoming value contains invalid values.
+   runner = f.FilterRunner(
+       filter_,
+       ['42', 98.6, 'not even close', 99, {12, 34}, None],
+   )
+   assert runner.is_valid() is False
+   assert runner.cleaned_data == [42, None, None, 99, None, None]
+
+``FilterRepeater`` can also process mappings (e.g., ``dict``); it will apply the
+filters to every value in the mapping, preserving the keys.
+
+.. code-block:: python
+
+   import filters as f
+
+   filter_ = f.FilterRepeater(f.Int | f.Required)
+
+   # Incoming value is 100% valid.
+   runner = f.FilterRunner(filter_, {
+       'alpha':   '42',
+       'bravo':   86.0,
+       'charlie': 99,
+   })
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {
+       'alpha':   42,
+       'bravo':   86,
+       'charlie': 99,
+   }
+
+   # Incoming value contains invalid values.
+   runner = f.FilterRunner(filter_, {
+       'alpha':   None,
+       'bravo':   86.1,
+       'charlie': 99
+   })
+   assert runner.is_valid() is False
+   assert runner.cleaned_data == {
+       'alpha':   None,
+       'bravo':   None,
+       'charlie': 99,
+   }
+
+.. note::
+
+   Note how this differs from :py:class:`filters.FilterMapper` —
+   ``FilterRepeater`` will apply the **same** filter chain to each item in the
+   mapping, whereas ``FilterMapper`` allows you to specify a **different**
+   filter chain to apply to each item based on its key.
+
+FilterSwitch
+------------
+Conditionally invokes a filter based on the output of a function.
+
+``FilterSwitch`` takes 2-3 parameters:
+
+* ``getter: Callable[[Any], Hashable]`` - a function that extracts the
+  comparison value from the incoming value.  Whatever this function returns
+  will be matched against the keys in ``cases``.
+* ``cases: Mapping[Hashable, FilterCompatible]`` - a mapping of possible return
+  values from ``getter`` and the corresponding filter chains.
+* ``default: Optional[FilterCompatible]`` - Filter chain that will be used if
+  the return value from ``getter`` doesn't match any keys in ``cases``.
+
+When a ``FilterSwitch`` is applied to an incoming ``value``:
+
+1. The ``getter`` will be called and ``value`` will be passed in.
+2. The return value from ``getter`` will be compared against the keys in
+   ``cases``:
+
+   * If a match is found, the corresponding filter chain will be applied to
+     ``value``.
+
+     .. important::
+
+        Note that the actual ``value`` gets passed to the filter chain, **not**
+        the result from calling ``getter``; the latter is **only** used to
+        figure out which filter chain to use!
+
+   * If no match is found, the ``FilterSwitch`` will check to see if it has a
+     ``default`` filter chain:
+
+     * If there is a ``default`` filter chain, that chain gets applied to the
+       ``value``.
+     * If not, then the incoming value is invalid.
+
+Example of a ``FilterSwitch`` that selects the correct filter to use based upon
+the incoming value's ``name`` item:
+
+.. code-block:: python
+
+   import filters as f
+   from operator import itemgetter
+
+   filter_ = f.FilterSwitch(
+       # This function will extract the comparison value.
+       getter=itemgetter('name'),
+
+       # These are the cases that the comparison value might match.
+       cases={
+           # If ``value.name == 'price'`` use this filter:
+           'price': f.FilterMapper({'value': f.Int | f.Min(0)}),
+
+           # If ``value.name == 'colour'`` use this filter instead:
+           'colour': f.FilterMapper({'value': f.Choice({'r', 'g', 'b'})}),
+       },
+
+       # (optional) If none of the above cases match, use this filter instead.
+       default=f.FilterMapper({'value': f.Unicode}),
+   )
+
+   # Applies the 'price' filter:
+   runner = f.FilterRunner(filter_, {'name': 'price', 'value': '995'})
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'name': 'price', 'value': 995}
+
+   # Applies the 'colour' filter:
+   runner = f.FilterRunner(filter_, {'name': 'colour', 'value': 'b'})
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'name': 'colour', 'value': 'b'}
+
+   # Applies the default filter:
+   runner = f.FilterRunner(filter_, {'name': 'size', 'value': 42})
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'name': 'size', 'value': '42'}
+
+.. important::
+
+   Note in the above example that the entire incoming dict gets passed to the
+   corresponding filter chain, **not** the result of calling
+   ``itemgetter('name')``!
+
+.. _filterception:
 
 Filterception
--------------
-Both ``FilterRepeater`` and ``FilterMapper`` can be included in a filter chain,
-just like any other filter.
+^^^^^^^^^^^^^
+Just like any other filter, complex filters can be chained with other filters.
 
-Here's a simple example that validates a collection of addresses:
+For example, to decode a JSON string that describes an address book card, the
+filter chain might look like this:
 
 .. code-block:: python
 
    import filters as f
 
-   data = [
-     {
-       'street':  ['Malecon de la Reserva 610'],
-       'city':    'Lima',
-       'country': 'Peru',
-     },
+   filter_ =\
+      f.Unicode | f.Required | f.JsonDecode | f.Type(dict) | f.FilterMapper(
+          {
+              'name': f.Unicode | f.Strip | f.Required,
+              'type': f.Unicode | f.Strip | f.Optional('person') |
+                  f.Choice({'business', 'person'}),
 
-     {
-       'street':  ['Parc du Champs de Mars', '5 Avenue Anatole France'],
-       'city':    'Paris',
-       'country': 'France',
-     },
-   ]
+              # Each person may have multiple phone numbers, which must be
+              # structured a particular way.
+              'phone_numbers': f.Array | f.FilterRepeater(
+                  f.FilterMapper(
+                      {
+                          'label': f.Unicode | f.Required,
+                          'country_code': f.Int,
+                          'number': f.Unicode | f.Required,
+                      },
+                      allow_extra_keys=False,
+                      allow_missing_keys=('country_code',),
+                  ),
+              ),
+          },
+          allow_extra_keys=False,
+          allow_missing_keys=False,
+      )
 
-   repeater = f.FilterRepeater(
-     f.FilterMapper({
-       'street':  f.FilterRepeater(f.Unicode),
-       'city':    f.Unicode,
-       'country': f.Unicode,
-     })
+   runner = f.FilterRunner(
+       filter_,
+       '{"name": "Ghostbusters", "type": "business", "phone_numbers": '
+       '[{"label": "office", "number": "555-2368"}]}'
    )
-
-   input = f.FilterRunner(repeater, data)
-
-   assert input.is_valid() is True
-   assert input.cleaned_data == data
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {
+       'name': 'Ghostbusters',
+       'type': 'business',
+       'phone_numbers': [
+           {'label': 'office', 'country_code': None, 'number': '555-2368'},
+       ],
+   }

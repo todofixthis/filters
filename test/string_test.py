@@ -349,10 +349,10 @@ class CaseFoldTestCase(BaseFilterTestCase):
         """
         # For some reason, the internet really loves to use ß to test
         # case folding functionality.
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses('Weißkopfseeadler', 'weisskopfseeadler')
 
-        # Note that case-folded does not necessarily mean ASCII-
-        # compatible!
+        # Note that case-folded does not necessarily mean ASCII-compatible!
         # noinspection SpellCheckingInspection
         self.assertFilterPasses('İstanbul', 'i\u0307stanbul')
 
