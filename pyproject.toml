@@ -2,7 +2,7 @@
 
 [project]
 name = "phx-filters"
-version = "3.0.0"
+version = "3.0.1"
 description = "Validation and data pipelines made easy!"
 readme = "README.rst"
 requires-python = ">= 3"
