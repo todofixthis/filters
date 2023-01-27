@@ -47,17 +47,19 @@ Here's an example:
      model = Post,
      field = 'slug',
 
-     # Predicates
+     # Add predicates to the query.
      filter={'published': True},
      exclude={'comments__isnull': True'},
      select_related=('author', 'comments'),
    )
 
-   post = filter_.apply('introducing-filters-library')
+   runner = f.FilterRunner(filter_, 'introducing-filters-library')
 
-Any method in ``QueryString`` can be used as a predicate so long as that method
-returns a ``QueryString`` object (e.g., ``filter`` and ``select_related`` are
+Any method in ``QuerySet`` can be used as a predicate so long as that method
+returns a ``QuerySet`` object (e.g., ``filter`` and ``select_related`` are
 valid predicates, but ``count`` and ``update`` are not).
+
+Refer to the `QuerySet API`_ for more information.
 
 ISO Filters
 -----------
@@ -153,4 +155,5 @@ by the `language_tags library`_).
 .. _ISO 4217 currency code: https://en.wikipedia.org/wiki/ISO_4217
 .. _iso3166 library: https://pypi.python.org/pypi/iso3166
 .. _py-moneyed library: https://pypi.python.org/pypi/py-moneyed
+.. _QuerySet API: https://docs.djangoproject.com/en/4.1/ref/models/querysets/#methods-that-return-new-querysets
 .. _language_tags library: https://pypi.python.org/pypi/language-tags
