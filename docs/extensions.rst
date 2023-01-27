@@ -25,11 +25,10 @@ have to use namespaces in order to keep them all straight:
    import filters_iso as iso_filters
    import api.filters as api_filters
 
-   request_filter =\
-     f.FilterMapper({
+   request_filter = f.FilterMapper({
        'locale': f.Unicode | f.Strip | iso_filters.Locale,
        'username': f.Unicode | f.Strip | api_filters.User | f.Required,
-     })
+   })
 
 And so on.
 
@@ -43,11 +42,10 @@ top-level ``filters.ext`` namespace:
 
    import filters as f
 
-   request_filter =\
-     f.FilterMapper({
+   request_filter = f.FilterMapper({
        'locale': f.Unicode | f.Strip | f.ext.Locale,
        'username': f.Unicode | f.Strip | f.ext.User | f.Required,
-     })
+   })
 
 Note in the above example that the ``Locale`` and ``User`` filters do not need
 to be imported explicitly, and they are added automatically to the ``f.ext``
@@ -55,21 +53,21 @@ namespace.
 
 Trade-Offs
 ==========
-There is one downside to using the Extensions framework: IDE autocompletion
-won't work.
+There is one major downside to using the Extensions framework: IDE
+autocompletion won't work (or at least, I haven't figured out how to make it
+work yet 😇).
 
 Extension filters are registered at runtime, so your IDE's static analysis has
 no way to know what's available in ``filters.ext``.
 
 Depending on your IDE, however, there may be ways to work around this.  For
-example, `PyCharm's debugger can be configured to collect type information at
-runtime <https://blog.jetbrains.com/pycharm/2013/02/dynamic-runtime-type-inference-in-pycharm-2-7/>`_.
+example,
+`PyCharm's debugger can be configured to collect type information at runtime`_.
 
 Prerequisites
 =============
 In order to register your filters with the Extensions framework, your project
-must use `setuptools <https://setuptools.readthedocs.io/en/latest/>`_ and have
-a valid ``pyproject.toml`` or ``setup.py`` file.
+must use `setuptools`_ and have a valid ``pyproject.toml`` or ``setup.py`` file.
 
 Registering Your Filters
 ========================
@@ -156,3 +154,6 @@ extension filters to load:
    DEBUG:filters.extensions:Registering extension filter filters_iso.Currency as Currency.
    DEBUG:filters.extensions:Registering extension filter filters_iso.Locale as Locale.
    Out[4]: ['Country', 'Currency', 'Locale']
+
+.. _PyCharm's debugger can be configured to collect type information at runtime: https://blog.jetbrains.com/pycharm/2013/02/dynamic-runtime-type-inference-in-pycharm-2-7/
+.. _setuptools: https://setuptools.readthedocs.io/en/latest/

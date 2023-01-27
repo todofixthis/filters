@@ -20,7 +20,7 @@ class Decimal(BaseFilter):
     CODE_NON_FINITE = 'not_finite'
 
     templates = {
-        CODE_INVALID:    'Numeric value expected.',
+        CODE_INVALID: 'Numeric value expected.',
         CODE_NON_FINITE: 'Numeric value expected.',
     }
 
@@ -196,7 +196,7 @@ class Max(BaseFilter):
 
                 template_vars={
                     'operator': '<' if self.exclusive else '<=',
-                    'max':      self.max_value,
+                    'max': self.max_value,
                 },
             )
 
@@ -263,7 +263,7 @@ class Min(BaseFilter):
 
                 template_vars={
                     'operator': '>' if self.exclusive else '>=',
-                    'min':      self.min_value,
+                    'min': self.min_value,
                 },
             )
 
@@ -286,9 +286,9 @@ class Round(BaseFilter):
 
             E.g., ``Round(1)`` rounds to the nearest whole number.
 
-            If you want to round to a float value, it is recommended
-            that you provide it as a string or Decimal, to avoid
-            floating point problems.
+            If you want to round to a float value, it is recommended that you
+            provide it as a string or Decimal, to avoid floating point
+            precision errors.
 
         :param rounding:
             Controls how to round values.
@@ -308,7 +308,7 @@ class Round(BaseFilter):
         self.rounding = rounding
 
     def _apply(self, value):
-        value = self._filter(value, Decimal)  # type: DecimalType
+        value: DecimalType = self._filter(value, Decimal)
 
         if self._has_errors:
             return None
@@ -316,12 +316,12 @@ class Round(BaseFilter):
         one = DecimalType('1')
 
         # Scale, round, unscale.
-        # Note that we use :py:meth:`decimal.Decimal.quantize` instead
-        # of :py:func:`round` to avoid floating-point precision errors.
+        # Note that we use :py:meth:`decimal.Decimal.quantize` instead of
+        # :py:func:`round` to avoid floating-point precision errors.
         # http://stackoverflow.com/a/4340355
         return self.result_type(
             (value * one / self.to_nearest)
-                .quantize(one, rounding=self.rounding)
+            .quantize(one, rounding=self.rounding)
 
             * self.to_nearest
         )

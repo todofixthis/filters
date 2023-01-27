@@ -16,8 +16,8 @@ __all__ = [
 
 def sorted_dict(value: typing.Mapping) -> typing.Any:
     """
-    Sorts a dict's keys to avoid leaking information about the
-    backend's handling of unordered dicts.
+    Sorts a dict's keys to avoid leaking information about the backend's
+    handling of unordered dicts.
     """
     if isinstance(value, typing.Mapping):
         return OrderedDict(
@@ -36,13 +36,12 @@ class BaseFilterTestCase(TestCase):
     """
     Base functionality for request filter unit tests.
 
-    Prevents typos from causing invalid test passes/failures by
-    abstracting the Filter type out of filtering ops; just set
-    ``filter_type`` at the top of your test case, and then use
-    ``assertFilterPasses`` and ``assertFilterErrors`` to check use
-    cases.
+    Prevents typos from causing invalid test passes/failures by abstracting the
+    Filter type out of filtering ops; just set ``filter_type`` at the top of
+    your test case, and then use ``assertFilterPasses`` and
+    ``assertFilterErrors`` to check use cases.
     """
-    filter_type = None  # type: typing.Callable[[...], BaseFilter]
+    filter_type: typing.Callable[[...], BaseFilter] = None
 
     class unmodified(object):
         """
@@ -53,53 +52,50 @@ class BaseFilterTestCase(TestCase):
 
     class skip_value_check(object):
         """
-        Used by ``assertFilterPasses`` to skip checking the filtered
-        value.  This is useful for tests where a simple equality
-        check is not practical.
+        Sentinal value; used by ``assertFilterPasses`` to skip checking the
+        filtered value.  This is useful for tests where a simple equality check
+        is not practical.
 
-        Note:  If you use ``skip_value_check``, you should add extra
-        assertions to your test to make sure the filtered value
-        conforms to expectations.
+        Note:  If you use ``skip_value_check``, you should add extra assertions
+        to your test to make sure the filtered value conforms to expectations.
         """
         pass
 
     def assertFilterPasses(self, runner, expected_value=unmodified):
         """
-        Asserts that the FilterRunner returns the specified value,
-        without errors.
+        Asserts that the FilterRunner returns the specified value, without
+        errors.
 
         :param runner:
-            Usually a FilterRunner instance, but you can pass in the
-            test value itself if you want (it will automatically be run
-            through ``_filter``).
+            Usually a FilterRunner instance, but you can pass in the test value
+            itself if you want (it will automatically be run through
+            ``_filter``).
 
         :param expected_value:
             The expected value for ``runner.cleaned_data``.
 
-            If omitted, the assertion will check that the incoming
-            value is returned unmodified.
+            If omitted, the assertion will check that the incoming value is
+            returned unmodified.
         """
         self.assertFilterErrors(runner, {}, expected_value)
 
     def assertFilterErrors(self, runner, expected_codes, expected_value=None):
         """
-        Asserts that the FilterRunner generates the specified error
-        codes.
+        Asserts that the FilterRunner generates the specified error codes.
 
         :param runner:
-            Usually a FilterRunner instance, but you can pass in the
-            test value itself if you want (it will automatically be
-            run through `_filter`).
+            Usually a FilterRunner instance, but you can pass in the test value
+            itself if you want (it will automatically be run through
+            `_filter`).
 
         :param expected_codes:
             Expected error codes.
 
         :param expected_value:
-            Expected value for ``runner.cleaned_data`` (usually
-            ``None``).
+            Expected value for ``runner.cleaned_data`` (usually ``None``).
         """
         if not isinstance(runner, FilterRunner):
-            runner = self._filter(runner)  # type: FilterRunner
+            runner: FilterRunner = self._filter(runner)
 
         # First check to make sure no unhandled exceptions occurred.
         if runner.has_exceptions:
@@ -146,8 +142,8 @@ class BaseFilterTestCase(TestCase):
         """
         Applies the Filter to the specified value.
 
-        Generally, you don't have to use this method in your test case,
-        unless you want to specify Filter options.
+        Generally, you don't have to use this method in your test case, unless
+        you want to specify Filter options.
 
         Example::
 
@@ -189,8 +185,8 @@ class BaseFilterTestCase(TestCase):
         Checks the value returned by the Filter, used by
         ``assertFilterPasses``.
 
-        In certain cases, it may be useful to override this method in
-        your test case subclass.
+        In certain cases, it may be useful to override this method in your test
+        case subclass.
 
         :param cleaned_data:
             ``cleaned_data`` from the FilterRunner.

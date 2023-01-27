@@ -4,20 +4,22 @@ Contents
    :maxdepth: 1
 
    getting_started
-   List of Filters <filters_list>
    writing_filters
    extensions
+   simple_filters
+   complex_filters
+   extension_filters
 
 Filters
 =======
 The Filters library provides an easy and readable way to create complex
 data validation and processing pipelines, including:
 
-- Validating complex JSON structures in API requests or config files.
-- Parsing timestamps and converting to UTC.
-- Converting Unicode strings to NFC, normalizing line endings and removing
+* Validating complex JSON structures in API requests or config files.
+* Parsing timestamps and converting to UTC.
+* Converting Unicode strings to NFC, normalizing line endings and removing
   unprintable characters.
-- Decoding Base64, including URL-safe variants.
+* Decoding Base64, including URL-safe variants.
 
 And much more!
 
@@ -88,9 +90,9 @@ Requirements
 ------------
 Filters is known to be compatible with the following Python versions:
 
-- 3.11
-- 3.10
-- 3.9
+* 3.11
+* 3.10
+* 3.9
 
 .. note::
    I'm only one person, so to keep from getting overwhelmed, I'm only committing
@@ -114,12 +116,12 @@ Extensions
 ~~~~~~~~~~
 The following extensions are available:
 
-- `Django Filters`_: Adds filters designed to work with Django applications.
+* `Django Filters`_: Adds filters designed to work with Django applications.
   To install::
 
       pip install phx-filters[django]
 
-- `ISO Filters`_: Adds filters for interpreting standard codes and identifiers.
+* `ISO Filters`_: Adds filters for interpreting standard codes and identifiers.
   To install::
 
       pip install phx-filters[iso]
