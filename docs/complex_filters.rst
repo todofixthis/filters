@@ -301,7 +301,7 @@ the incoming value's ``name`` item:
 .. _filterception:
 
 Filterception
-^^^^^^^^^^^^^
+=============
 Just like any other filter, complex filters can be chained with other filters.
 
 For example, to decode a JSON string that describes an address book card, the
