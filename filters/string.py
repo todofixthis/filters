@@ -231,8 +231,9 @@ class MaxBytes(BaseFilter):
     Ensures that an incoming string value is small enough to fit into a
     specified number of bytes when encoded.
 
-    Note:  The resulting value is a byte string, even if you provide a
-    unicode.
+    .. note::
+
+        The resulting value is always byte string.
     """
     CODE_TOO_LONG = 'too_long'
 
@@ -245,8 +246,9 @@ class MaxBytes(BaseFilter):
     def __init__(
             self,
             max_bytes: int,
-            truncate: bool = True,
+            truncate: bool = False,
             prefix: str = '',
+            suffix: str = '',
             encoding: str = 'utf-8',
     ) -> None:
         """
@@ -254,16 +256,30 @@ class MaxBytes(BaseFilter):
             Max number of bytes to allow.
 
         :param truncate:
-            Whether to truncate values that are too long.
+            How to handle values that are too long:
 
-            Set this to ``False`` to save system resources when you
-            know that you will reject values that are too long.
+            - ``truncate is True``:  Return truncated string.
+            - ``truncate is False``:  Treat as invalid value.
 
         :param prefix:
             Prefix to apply to truncated values.
 
+            The prefix will count towards the number of bytes, so even with a
+            prefix the resulting string will not exceed ``max_bytes`` in
+            length.
+
             Ignored when the incoming value is short enough, or when
-            ``truncate`` is ``False``.
+            ``truncate is False``.
+
+        :param suffix:
+            Suffix to apply to truncated values.
+
+            The suffix will count towards the number of bytes, so even with a
+            suffix the resulting string will not exceed ``max_bytes`` in
+            length.
+
+            Ignored when the incoming value is short enough, or when
+            ``truncate is False``.
 
         :param encoding:
             The character encoding to check against.
@@ -275,6 +291,7 @@ class MaxBytes(BaseFilter):
         self.encoding = encoding
         self.max_bytes = max_bytes
         self.prefix = prefix
+        self.suffix = suffix
         self.truncate = truncate
 
     def __str__(self):
@@ -304,42 +321,34 @@ class MaxBytes(BaseFilter):
         if self._has_errors:
             return None
 
-        str_value = value.encode(self.encoding)
+        bytes_value = value.encode(self.encoding)
 
-        if len(str_value) > self.max_bytes:
-            replacement = (
-                self.truncate_string(
-                    # Ensure that we convert back to unicode before
-                    # adding the prefix, just in case `self.encoding`
-                    # indicates a codec that uses a BOM.
-                    value=self.prefix + value,
+        if len(bytes_value) > self.max_bytes:
+            if self.truncate:
+                # Truncated values are considered valid.
+                return self.truncate_string(value)
 
-                    max_bytes=self.max_bytes,
-                    encoding=self.encoding,
-                )
-                if self.truncate
-                else None
-            )
-
+            # Else, too-long values are invalid.
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_LONG,
-                replacement=replacement,
-
                 context={
                     'encoding': self.encoding,
                     'max_bytes': self.max_bytes,
-                    'prefix': self.prefix,
                     'truncate': self.truncate,
                 },
             )
 
-        return str_value
+        return bytes_value
 
-    @staticmethod
-    def truncate_string(value: str, max_bytes: int, encoding: str) -> bytes:
+    def truncate_string(self, value: str) -> bytes:
         """
-        Truncates a string value to the specified number of bytes.
+        Truncates a too-long string value to the specified number of bytes.
+
+        .. note::
+
+           This method assumes will truncate any value passed in, even if it
+           is small enough.
 
         :return:
             Returns bytes, truncated to the correct length.
@@ -347,14 +356,29 @@ class MaxBytes(BaseFilter):
             Note: Might be a bit shorter than `max_bytes`, to avoid
             orphaning a multibyte sequence.
         """
-        # Convert to bytearray so that we get the same handling in
-        # Python 2 and Python 3.
-        bytes_ = bytearray(value.encode(encoding))
+        # Add the prefix directly to the unicode value, just in
+        # case ``self.encoding`` indicates a codec that uses a BOM.
+        bytes_value = (self.prefix + value).encode(self.encoding)
+
+        encoded_suffix = b''
+        if self.suffix:
+            # Note that ``self.encoding`` may indicate a codec that
+            # uses a BOM, so we have to do a little extra work to make
+            # sure we don't insert an extra BOM partway through!
+            bom = len(''.encode(self.encoding))
+            encoded_suffix = self.suffix.encode(self.encoding)[bom:]
+
+        # Ensure we leave enough space for the suffix.
+        target_bytes = self.max_bytes - len(encoded_suffix)
+
+        # Edge case where ``self.max_bytes`` is so tiny that we can't even fit
+        # the entire prefix+suffix into the end result.
+        if target_bytes < 1:
+            return b''
 
         # Truncating the value is a bit tricky, as we have to be
         # careful not to leave an unterminated multibyte sequence.
-
-        if encoding.lower() in ['utf-8', 'utf8']:
+        if self.encoding.lower() in {'utf-8', 'utf8'}:
             #
             # This code works a bit faster than the generic routine
             # (see below) because we only have to inspect up to 4
@@ -363,7 +387,7 @@ class MaxBytes(BaseFilter):
             #
             # But, it only works for UTF-8.
             #
-            truncated = bytes_[0:max_bytes]
+            truncated = bytes_value[0:target_bytes]
 
             # Walk backwards through the string until we hit certain
             # sequences.
@@ -399,7 +423,7 @@ class MaxBytes(BaseFilter):
                 # Else, we have a continuation byte.  Continue walking
                 # backwards through the string.
 
-            return truncated
+            return truncated + encoded_suffix
 
         else:
             trim = 0
@@ -407,26 +431,26 @@ class MaxBytes(BaseFilter):
                 # Progressively chop bytes off the end of the string
                 # until we have something that can be successfully
                 # decoded using the specified encoding.
-                truncated = bytes_[0:max_bytes - trim]
+                truncated = bytes_value[0:target_bytes - trim]
 
                 try:
-                    truncated.decode(encoding)
+                    truncated.decode(self.encoding)
                 except UnicodeDecodeError:
                     trim += 1
                 else:
-                    return bytes(truncated)
+                    return bytes(truncated) + encoded_suffix
 
                 # We should never get here, but just in case, we need
                 # to ensure the loop eventually terminates (Python
                 # won't error if ``max_bytes - trim`` goes negative,
                 # since the slice operator accepts negative values).
-                if trim >= max_bytes:
+                if trim >= target_bytes:
                     raise ValueError(
-                        'Unable to truncate {bytes_!r} to {max_bytes} '
+                        'Unable to truncate {bytes_value!r} to {target_bytes} '
                         'bytes when encoded using {encoding}.'.format(
-                            bytes_=bytes_,
-                            max_bytes=max_bytes,
-                            encoding=encoding,
+                            bytes_value=bytes_value,
+                            target_bytes=target_bytes,
+                            encoding=self.encoding,
                         ),
                     )
 

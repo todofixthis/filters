@@ -641,7 +641,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
         Use ``Required | MaxBytes`` if you want to reject null values.
         """
-        self.assertFilterPasses(self._filter(None, max_bytes=65535))
+        self.assertFilterPasses(self._filter(None, max_bytes=1))
 
     def test_pass_string_short(self):
         """
@@ -656,81 +656,150 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_string_short_with_prefix(self):
         """
-        The filter is configured to apply a prefix to values that are
-        too long, but the incoming value is a unicode that is short
-        enough.
+        The filter is configured to apply a prefix to values that are too long,
+        but the incoming value is a unicode string that is short enough.
         """
         # If we were to apply the prefix to the incoming string, it
         # would be too long to fit, but the filter will only apply
         # the prefix if the value needs to be truncated.
         self.assertFilterPasses(
-            self._filter('Γειάσου Κόσμε', max_bytes=25, prefix='σφάλμα:'),
+            self._filter(
+                'Γειάσου Κόσμε',
+                max_bytes=25,
+                truncate=True,
+                prefix='σφάλμα:',
+            ),
 
             # The filter always returns bytes.
             'Γειάσου Κόσμε'.encode('utf-8'),
         )
 
-    def test_fail_string_long(self):
+    def test_pass_string_short_with_suffix(self):
+        """
+        The filter is configured to apply a suffix to values that are too long,
+        but the incoming value is a unicode string that is short enough.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Γειάσου Κόσμε',
+                max_bytes=25,
+                truncate=True,
+                suffix=' (σφάλμα)',
+            ),
+
+            # The filter always returns bytes.
+            'Γειάσου Κόσμε'.encode('utf-8'),
+        )
+
+    def test_fail_string_too_long(self):
         """
         The incoming value is a string that is too long.
         """
         self.assertFilterErrors(
             self._filter('Γειάσου Κόσμε', max_bytes=24),
             [f.MaxBytes.CODE_TOO_LONG],
+        )
+
+    def test_pass_string_truncated(self):
+        """
+        The incoming value is a string that is too long, and the filter is
+        configured to truncate it.
+        """
+        self.assertFilterPasses(
+            self._filter('Γειάσου Κόσμε', max_bytes=24, truncate=True),
 
             # Note that the resulting value is truncated to 23 bytes
             # instead of 24, so as not to orphan a multibyte
             # sequence.
-            expected_value=
             b'\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83\xce\xbf'
             b'\xcf\x85 \xce\x9a\xcf\x8c\xcf\x83\xce\xbc',
         )
 
-    def test_fail_string_long_with_prefix(self):
+    def test_pass_string_truncated_with_prefix(self):
         """
         The incoming value is a string that is too long, and the
         filter is configured to apply a prefix before truncating.
         """
-        self.assertFilterErrors(
-            self._filter('Γειάσου Κόσμε', max_bytes=24, prefix='σφάλμα:'),
-            [f.MaxBytes.CODE_TOO_LONG],
+        self.assertFilterPasses(
+            self._filter(
+                'Γειάσου Κόσμε',
+                max_bytes=24,
+                truncate=True,
+                prefix='σφάλμα:'
+            ),
 
             # Note that the prefix reduces the number of bytes
             # available when truncating the value.
             expected_value=
-            b'\xcf\x83\xcf\x86\xce\xac\xce\xbb\xce\xbc\xce\xb1:'
+            b'\xcf\x83\xcf\x86\xce\xac\xce\xbb\xce\xbc\xce\xb1:'  # Prefix
             b'\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83'
         )
 
-    def test_fail_string_long_no_truncate(self):
+    def test_pass_string_truncated_with_suffix(self):
         """
-        The incoming value is a string that is too long, and the
-        filter is configured not to truncate values.
+        The incoming value is a string that is too long, and the filter is
+        configured to apply a suffix after truncating.
         """
-        self.assertFilterErrors(
-            self._filter('Γειάσου Κόσμε', max_bytes=24, truncate=False),
-            [f.MaxBytes.CODE_TOO_LONG],
+        self.assertFilterPasses(
+            self._filter(
+                'หวัดดีชาวโลก',
+                max_bytes=30,
+                truncate=True,
+                suffix=' (อีก)',
+            ),
 
-            # When the filter is configured with `truncate=False`, it
-            # returns `None` instead of truncating too-long values.
-            expected_value=None,
+            expected_value=
+            b'\xe0\xb8\xab\xe0\xb8\xa7\xe0\xb8\xb1'
+            b'\xe0\xb8\x94\xe0\xb8\x94\xe0\xb8\xb5'
+            b' (\xe0\xb8\xad\xe0\xb8\xb5\xe0\xb8\x81)'  # Suffix
         )
 
-    def test_fail_string_tiny_max_bytes(self):
+    def test_pass_string_truncated_max_bytes_param_too_small(self):
         """
-        The filter is configured with a `max_bytes` so tiny that it is
+        The filter is configured with a ``max_bytes`` so tiny that it is
         impossible to fit any multibyte sequences into a truncated
         string.
+
+        This will probably never happen outside of this unit test, but if
+        there's one thing I've learned, it's that customers never walk into a
+        bar and simply order a beer.
         """
-        self.assertFilterErrors(
-            self._filter('你好，世界！', max_bytes=2),
-            [f.MaxBytes.CODE_TOO_LONG],
+        self.assertFilterPasses(
+            self._filter(
+                '你好，世界！',
+                max_bytes=2,
+                truncate=True,
+                prefix='更多',
+                suffix='更多',
+            ),
 
             # The filter returns an empty string, not `None`.
             expected_value=b'',
         )
 
-    def test_pass_string_alt_encoding(self):
+    def test_pass_string_truncated_max_bytes_param_almost_too_small(self):
+        """
+        The filter is configured with ``max_bytes`` so tiny that it is
+        impossible to fit any multibyte sequences into a truncated string...
+        but just big enough to fit in some of the prefix+suffix.
+
+        Why do I do this to myself?
+        """
+        self.assertFilterPasses(
+            self._filter(
+                '你好，世界！',
+                max_bytes=3,
+                truncate=True,
+                prefix='->',
+                suffix='<-',
+            ),
+
+            # The suffix has priority over the prefix.
+            # Because I had to pick one :shrug:
+            expected_value=b'-<-',
+        )
+
+    def test_pass_string_short_alt_encoding(self):
         """
         The filter is configured to use an encoding other than UTF-8,
         and the incoming value is a string that is short enough.
@@ -740,6 +809,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 'Γειάσου Κόσμε',
 
                 max_bytes=13,
+                truncate=True,
                 encoding='iso-8859-7',
             ),
 
@@ -748,43 +818,56 @@ class MaxBytesTestCase(BaseFilterTestCase):
             b'\xc3\xe5\xe9\xdc\xf3\xef\xf5 \xca\xfc\xf3\xec\xe5',
         )
 
-    def test_fail_string_alt_encoding(self):
+    def test_fail_string_too_long_alt_encoding_has_bom(self):
         """
-        The filter is configured to use an encoding other that UTF-8,
+        The filter is configured to use an encoding that uses a BOM,
         and the incoming value is a string that is too long.
         """
         self.assertFilterErrors(
             self._filter(
                 'Γειάσου Κόσμε',
 
-                max_bytes=13,
+                max_bytes=27,
                 encoding='utf-16',
             ),
             [f.MaxBytes.CODE_TOO_LONG],
-
-            # End result is only 12 bytes because UTF-16 uses 2 bytes
-            # per character.
-            #
-            # Technically, it's only 10 bytes if you don't count the
-            # BOM.
-            expected_value=
-            b'\xff\xfe\x93\x03\xb5\x03\xb9\x03\xac\x03\xc3\x03',
         )
 
-    def test_fail_string_alt_encoding_with_prefix(self):
+    def test_pass_string_truncated_alt_encoding_has_bom(self):
         """
-        The filter is configured to use an encoding other than UTF-8
-        and apply a prefix to truncated values.
+        The filter is configured to use an encoding that uses a BOM,
+        and the incoming value is a string that will be truncated.
         """
-        self.assertFilterErrors(
+        self.assertFilterPasses(
+            self._filter(
+                'Γειάσου Κόσμε',
+
+                max_bytes=13,
+                truncate=True,
+                encoding='utf-16',
+            ),
+
+            # End result is only 12 bytes because UTF-16 uses 2 bytes
+            # per character, plus 2 bytes for the BOM.
+            expected_value=
+            b'\xff\xfe'  # BOM
+            b'\x93\x03\xb5\x03\xb9\x03\xac\x03\xc3\x03'  # Truncated string
+        )
+
+    def test_pass_string_truncated_alt_encoding_has_bom_with_prefix(self):
+        """
+        The filter is configured to use an encoding that uses a BOM,
+        and to apply a prefix to truncated values.
+        """
+        self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
 
                 max_bytes=18,
+                truncate=True,
                 prefix='σφάλμα:',
                 encoding='utf-16',
             ),
-            [f.MaxBytes.CODE_TOO_LONG],
 
             # Note that the BOM is only applied once.
             expected_value=
@@ -795,6 +878,68 @@ class MaxBytesTestCase(BaseFilterTestCase):
             b'\x03\xbc\x03\xb1\x03:\x00'
             # Truncated string:
             b'\x93\x03',
+        )
+
+    def test_pass_string_truncated_alt_encoding_has_bom_with_suffix(self):
+        """
+        The filter is configured to use an encoding that uses a BOM,
+        and to apply a suffix to the truncated values.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'หวัดดีชาวโลก',
+                max_bytes=20,
+                truncate=True,
+                suffix=' (อีก)',
+                encoding='utf-16'
+            ),
+
+            expected_value=
+            b"\xff\xfe"  # BOM
+            b"+\x0e'\x0e1\x0e"  # Truncated string
+            b' \x00(\x00-\x0e5\x0e\x01\x0e)\x00'  # Suffix
+        )
+
+    def test_pass_string_truncated_alt_encoding_has_bom_with_prefix_and_suffix(
+            self):
+        """
+        Because my life wasn't hard enough already...
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'मैं अपने आप से ऐसा क्यों करता हूं?',
+                max_bytes=40,
+                truncate=True,
+                prefix='[अधिक] ',
+                suffix=' (अधिक)',
+                encoding='utf-16'
+            ),
+
+            expected_value=
+            b"\xff\xfe"  # BOM
+            b"[\x00\x05\t'\t?\t\x15\t]\x00 \x00"  # Prefix
+            b'.\tH\t\x02\t \x00\x05\t'  # Truncated string
+            b" \x00(\x00\x05\t'\t?\t\x15\t)\x00"  # Suffix
+        )
+
+    def test_pass_string_truncated_max_bytes_param_almost_too_small_alt_encoding_has_bom(
+            self):
+        """
+        Unrealistically tiny ``max_bytes``, part 2: the revenge!
+        """
+        self.assertFilterPasses(
+            self._filter(
+                '你好，世界！',
+                max_bytes=4,
+                truncate=True,
+                prefix='>',
+                suffix='<',
+                encoding='utf-16',
+            ),
+
+            # The suffix has priority over the prefix.
+            # Because I had to pick one :shrug:
+            expected_value=b'\xff\xfe<\x00',
         )
 
     def test_pass_bytes_short(self):
@@ -822,6 +967,21 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 max_bytes=17,
             ),
             [f.MaxBytes.CODE_TOO_LONG],
+        )
+
+    def test_pass_bytes_truncated(self):
+        """
+        The incoming value is a byte string that is too long, and the filter is
+        configured to truncate.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                b'\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c'
+                b'\xe4\xb8\x96\xe7\x95\x8c\xef\xbc\x81',
+
+                max_bytes=17,
+                truncate=True,
+            ),
 
             # Note that the resulting value is truncated to 15 bytes
             # instead of 17, so as not to orphan a multibyte
