@@ -343,17 +343,18 @@ class MaxBytes(BaseFilter):
 
     def truncate_string(self, value: str) -> bytes:
         """
-        Truncates a too-long string value to the specified number of bytes.
+        Truncates a too-long string value to the specified number of bytes,
+        using the filter's current configuration.
 
         .. note::
 
-           This method assumes will truncate any value passed in, even if it
-           is small enough.
+           This method will truncate any value passed in, even if it is already
+           smaller than ``self.max_bytes``.
 
         :return:
             Returns bytes, truncated to the correct length.
 
-            Note: Might be a bit shorter than `max_bytes`, to avoid
+            Note: Might be a bit shorter than ``self.max_bytes``, to avoid
             orphaning a multibyte sequence.
         """
         # Add the prefix directly to the unicode value, just in
