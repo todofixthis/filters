@@ -600,9 +600,8 @@ max value, set ``exclusive=True`` in the filter's initialiser:
 
 MaxBytes
 --------
-Truncates a unicode string to a max number of bytes.  When converting to a
-multibyte encoding (e.g., UTF-8), the filter will truncate additional bytes as
-needed to avoid orphaned sequences (see example below).
+Checks that a string will fit into a max number of bytes when encoded (using
+UTF-8 by default).
 
 .. important::
 
@@ -611,30 +610,108 @@ needed to avoid orphaned sequences (see example below).
 
 .. code-block:: python
 
+      import filters as f
+
+      runner = f.FilterRunner(f.MaxBytes(25), 'Γειάσου Κόσμε')
+      assert runner.is_valid() is True
+      assert runner.cleaned_data ==\
+        b'\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83\xce\xbf' \
+        b'\xcf\x85 \xce\x9a\xcf\x8c\xcf\x83\xce\xbc\xce\xb5'
+
+      runner = f.FilterRunner(f.MaxBytes(24), 'Γειάσου Κόσμε')
+      assert runner.is_valid() is False
+      assert runner.cleaned_data is None
+
+Instead of treating too-long values as invalid, you can configure the filter to
+truncate them instead:
+
+.. code-block:: python
+
    import filters as f
 
-   runner = f.FilterRunner(f.MaxBytes(24), 'Γειάσου Κόσμε')
-   # Value is too long, so ``is_valid()`` returns ``False``.
-   assert runner.is_valid() is False
-   # Note that the resulting value is truncated to 23 bytes instead of 24, so
-   # as not to orphan a multibyte sequence.
+   runner = f.FilterRunner(f.MaxBytes(22, truncate=True), 'हैलो वर्ल्ड')
+   # Truncated values are considered valid.
+   assert runner.is_valid() is True
    assert runner.cleaned_data ==\
-       b'\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83\xce\xbf' \
-       b'\xcf\x85 \xce\x9a\xcf\x8c\xcf\x83\xce\xbc'
+       b'\xe0\xa4\xb9\xe0\xa5\x88\xe0\xa4\xb2\xe0' \
+       b'\xa5\x8b \xe0\xa4\xb5\xe0\xa4\xb0\xe0\xa5\x8d'
 
-.. tip::
-
-   If you just want to validate the length of the input and don't need to
-   waste CPU cycles truncating too-long values, you can provide `truncate=False`
-   to the filter's initialiser:
+.. note::
+   When truncating with a multibyte encoding (e.g., UTF-8), the filter may
+   remove additional bytes as needed to avoid orphaned sequences:
 
    .. code-block:: python
 
       import filters as f
 
-      runner = f.FilterRunner(f.MaxBytes(24, truncate=False), 'Γειάσου Κόσμε')
-      assert runner.is_valid() is False
-      assert runner.cleaned_data is None
+      runner = f.FilterRunner(f.MaxBytes(21, truncate=True), 'हैलो वर्ल्ड')
+      assert runner.is_valid() is True
+      # Result is truncated to 19 bytes instead of 21, so as not to orphan a
+      # multibyte sequence.
+      assert len(runner.cleaned_data) == 19
+
+You can configure the filter to apply a prefix and/or suffix to the value when
+truncating:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Apply a prefix to truncated values:
+   runner = f.FilterRunner(
+       f.MaxBytes(12, truncate=True, prefix='(more) '),
+       'Hello, world!'
+   )
+   assert runner.is_valid() is True
+   # The length of the prefix is taken into account, so that the result is still
+   # 12 bytes long.
+   assert runner.cleaned_data == b'(more) Hello'
+
+   # Apply a suffix to truncated values:
+   runner = f.FilterRunner(
+       f.MaxBytes(12, truncate=True, suffix='...'),
+       'Hello, world!',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == b'Hello, wo...'
+
+   # Apply both, why not..
+   runner = f.FilterRunner(
+       f.MaxBytes(12, truncate=True, prefix='->', suffix='<-'),
+       'Hello, world!',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == b'->Hello, w<-'
+
+By default, the filter uses UTF-8; if you need to use a different encoding, you
+can specify it when initialising the filter:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(
+       f.MaxBytes(32, truncate=True, encoding='utf-16'),
+       'kia ora e te ao whānui',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data ==\
+       b'\xff\xfek\x00i\x00a\x00 \x00o\x00r\x00a\x00' \
+       b' \x00e\x00 \x00t\x00e\x00 \x00a\x00o\x00'
+
+   # Prefix and suffix also work with alternate encodings.
+   runner = f.FilterRunner(
+       f.MaxBytes(40, truncate=True, prefix='[अधिक] ', suffix=' (अधिक)', encoding='utf-16'),
+       'मैं अपने आप से ऐसा क्यों करता हूं?',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == (
+       b"\xff\xfe"                           # BOM
+       b"[\x00\x05\t'\t?\t\x15\t]\x00 \x00"  # Prefix
+       b'.\tH\t\x02\t \x00\x05\t'            # Truncated string
+       b" \x00(\x00\x05\t'\t?\t\x15\t)\x00"  # Suffix
+   )
+   assert len(runner.cleaned_data) == 40
 
 MaxLength
 ---------
