@@ -8,7 +8,7 @@ import regex
 
 import filters as f
 from filters.test import BaseFilterTestCase
-from test.simple_test import Bytesy, Unicody
+from test.test_simple import Bytesy, Unicody
 
 
 class Base64DecodeTestCase(BaseFilterTestCase):
