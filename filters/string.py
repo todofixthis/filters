@@ -323,11 +323,11 @@ class MaxBytes(BaseFilter):
 
         bytes_value = value.encode(self.encoding)
 
-        if len(bytes_value) > self.max_bytes:
-            if self.truncate:
-                # Truncated values are considered valid.
-                return self.truncate_string(value)
+        if self.truncate:
+            # Truncated values are considered valid.
+            return self.truncate_bytes(bytes_value)
 
+        if len(bytes_value) > self.max_bytes:
             # Else, too-long values are invalid.
             return self._invalid_value(
                 value=value,
@@ -341,15 +341,10 @@ class MaxBytes(BaseFilter):
 
         return bytes_value
 
-    def truncate_string(self, value: str) -> bytes:
+    def truncate_bytes(self, bytes_value: bytes) -> bytes:
         """
-        Truncates a too-long string value to the specified number of bytes,
+        Truncates a too-long bytes value to the specified number of bytes,
         using the filter's current configuration.
-
-        .. note::
-
-           This method will truncate any value passed in, even if it is already
-           smaller than ``self.max_bytes``.
 
         :return:
             Returns bytes, truncated to the correct length.
@@ -357,17 +352,29 @@ class MaxBytes(BaseFilter):
             Note: Might be a bit shorter than ``self.max_bytes``, to avoid
             orphaning a multibyte sequence.
         """
-        # Add the prefix directly to the unicode value, just in
-        # case ``self.encoding`` indicates a codec that uses a BOM.
-        bytes_value = (self.prefix + value).encode(self.encoding)
+        if len(bytes_value) <= self.max_bytes:
+            return bytes_value
 
-        encoded_suffix = b''
-        if self.suffix:
-            # Note that ``self.encoding`` may indicate a codec that
-            # uses a BOM, so we have to do a little extra work to make
-            # sure we don't insert an extra BOM partway through!
-            bom = len(''.encode(self.encoding))
-            encoded_suffix = self.suffix.encode(self.encoding)[bom:]
+        # Note that ``self.encoding`` may indicate a codec that
+        # uses a BOM, so we have to do a little extra work to make
+        # sure we don't insert extra BOMs in the resulting value.
+        bom = len(''.encode(self.encoding))
+
+        # Prefix can be prepended right away.
+        if self.prefix:
+            bytes_value = (
+                    bytes_value[0:bom] +
+                    self.prefix.encode(self.encoding)[bom:] +
+                    bytes_value[bom:]
+            )
+
+        # Suffix has to be tucked away for later (otherwise, the first thing
+        # we'd truncate would be the suffix!).
+        encoded_suffix = (
+            self.suffix.encode(self.encoding)[bom:]
+            if self.suffix
+            else b''
+        )
 
         # Ensure we leave enough space for the suffix.
         target_bytes = self.max_bytes - len(encoded_suffix)
