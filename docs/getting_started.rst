@@ -101,7 +101,7 @@ If you want to reject ``None``, add the ``Required`` filter to your chain:
 Next Steps
 ==========
 See :doc:`/simple_filters` for a list of all the filters that come bundled with
-the Filters library (and its official extensions).
+the Filters library.
 
 Be sure to pay special attention to :doc:`/complex_filters`, which lists filters
 designed exclusively to work with other filters, allowing you to construct
