@@ -19,7 +19,7 @@ class TestFilterBravo(f.BaseFilter):
     """
 
     def __init__(self, name: typing.Optional[str] = None) -> None:
-        super(TestFilterBravo, self).__init__()
+        super().__init__()
 
         self.name = name
 

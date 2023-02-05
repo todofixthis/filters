@@ -34,6 +34,28 @@ class.  This class provides an interface very similar to a Django form.
 * ``errors``:  If the value is not valid, this property holds the validation
   errors.
 
+Reusing FilterRunners
+---------------------
+If you want to run the same set of filters on different values, you can create
+a single ``FilterRunner`` instance and call its ``apply()`` method:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.Choice({'foo', 'bar', 'baz', 'luhrmann'}))
+
+   input_1 = 'foo'
+   input_2 = 'foobie'
+
+   runner.apply(input_1)
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'foo'
+
+   runner.apply(input_2)
+   assert runner.is_valid() is False
+   assert runner.cleaned_data is None
+
 Chaining Filters
 ================
 The filters library conforms to the unix philosophy of,

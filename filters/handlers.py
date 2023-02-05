@@ -164,14 +164,14 @@ class FilterRunner(object):
     def __init__(
             self,
             starting_filter: FilterCompatible,
-            incoming_data: typing.Any,
+            incoming_data: typing.Any = None,
             capture_exc_info: bool = False,
     ) -> None:
         """
-        :param incoming_data: E.g., `request.POST`.
+        :param incoming_data: E.g., ``request.POST``.
 
         :param capture_exc_info:
-            Whether to capture `sys.exc_info` when handling an exception.
+            Whether to capture ``sys.exc_info`` when handling an exception.
 
             This is turned off by default to reduce memory usage, but it is
             useful in certain cases (e.g., if you want to send exceptions to a
@@ -191,6 +191,15 @@ class FilterRunner(object):
 
     def __str__(self):
         return str(self.filter_chain)
+
+    def apply(self, incoming_data: typing.Any):
+        """
+        Reruns the filter chain against a new value.
+        """
+        self.data = incoming_data
+
+        self._cleaned_data = None
+        self._handler = None
 
     @property
     def cleaned_data(self):
