@@ -9,9 +9,33 @@ import filters as f
 from filters.base import ExceptionHandler
 
 
+class FilterRunnerTestCase(TestCase):
+    def test_apply(self):
+        """
+        Calling a FilterRunner's ``apply()`` method reruns its filter chain
+        against the specified input.
+        """
+        runner = f.FilterRunner(f.Int)
+        self.assertTrue(runner.is_valid())
+        self.assertDictEqual(runner.error_codes, {})
+        self.assertIsNone(runner.cleaned_data)
+
+        runner.apply('42')
+        self.assertTrue(runner.is_valid())
+        self.assertDictEqual(runner.error_codes, {})
+        self.assertEqual(runner.cleaned_data, 42)
+
+        runner.apply('Not an int')
+        self.assertFalse(runner.is_valid())
+        self.assertDictEqual(
+            runner.error_codes,
+            {'': [f.Decimal.CODE_INVALID]},
+        )
+
+
 class ExceptionHandlerTestCase(TestCase):
     def setUp(self):
-        super(ExceptionHandlerTestCase, self).setUp()
+        super().setUp()
 
         self.handler = ExceptionHandler()
 
@@ -89,7 +113,7 @@ class MemoryLogHandler(logging.Handler):
     """
 
     def __init__(self, level: int = logging.NOTSET) -> None:
-        super(MemoryLogHandler, self).__init__(level)
+        super().__init__(level)
 
         self._records = []  # type: typing.List[logging.LogRecord]
         self.max_level_emitted = logging.NOTSET
@@ -142,7 +166,7 @@ class MemoryLogHandler(logging.Handler):
 
 class LogHandlerTestCase(TestCase):
     def setUp(self):
-        super(LogHandlerTestCase, self).setUp()
+        super().setUp()
 
         self.logs = MemoryLogHandler()
 
@@ -158,7 +182,7 @@ class LogHandlerTestCase(TestCase):
         """
         message = 'Needs more cowbell.'
         context = {
-            'key':   'test',
+            'key': 'test',
             'value': "(Don't Fear) The Reaper",
         }
 
@@ -180,7 +204,7 @@ class LogHandlerTestCase(TestCase):
         """
         message = 'An exception occurred!'
         context = {
-            'key':   'test',
+            'key': 'test',
             'value': "(Don't Fear) The Reaper",
         }
 
@@ -215,7 +239,7 @@ class LogHandlerTestCase(TestCase):
 
 class MemoryHandlerTestCase(TestCase):
     def setUp(self):
-        super(MemoryHandlerTestCase, self).setUp()
+        super().setUp()
 
         self.handler = f.MemoryHandler()
 
@@ -227,8 +251,8 @@ class MemoryHandlerTestCase(TestCase):
         key = 'test'
         message = 'Needs more cowbell.'
         context = {
-            'code':  code,
-            'key':   key,
+            'code': code,
+            'key': key,
             'value': "(Don't Fear) The Reaper",
         }
 
@@ -281,8 +305,8 @@ class MemoryHandlerTestCase(TestCase):
         key = 'test'
         message = 'An exception occurred!'
         context = {
-            'code':  code,
-            'key':   key,
+            'code': code,
+            'key': key,
             'value': "(Don't Fear) The Reaper",
         }
 
