@@ -12,7 +12,6 @@ __all__ = [
     'Array',
     'ByteArray',
     'Call',
-    'Choice',
     'Date',
     'Datetime',
     'Empty',
@@ -254,46 +253,6 @@ class Call(BaseFilter):
                 reason=e,
                 exc_info=True,
             )
-
-
-class Choice(BaseFilter):
-    """
-    Expects the value to match one of the items in a set.
-
-    Note:  When matching string values, the comparison is case-
-    sensitive!  Use the :py:class:`CaseFold` Filter if you want to
-    perform a case-insensitive comparison.
-    """
-    CODE_INVALID = 'not_valid_choice'
-
-    templates = {
-        CODE_INVALID: 'Valid options are: {choices}',
-    }
-
-    def __init__(self, choices: typing.Iterable[typing.Hashable]) -> None:
-        super().__init__()
-
-        self.choices = set(choices)
-
-    def __str__(self):
-        return '{type}({choices!r})'.format(
-            type=type(self).__name__,
-            choices=sorted(map(str, self.choices)),
-        )
-
-    def _apply(self, value):
-        if value not in self.choices:
-            return self._invalid_value(
-                value=value,
-                reason=self.CODE_INVALID,
-                exc_info=True,
-
-                template_vars={
-                    'choices': sorted(map(str, self.choices)),
-                },
-            )
-
-        return value
 
 
 class Datetime(BaseFilter):

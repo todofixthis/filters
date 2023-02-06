@@ -1,15 +1,14 @@
 import json
 import socket
 import typing
+import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
-from collections import OrderedDict
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
 import regex
-import unicodedata
 
 from filters.base import BaseFilter, Type
 from filters.simple import MaxLength
@@ -18,6 +17,7 @@ __all__ = [
     'Base64Decode',
     'ByteString',
     'CaseFold',
+    'Choice',
     'IpAddress',
     'JsonDecode',
     'MaxBytes',
@@ -52,13 +52,13 @@ class Base64Decode(BaseFilter):
             return None
 
         # Strip out whitespace.
-        # Technically, whitespace is not part of the Base64 alphabet,
-        # but virtually every implementation allows it.
+        # Technically, whitespace is not part of the Base64 alphabet, but
+        # virtually every implementation allows it.
         value = self.whitespace_re.sub(b'', value)
 
         # Check for invalid characters.
-        # Note that Python 3's b64decode does this for us, but we also
-        # have to support Python 2.
+        # Note that Python 3's b64decode does this for us, but we also have to
+        # support Python 2.
         # https://docs.python.org/3/library/base64.html#base64.b64decode
         if not self.base64_re.match(value):
             return self._invalid_value(
@@ -100,13 +100,13 @@ class CaseFold(BaseFilter):
     Applies case folding to an incoming string, allowing you to perform
     case-insensitive comparisons.
 
-    The result tends to be lowercase, but it is recommended that you
-    NOT treat CaseFold as a Unicode-aware lowercase filter!  The
-    proper way to lowercase a string is very much locale-dependent.
+    The result tends to be lowercase, but it is recommended that you NOT treat
+    CaseFold as a Unicode-aware lowercase filter!  The proper way to lowercase
+    a string is very much locale-dependent.
 
-    Note that the built in :py:meth:`str.upper` and
-    :py:meth:`str.lower` methods tend do a pretty good job of properly
-    changing the case of unicode strings.
+    Note that the built-in :py:meth:`str.upper` and :py:meth:`str.lower`
+    methods tend do a pretty good job of properly changing the case of unicode
+    strings.
 
     References:
       - http://www.w3.org/International/wiki/Case_folding
@@ -121,6 +121,75 @@ class CaseFold(BaseFilter):
             return None
 
         return value.casefold()
+
+
+class Choice(BaseFilter):
+    """
+    Requires an incoming value to match one of a set of allowed options.
+
+    By default, the comparison is case-sensitive, but you can control this via
+    the filter's initialiser.
+
+    .. note::
+
+       This filter is technically able to work with any hashable value, not
+       just strings.
+    """
+    CODE_INVALID = 'not_valid_choice'
+
+    templates = {
+        CODE_INVALID: 'Valid options are: {choices}',
+    }
+
+    def __init__(self,
+            choices: typing.Iterable[typing.Hashable],
+            case_sensitive: bool = True,
+    ) -> None:
+        """
+        :param choices:
+            The allowed options; if an incoming value doesn't match any of
+            these values, it is invalid.
+
+        :param case_sensitive:
+            Whether the comparison should be case-sensitive.
+        """
+        super().__init__()
+
+        self.case_sensitive: bool = case_sensitive
+
+        self.choice_map: typing.Dict[typing.Hashable, typing.Hashable] = {}
+
+        for choice in choices:
+            if self.case_sensitive or not isinstance(choice, typing.Text):
+                self.choice_map[choice] = choice
+            else:
+                self.choice_map[CaseFold().apply(choice)] = choice
+
+    def __str__(self):
+        return '{type}({choices!r})'.format(
+            type=type(self).__name__,
+            choices=sorted(map(str, self.choice_map.values())),
+        )
+
+    def _apply(self, value):
+        comparison = (
+            value
+            if self.case_sensitive or not isinstance(value, typing.Text)
+            else CaseFold().apply(value)
+        )
+
+        try:
+            return self.choice_map[comparison]
+        except KeyError:
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_INVALID,
+                exc_info=True,
+
+                template_vars={
+                    'choices': sorted(map(str, self.choice_map.values())),
+                },
+            )
 
 
 class IpAddress(BaseFilter):
@@ -147,7 +216,7 @@ class IpAddress(BaseFilter):
         )
 
     @property
-    def ip_type(self) -> str:
+    def ip_type(self) -> typing.Text:
         """
         Returns the IP address versions that this Filter accepts.
         """
@@ -157,7 +226,7 @@ class IpAddress(BaseFilter):
         ]))
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: typing.Text = self._filter(value, Type(typing.Text))
 
         if self._has_errors:
             return None
@@ -177,9 +246,8 @@ class IpAddress(BaseFilter):
             except socket.error:
                 pass
             else:
-                # Convert the binary value back into a string
-                # representation so that the end result is
-                # normalized.
+                # Convert the binary value back into a string representation,
+                # so that the end result is normalized.
                 # https://en.wikipedia.org/wiki/IPv6_address#Presentation
                 return socket.inet_ntop(socket.AF_INET6, n)
 
@@ -198,9 +266,6 @@ class IpAddress(BaseFilter):
 class JsonDecode(BaseFilter):
     """
     Interprets the value as JSON.
-
-    JSON objects are converted to OrderedDict instances so that key
-    order is preserved.
     """
     CODE_INVALID = 'not_json'
 
@@ -214,14 +279,13 @@ class JsonDecode(BaseFilter):
         self.decoder = decoder
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: typing.Text = self._filter(value, Type(typing.Text))
 
         if self._has_errors:
             return None
 
         try:
-            # :see: http://stackoverflow.com/a/6921760
-            return self.decoder(value, object_pairs_hook=OrderedDict)
+            return self.decoder(value)
         except ValueError:
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
@@ -247,9 +311,9 @@ class MaxBytes(BaseFilter):
             self,
             max_bytes: int,
             truncate: bool = False,
-            prefix: str = '',
-            suffix: str = '',
-            encoding: str = 'utf-8',
+            prefix: typing.Text = '',
+            suffix: typing.Text = '',
+            encoding: typing.Text = 'utf-8',
     ) -> None:
         """
         :param max_bytes:
@@ -309,14 +373,14 @@ class MaxBytes(BaseFilter):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value = self._filter(
+        value: typing.Text = self._filter(
             value=value,
 
             filter_chain=(
                     Type((bytes, str,)) |
                     Unicode(encoding=self.encoding)
             ),
-        )  # type: str
+        )
 
         if self._has_errors:
             return None
@@ -384,36 +448,34 @@ class MaxBytes(BaseFilter):
         if target_bytes < 1:
             return b''
 
-        # Truncating the value is a bit tricky, as we have to be
-        # careful not to leave an unterminated multibyte sequence.
+        # Truncating the value is a bit tricky, as we have to be careful not to
+        # leave an unterminated multibyte sequence.
         if self.encoding.lower() in {'utf-8', 'utf8'}:
             #
-            # This code works a bit faster than the generic routine
-            # (see below) because we only have to inspect up to 4
-            # bytes from the end of the encoded value instead of
-            # having to repeatedly decode the entire string.
+            # This code works a bit faster than the generic routine (see below)
+            # because we only have to inspect up to 4 bytes from the end of the
+            # encoded value instead of having to repeatedly decode the entire
+            # string.
             #
             # But, it only works for UTF-8.
             #
             truncated = bytes_value[0:target_bytes]
 
-            # Walk backwards through the string until we hit certain
-            # sequences.
+            # Walk backwards through the string until we hit certain sequences.
             for i, o in enumerate(reversed(truncated), start=1):
-                # If the final byte is not part of a multibyte
-                # sequence, then we can stop right away; there is no
-                # need to remove anything.
+                # If the final byte is not part of a multibyte sequence, then
+                # we can stop right away; there is no need to remove anything.
                 if (i < 2) and (o < 0b10000000):
                     break
 
-                # If this byte is a leading byte (the first byte in a
-                # multibyte sequence), determine how many bytes we
-                # need to strip off the end of the string so that we
-                # can decode it back into a unicode if needed.
+                # If this byte is a leading byte (the first byte in a multibyte
+                # sequence), determine how many bytes we need to strip off the
+                # end of the string so that we can decode it back into a
+                # unicode if needed.
                 if o >= 0b11000000:
                     # Note:  Assuming max 4 bytes per sequence.
-                    # Should be good enough until extraterrestrial
-                    # languages are encountered.
+                    # Should be good enough until extraterrestrial languages
+                    # are encountered.
                     seq_length = (
                         4 if o >= 0b11110000 else
                         3 if o >= 0b11100000 else
@@ -421,8 +483,8 @@ class MaxBytes(BaseFilter):
                     )
 
                     # Now that we know how many bytes are in the final
-                    # sequence, check to see if it is complete, and
-                    # discard it if it is incomplete.
+                    # sequence, check to see if it is complete, and discard it
+                    # if it is incomplete.
                     if seq_length != i:
                         truncated = truncated[0:-i]
 
@@ -436,9 +498,9 @@ class MaxBytes(BaseFilter):
         else:
             trim = 0
             while True:
-                # Progressively chop bytes off the end of the string
-                # until we have something that can be successfully
-                # decoded using the specified encoding.
+                # Progressively chop bytes off the end of the string until we
+                # have something that can be successfully decoded using the
+                # specified encoding.
                 truncated = bytes_value[0:target_bytes - trim]
 
                 try:
@@ -448,10 +510,10 @@ class MaxBytes(BaseFilter):
                 else:
                     return bytes(truncated) + encoded_suffix
 
-                # We should never get here, but just in case, we need
-                # to ensure the loop eventually terminates (Python
-                # won't error if ``max_bytes - trim`` goes negative,
-                # since the slice operator accepts negative values).
+                # We should never get here, but just in case, we need to ensure
+                # the loop eventually terminates (Python won't error if
+                # ``max_bytes - trim`` goes negative, since the slice operator
+                # accepts negative values).
                 if trim >= target_bytes:
                     raise ValueError(
                         'Unable to truncate {bytes_value!r} to {target_bytes} '
@@ -467,14 +529,14 @@ class Regex(BaseFilter):
     """
     Matches a regular expression in the value.
 
-    IMPORTANT: This filter returns a LIST of all sequences in the
-    input value that matched the regex!
+    IMPORTANT: This filter returns a LIST of all sequences in the input value
+    that matched the regex!
 
-    IMPORTANT: This Filter uses the ``regex`` library, which behaves
-    slightly differently than Python's ``re`` library.
+    IMPORTANT: This Filter uses the ``regex`` library, which behaves slightly
+    differently than Python's ``re`` library.
 
-    If you've never used ``regex`` before, try it; you'll never want to
-    go back!
+    If you've never used ``regex`` before, try it; you'll never want to go
+    back!
 
     References:
       - https://pypi.python.org/pypi/regex
@@ -491,14 +553,15 @@ class Regex(BaseFilter):
         regex.regex.Pattern,
     )
 
-    # noinspection PyProtectedMember
-    def __init__(self, pattern: typing.Union[str, typing.Pattern]) -> None:
+    def __init__(self,
+            pattern: typing.Union[typing.Text, typing.Pattern],
+    ) -> None:
         """
         :param pattern:
             String pattern, or pre-compiled regex.
 
-            IMPORTANT:  If you specify your own compiled regex, be sure to
-            add the ``UNICODE`` flag for Unicode support!
+            IMPORTANT:  If you specify your own compiled regex, be sure to add
+            the ``UNICODE`` flag for Unicode support!
         """
         super().__init__()
 
@@ -515,7 +578,7 @@ class Regex(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: typing.Text = self._filter(value, Type(typing.Text))
 
         if self._has_errors:
             return None
@@ -542,29 +605,31 @@ class Split(BaseFilter):
     """
     Splits an incoming string into parts.
 
-    The result is either a list or an OrderedDict, depending on whether
-    you specify keys to map to the result.
+    The result is either a list or a dict, depending on whether you
+    specify keys to map to the result.
     """
 
     # noinspection PyProtectedMember
     def __init__(
             self,
-            pattern: typing.Union[str, typing.Pattern],
-            keys: typing.Optional[typing.Sequence[str]] = None,
+            pattern: typing.Union[typing.Text, typing.Pattern],
+            keys: typing.Optional[typing.Sequence[typing.Text]] = None,
     ) -> None:
         """
         :param pattern:
             Regex used to split incoming string values.
 
-            IMPORTANT:  If you specify your own compiled regex, be sure
-            to add the ``UNICODE`` flag for Unicode support!
+            IMPORTANT:  If you specify your own compiled regex, be sure to add
+            the ``UNICODE`` flag for Unicode support!
 
         :param keys:
-            If set, the resulting list will be converted into an
-            OrderedDict, using the specified keys.
+            If set, the resulting list will be converted into a dict, using the
+            specified keys.
 
-            IMPORTANT:  If ``keys`` is set, the split value's length
-            must be less than or equal to ``len(keys)``.
+            .. important::
+
+               If ``keys`` is set, the split value's length must be less than
+               or equal to ``len(keys)``.
         """
         super().__init__()
 
@@ -584,7 +649,7 @@ class Split(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: typing.Text = self._filter(value, Type(typing.Text))
 
         if self._has_errors:
             return None
@@ -592,34 +657,33 @@ class Split(BaseFilter):
         split = self.regex.split(value)
 
         if self.keys:
-            # The split value can have at most as many items as
-            # ``self.keys``.
+            # The split value can have at most as many items as ``self.keys``.
             split = self._filter(split, MaxLength(len(self.keys)))
 
             if self._has_errors:
                 return None
 
-            return OrderedDict(zip_longest(self.keys, split))
+            return dict(zip_longest(self.keys, split))
         else:
             return split
 
 
 class Strip(BaseFilter):
     """
-    Strips characters (whitespace and non-printables by default) from
-    the end(s) of a string.
+    Strips characters (whitespace and non-printables by default) from the
+    end(s) of a string.
 
-    IMPORTANT:  This Filter uses the ``regex`` library, which behaves
-    slightly differently than Python's ``re`` library.
+    IMPORTANT:  This Filter uses the ``regex`` library, which behaves slightly
+    differently than Python's ``re`` library.
 
-    If you've never used ``regex`` before, try it; you'll never want to
-    go back!
+    If you've never used ``regex`` before, try it; you'll never want to go
+    back!
     """
 
     def __init__(
             self,
-            leading: str = r'[\p{C}\s]+',
-            trailing: str = r'[\p{C}\s]+',
+            leading: typing.Text = r'[\p{C}\s]+',
+            trailing: typing.Text = r'[\p{C}\s]+',
     ) -> None:
         """
         :param leading:
@@ -654,7 +718,7 @@ class Strip(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: typing.Text = self._filter(value, Type(typing.Text))
 
         if self._has_errors:
             return None
@@ -672,8 +736,8 @@ class Unicode(BaseFilter):
     """
     Converts a value into a unicode string.
 
-    Note:  By default, additional normalization is applied to the
-    resulting value.  See the initializer docstring for more info.
+    Note:  By default, additional normalization is applied to the resulting
+    value.  See the initialiser docstring for more info.
 
     References:
       - https://docs.python.org/2/howto/unicode.html
@@ -687,7 +751,7 @@ class Unicode(BaseFilter):
 
     def __init__(
             self,
-            encoding: str = 'utf-8',
+            encoding: typing.Text = 'utf-8',
             normalize: bool = True,
     ) -> None:
         """
@@ -707,12 +771,12 @@ class Unicode(BaseFilter):
 
         if self.normalize:
             #
-            # Compile the regex that we will use to remove non-
-            # printables from the resulting unicode.
+            # Compile the regex that we will use to remove non- printables from
+            # the resulting unicode.
             # http://www.regular-expressions.info/unicode.html#category
             #
-            # Note: using a double negative so that we can exclude
-            # newlines, which are technically considered control chars.
+            # Note: using a double negative so that we can exclude newlines,
+            # which are technically considered control chars.
             # http://stackoverflow.com/a/3469155
             #
             self.npr = regex.compile(r'[^\P{C}\s]+', regex.UNICODE)
@@ -725,7 +789,7 @@ class Unicode(BaseFilter):
 
     def _apply(self, value):
         try:
-            if isinstance(value, str):
+            if isinstance(value, typing.Text):
                 decoded = value
 
             elif isinstance(value, bytes):
@@ -789,7 +853,7 @@ class ByteString(Unicode):
 
     def __init__(
             self,
-            encoding: str = 'utf-8',
+            encoding: typing.Text = 'utf-8',
             normalize: bool = False,
     ) -> None:
         """
@@ -812,35 +876,35 @@ class ByteString(Unicode):
 
     # noinspection SpellCheckingInspection
     def _apply(self, value):
-        decoded = super()._apply(value)  # type: str
+        decoded: typing.Text = super()._apply(value)
 
         #
-        # No need to catch UnicodeEncodeErrors here; UTF-8 can handle
-        # any unicode value.
+        # No need to catch UnicodeEncodeErrors here; UTF-8 can handle any
+        # unicode value.
         #
-        # Technically, we could get this error if we encounter a code
-        # point beyond U+10FFFF (the highest valid code point in the
-        # Unicode standard).
+        # Technically, we could get this error if we encounter a code point
+        # beyond U+10FFFF (the highest valid code point in the Unicode
+        # standard).
         #
-        # However, it's not possible to create a `unicode` object with
-        # an invalid code point, so we wouldn't even be able to get
-        # this far if the incoming value contained a character that
-        # can't be represented using UTF-8.
+        # However, it's not possible to create a `unicode` object with an
+        # invalid code point, so we wouldn't even be able to get this far if
+        # the incoming value contained a character that can't be represented
+        # using UTF-8.
         #
-        # Note that in some versions of Python, it is possible (albeit
-        # really difficult) to trick Python into creating unicode
-        # objects with invalid code points, but it generally requires
-        # using specific codecs that aren't UTF-8.
+        # Note that in some (very old and no-longer-supported) versions of
+        # Python, it is possible (albeit really difficult) to trick Python into
+        # creating unicode objects with invalid code points, but it generally
+        # requires using specific codecs that aren't UTF-8.
         #
-        # Example of exploit and release notes from the Python release
-        # (2.7.6) that fixes the issue:
+        # Example of exploit and release notes from the Python release (2.7.6)
+        # that fixes the issue:
         #
         #   - https://gist.github.com/rspeer/7559750
         #   - https://hg.python.org/cpython/raw-file/99d03261c1ba/Misc/NEWS
         #
 
-        # Normally we return ``None`` if we get any errors, but in this
-        # case, we'll let the superclass method decide.
+        # Normally we return ``None`` if we get any errors, but in this case,
+        # we'll let the superclass method decide.
         return decoded if self._has_errors else decoded.encode('utf-8')
 
 
@@ -861,8 +925,8 @@ class Uuid(BaseFilter):
     def __init__(self, version: typing.Optional[int] = None) -> None:
         """
         :type version:
-            If specified, requires the resulting UUID to match the
-            specified version.
+            If specified, requires the resulting UUID to match the specified
+            version.
 
         References:
           - https://en.wikipedia.org/wiki/Uuid#RFC_4122_Variant
@@ -878,8 +942,10 @@ class Uuid(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value,
-            Type((str, UUID,)))  # type: typing.Union[str, UUID]
+        value: typing.Union[typing.Text, UUID] = self._filter(
+            value,
+            Type((typing.Text, UUID)),
+        )
 
         if self._has_errors:
             return None

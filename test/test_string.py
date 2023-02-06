@@ -1,5 +1,4 @@
 import re
-from collections import OrderedDict
 from decimal import Decimal
 from uuid import UUID
 from xml.etree.ElementTree import Element
@@ -7,6 +6,7 @@ from xml.etree.ElementTree import Element
 import regex
 
 import filters as f
+import filters.string
 from filters.test import BaseFilterTestCase
 from test.test_simple import Bytesy, Unicody
 
@@ -388,6 +388,64 @@ class CaseFoldTestCase(BaseFilterTestCase):
         )
 
 
+class ChoiceTestCase(BaseFilterTestCase):
+    filter_type = filters.string.Choice
+
+    def test_pass_none(self):
+        """
+        ``None`` always passes this Filter.
+
+        Use ``Required | Choice`` if you want to reject null values.
+        """
+        self.assertFilterPasses(
+            # Even if you specify no valid choices, `None` still
+            # passes.
+            self._filter(None, choices=()),
+        )
+
+    def test_pass_valid(self):
+        """
+        The incoming value matches one of the choices.
+        """
+        self.assertFilterPasses(
+            self._filter('Curly', choices=('Moe', 'Larry', 'Curly')),
+        )
+
+    def test_fail_invalid(self):
+        """
+        The incoming value does not match any of the choices.
+        """
+        self.assertFilterErrors(
+            self._filter('Shemp', choices=('Moe', 'Larry', 'Curly')),
+            [filters.string.Choice.CODE_INVALID],
+        )
+
+    def test_pass_case_insensitive_valid(self):
+        """
+        The incoming value matches a choice using case-insensitive comparison.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'mOE',
+                choices=('Moe', 'Larry', 'Curly'),
+                case_sensitive=False,
+            ),
+
+            # The ``choices`` passed to the filter initialiser define the
+            # canonical choices.
+            'Moe',
+        )
+
+    def test_fail_case_insensitive_type_mismatch(self):
+        """
+        The incoming value has a different type, so it does not match.
+        """
+        self.assertFilterErrors(
+            self._filter(42, choices=(('42',)), case_sensitive=False),
+            [f.Choice.CODE_INVALID],
+        )
+
+
 class IpAddressTestCase(BaseFilterTestCase):
     filter_type = f.IpAddress
 
@@ -594,9 +652,6 @@ class JsonDecodeTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             '{"foo": "bar", "baz": "luhrmann"}',
-
-            # Technically, the return value is an OrderedDict, but to
-            # keep things simple, we will compare them as dicts.
             {'foo': 'bar', 'baz': 'luhrmann'},
         )
 
@@ -1166,33 +1221,23 @@ class SplitTestCase(BaseFilterTestCase):
     def test_pass_keys(self):
         """
         If desired, you can map a collection of keys onto the resulting
-        list, which creates an OrderedDict.
+        list, which creates a dict.
 
         This is particularly cool, as it lets you chain a Split with a
         FilterMapper.
         """
-        filtered = self._filter(
-            'foo:bar:baz',
-            pattern=':',
-            keys=('a', 'b', 'c',),
-        )
+        self.assertFilterPasses(
+            self._filter(
+                'foo:bar:baz',
+                pattern=':',
+                keys=('a', 'b', 'c',),
+            ),
 
-        self.assertFilterPasses(filtered, self.skip_value_check)
-
-        cleaned = filtered.cleaned_data
-        self.assertIsInstance(cleaned, OrderedDict)
-
-        self.assertDictEqual(cleaned, {
-            'a': 'foo',
-            'b': 'bar',
-            'c': 'baz',
-        })
-
-        # Because the result is an OrderedDict, the order is preserved
-        # as well.
-        self.assertListEqual(
-            list(cleaned.values()),
-            ['foo', 'bar', 'baz'],
+            {
+                'a': 'foo',
+                'b': 'bar',
+                'c': 'baz',
+            },
         )
 
     def test_pass_precompiled_regex(self):
@@ -1629,7 +1674,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
-          - http://stackoverflow.com/q/16467479
+          - https://stackoverflow.com/q/16467479
         """
         #   U+0065 LATIN SMALL LETTER E
         # + U+0301 COMBINING ACUTE ACCENT
