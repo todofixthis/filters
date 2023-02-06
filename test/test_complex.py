@@ -1,7 +1,6 @@
 from collections import namedtuple
 
 import filters as f
-import filters.string
 from filters.test import BaseFilterTestCase
 
 
@@ -31,15 +30,13 @@ class FilterChainTestCase(BaseFilterTestCase):
         """
         You can also chain FilterChains together.
         """
-        fc1 = f.NotEmpty | filters.string.Choice(
-            choices=('Lucky', 'Dusty', 'Ned'))
+        fc1 = f.NotEmpty | f.Choice(choices=('Lucky', 'Dusty', 'Ned'))
         fc2 = f.NotEmpty | f.MinLength(4)
 
         self.filter_type = lambda: fc1 | fc2
 
         self.assertFilterPasses('Lucky')
-        self.assertFilterErrors('El Guapo', [
-            filters.string.Choice.CODE_INVALID])
+        self.assertFilterErrors('El Guapo', [f.Choice.CODE_INVALID])
         self.assertFilterErrors('Ned', [f.MinLength.CODE_TOO_SHORT])
 
     def test_stop_after_invalid_value(self):
@@ -897,10 +894,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
                     {
                         'type':
                             f.Required
-                            | filters.string.Choice(choices={
-                                'image/jpeg',
-                                'image/png',
-                            }),
+                            | f.Choice(choices={'image/jpeg', 'image/png'}),
 
                         'data': f.Required | f.Base64Decode,
                     },
@@ -965,7 +959,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 # processing error codes.
                 'id': [f.Decimal.CODE_NON_FINITE],
                 'subject': [f.FilterMapper.CODE_MISSING_KEY],
-                'attachment.type': [filters.string.Choice.CODE_INVALID],
+                'attachment.type': [f.Choice.CODE_INVALID],
                 'attachment.data': [f.Type.CODE_WRONG_TYPE],
             },
 
@@ -1034,7 +1028,7 @@ class NamedTupleTestCase(BaseFilterTestCase):
     def test_success_iterable_compat(self):
         """
         Incoming value is an iterable, formatted for compatibility with
-        Python < 3.6 (even though technically we don't support it any more;
+        Python < 3.6 (even though technically we don't support it anymore;
         don't tell anyone).
         """
         value = [('b', 192), ('g', 128), ('r', 64)]
@@ -1223,5 +1217,5 @@ class FilterSwitchTestCase(BaseFilterTestCase):
                 },
             ),
 
-            [filters.string.Choice.CODE_INVALID],
+            [f.Choice.CODE_INVALID],
         )
