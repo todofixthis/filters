@@ -622,7 +622,7 @@ class Pick(BaseFilter):
 
         NotEmpty().apply(keys)
 
-        self.keys = set(keys)
+        self.keys = keys
         self.allow_missing_keys = (
             set(allow_missing_keys)
             if isinstance(allow_missing_keys, typing.Iterable)

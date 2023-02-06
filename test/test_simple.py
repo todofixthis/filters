@@ -1186,6 +1186,24 @@ class PickTestCase(BaseFilterTestCase):
             {'foo': 'bar'},
         )
 
+    def test_pass_mapping_ordered_keys(self):
+        """
+        When keys are provided in an ordered collection, the order of keys
+        determines the order of the items in the result.
+        """
+        runner = self.assertFilterPasses(
+            self._filter(
+                {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
+                keys=('actor', 'name', 'job'),
+            ),
+            {'actor': 'Harrison', 'name': 'Indy', 'job': 'archaeologist'},
+        )
+
+        self.assertListEqual(
+            list(runner.cleaned_data.keys()),
+            ['actor', 'name', 'job'],
+        )
+
     def test_pass_mapping_missing_values(self):
         """
         Any keys not present in the incoming value are set to ``None``.
@@ -1193,7 +1211,7 @@ class PickTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             self._filter(
                 {'foo': 'bar', 'baz': 'luhrmann'},
-                keys={'foo', 'foobie'},
+                keys=['foo', 'foobie'],
             ),
             {'foo': 'bar', 'foobie': None},
         )
@@ -1234,7 +1252,7 @@ class PickTestCase(BaseFilterTestCase):
         self.assertFilterErrors(
             self._filter(
                 {'foo': 'bar', 'baz': 'luhrmann'},
-                keys={'foo', 'foobie', 'foobar'},
+                keys=['foo', 'foobie', 'foobar'],
                 allow_missing_keys=False,
             ),
             {
@@ -1252,7 +1270,7 @@ class PickTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             self._filter(
                 {'foo': 'bar', 'baz': 'luhrmann'},
-                keys={'foo', 'foobie', 'foobar'},
+                keys=['foo', 'foobie', 'foobar'],
                 allow_missing_keys={'foobie', 'foobar'},
             ),
             {'foo': 'bar', 'foobie': None, 'foobar': None},
@@ -1263,8 +1281,21 @@ class PickTestCase(BaseFilterTestCase):
         Using the filter to pick specific indices from a sequence.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz'], keys={0, 2}),
+            self._filter(['foo', 'bar', 'baz'], keys=[0, 2]),
             ['foo', 'baz'],
+        )
+
+    def test_pass_sequence_ordered_keys(self):
+        """
+        When keys are provided in an ordered collection, the order of keys
+        determines the order of the items in the result.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                ['Indiana', 'Marion', 'Marcus'],
+                keys=[1, 0, 2],
+            ),
+            ['Marion', 'Indiana', 'Marcus'],
         )
 
     def test_pass_sequence_missing_values(self):

@@ -1075,6 +1075,22 @@ the rest:
    assert runner.is_valid() is True
    assert runner.cleaned_data == [42, 86]
 
+.. important::
+
+   The order of the keys you provide will determine the order that they appear
+   in the resulting value.  This is particularly important for sequences:
+
+   .. code-block:: python
+
+      import filters as f
+
+      runner = f.FilterRunner(
+          f.Pick([1, 0, 2]),
+          ['Indiana', 'Marion', 'Marcus'],
+      )
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == ['Marion', 'Indiana', 'Marcus']
+
 By default, any picked keys that aren't present in the incoming value are
 set to ``None``:
 
