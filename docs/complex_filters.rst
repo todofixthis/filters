@@ -3,6 +3,8 @@ Complex Filters
 Complex filters are filters that work in tandem with other filters, allowing you
 to create complex data schemas and transformation pipelines.
 
+.. _filter-mapper:
+
 FilterMapper
 ------------
 Applies filters to an incoming mapping (e.g., ``dict``).
