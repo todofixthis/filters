@@ -5,7 +5,7 @@ name = "phx-filters"
 version = "3.2.0"
 description = "Validation and data pipelines made easy!"
 readme = "README.rst"
-requires-python = ">= 3"
+requires-python = ">= 3.6"
 license = { file = "LICENCE.txt" }
 authors = [
     { email = "Phoenix Zerin <phx@phx.nz>" }

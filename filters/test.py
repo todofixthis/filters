@@ -15,11 +15,11 @@ __all__ = [
 
 def sorted_dict(value: typing.Mapping) -> typing.Any:
     """
-    Sorts a dict's keys to avoid leaking information about the backend's
-    handling of unordered dicts.
+    Sorts a dict's keys, to make it easier to compare filter messages from
+    test failures.
     """
     if isinstance(value, typing.Mapping):
-        # ``dict`` preserves key insertion order since Python 3.6.
+        # Note: ``dict`` preserves key insertion order since Python 3.6.
         # https://docs.python.org/3/library/stdtypes.html#dict
         return dict(
             (key, sorted_dict(value[key]))
