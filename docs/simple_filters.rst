@@ -55,7 +55,7 @@ Automatically handles URL-safe variant and incorrect/missing padding.
    This filter operates on (and returns) byte strings, not unicode strings!
 
    If the incoming value could be a unicode string, chain a
-   :py:class:`filters.ByteString` in front of :py:class:`filters.Base64Decode`:
+   :ref:`byte-string` in front of :py:class:`filters.Base64Decode`:
 
    .. code-block:: python
 
@@ -69,7 +69,7 @@ Automatically handles URL-safe variant and incorrect/missing padding.
       assert runner.cleaned_data == b'Hello, world!'
 
    If you want the resulting value to be a unicode string as well, add
-   :py:class:`filters.Unicode` to the end of the chain:
+   :ref:`unicode` to the end of the chain:
 
    .. code-block:: python
 
@@ -127,6 +127,8 @@ encoding, you can provide it to the filter's initialiser:
        73, 241, 116, 235, 114, 110, 226, 116, 105, 244,
        110, 224, 108, 105, 122, 230, 116, 105, 248, 110,
    ])
+
+.. _byte-string:
 
 ByteString
 ----------
@@ -188,6 +190,8 @@ Calls an arbitrary function on the incoming value.
       assert runner.is_valid() is True
       assert runner.cleaned_data is False
 
+.. _case-fold:
+
 CaseFold
 --------
 Applies
@@ -226,9 +230,11 @@ initialiser.
 
 .. note::
 
-   The comparison is case-sensitive; chain this filter with
-   :py:class:`filters.CaseFold` for case-insensitive comparison (but note that
-   this will modify the resulting value).
+   The comparison is case-sensitive; chain this filter with :ref:`case-fold` for
+   case-insensitive comparison (but note that this will modify the resulting
+   value).
+
+.. _date:
 
 Date
 ----
@@ -308,7 +314,7 @@ configured via the filter initialiser).
 
    The resulting datetime **always** has ``tzinfo=utc``.
 
-   Like :py:class:`filters.Date`, :py:class:`filters.Datetime` assumes that
+   Like :ref:`date`, :py:class:`filters.Datetime` assumes that
    incoming naive timestamps are UTC; you can change this by providing a
    ``timezone`` argument to the filter initializer.  The filter will use this
    value when converting naive timestamps to UTC.
@@ -379,7 +385,7 @@ of decimal places.
 .. tip::
 
    If you want to control how the rounding is applied (e.g., always round
-   down), chain this filter with :py:class:`filters.Round`:
+   down), chain this filter with :ref:`round`:
 
    .. code-block:: python
 
@@ -488,6 +494,70 @@ For IPv6 addresses, the result is always converted to its `short form`_.
    runner = f.FilterRunner(filter_, '1027.0.0.1')
    assert runner.is_valid() is False
 
+.. _item:
+
+Item
+----
+Extracts a single item from a mapping (e.g., ``dict``) or sequence (e.g.,
+``list``).
+
+By default, the filter extracts the first item from the incoming value:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Extract the value of the first item in a mapping:
+   runner = f.FilterRunner(f.Item, {'name': 'Indy', 'job': 'archaeologist'})
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Indy'
+
+   # Extract the item at the 0th index in a sequence:
+   runner = f.FilterRunner(f.Item, ['Indiana', 'Marcus', 'Marion'])
+   assert runner.cleaned_data == 'Indiana'
+
+You can also provide the key/index that you want extracted to the filter
+initialiser:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Extract the 'job' value from a mapping:
+   runner = f.FilterRunner(
+       f.Item('job'),
+       {'name': 'Indy', 'job': 'archaeologist'},
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'archaeologist'
+
+   # Extract the item at the 2nd index in a sequence:
+   runner = f.FilterRunner(f.Item(2), ['Indiana', 'Marcus', 'Marion'])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Marion'
+
+If the incoming value is empty, or if it does not contain the required key, it
+is invalid:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.Item, {})
+   assert runner.is_valid() is False
+
+   runner = f.FilterRunner(
+       f.Item('profession'),
+       {'name': 'Indy', 'job': 'archaeologist'},
+   )
+   assert runner.is_valid() is False
+
+   runner = f.FilterRunner(f.Item, [])
+   assert runner.is_valid() is False
+
+   runner = f.FilterRunner(f.Item(42), ['Indiana', 'Marcus', 'Marion'])
+   assert runner.is_valid() is False
+
 JsonDecode
 ----------
 Decodes a string that is JSON-encoded.
@@ -564,8 +634,8 @@ length (i.e., whose type implements ``typing.Sized``):
 
    :py:class:`filters.Length` requires the incoming value to have *exactly*
    the specified length; if you want to check that the incoming value has a
-   minimum or maximum length, use :py:class:`filters.MinLength` or
-   :py:class:`filters.MaxLength`, respectively.
+   minimum or maximum length, use :ref:`min-length` or :ref:`max-length`,
+   respectively.
 
 Max
 ---
@@ -783,60 +853,6 @@ the min value, set ``exclusive=True`` in the filter's initialiser:
    runner = f.FilterRunner(f.Min(5, exclusive=True), 5)
    assert runner.is_valid() is False
 
-:py:class:`filters.Round`
-Rounds the incoming value to the nearest integer or fraction specified in
-the filter initialiser.
-
-The result is always a ``decimal.Decimal`` instance, to avoid issues with
-`floating-point precision`_.
-
-.. code-block:: python
-
-   import filters as f
-   from decimal import Decimal
-
-   runner = f.FilterRunner(f.Round('5'), 42)
-   assert runner.is_valid() is True
-   assert isinstance(runner.cleaned_data, Decimal)
-   assert runner.cleaned_data == Decimal('40')
-
-   runner = f.FilterRunner(f.Round('5'), 43)
-   assert runner.is_valid() is True
-   assert isinstance(runner.cleaned_data, Decimal)
-   assert runner.cleaned_data == Decimal('45')
-
-.. important::
-
-   When specifying a decimal value to round to, use a string value, in order
-   to prevent aforementioned issues with `floating-point precision`_.
-
-   .. code-block:: python
-
-      import filters as f
-
-      # NO: Potentially unsafe; don't do this!
-      runner = f.FilterRunner(f.Round(0.001), '3.1415926')
-
-      # YES: Do this instead:
-      runner = f.FilterRunner(f.Round('0.001'), '3.1415926')
-
-You can also control the rounding behaviour by specifying a `rounding mode`_:
-
-.. code-block:: python
-
-   import filters as f
-   from decimal import ROUND_CEILING, ROUND_FLOOR
-
-   # Always round up:
-   runner = f.FilterRunner(f.Round('0.25', ROUND_CEILING), '0.26')
-   assert runner.is_valid() is True
-   assert runner.cleaned_data == Decimal('0.5')
-
-   # Always round down:
-   runner = f.FilterRunner(f.Round('0.25', ROUND_FLOOR), '0.49')
-   assert runner.is_valid() is True
-   assert runner.cleaned_data == Decimal('0.25')
-
 .. _min-length:
 
 MinLength
@@ -1002,7 +1018,7 @@ length (i.e., whose type implements ``typing.Sized``):
 .. important::
 
    ``None`` always passes this filter (see :ref:`none-is-special` for more
-   information).  Use :py:class:`filters.Required` to reject ``None``:
+   information).  Use :ref:`required` to reject ``None``:
 
    .. code-block:: python
 
@@ -1211,6 +1227,7 @@ optional ``allow_missing_keys`` argument to the filter initialiser:
    assert runner.is_valid() is True
    assert runner.cleaned_data == ['Indiana', 'Marcus', None]
 
+.. _regex:
 
 Regex
 -----
@@ -1235,8 +1252,8 @@ This filter returns a list of matches.
 
 .. tip::
 
-   You can chain :py:class:`filters.Regex` with
-   :py:class:`filters.FilterRepeater` to apply filters to the matched values:
+   You can chain :py:class:`filters.Regex` with :ref:`filter-repeater` to apply
+   filters to the matched values:
 
    .. code-block:: python
 
@@ -1248,6 +1265,28 @@ This filter returns a list of matches.
       )
       assert runner.is_valid() is True
       assert runner.cleaned_data == [42, 86, 99]
+
+   If you know there will only be a single match from the regular expression,
+   you can use :ref:`item` instead:
+
+   .. code-block:: python
+
+      import filters as f
+
+      # Adapted from https://stackoverflow.com/a/6640851
+      uuid_regex =\
+          r'^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$'
+
+      # ``f.Regex`` returns an array, so we have to use ``f.Item`` to extract
+      # the UUID value before we can pass it along to ``f.Uuid``.
+      runner = f.FilterRunner(f.Regex(uuid_regex) | f.Item | f.Uuid)
+
+      runner.apply('3466c56a-2ebc-449d-97d2-9b119721ff0f')
+      assert runner.is_valid() is True
+      assert runner.cleaned_data ==\
+          UUID('3466c56a-2ebc-449d-97d2-9b119721ff0f')
+
+.. _required:
 
 Required
 --------
@@ -1274,6 +1313,63 @@ This filter is the only exception to the "``None`` always passes" rule (see
    runner = f.FilterRunner(f.NotEmpty, None)
    assert runner.is_valid() is True
    assert runner.cleaned_data is None
+
+.. _round:
+
+Round
+-----
+Rounds the incoming value to the nearest integer or fraction specified in
+the filter initialiser.
+
+The result is always a ``decimal.Decimal`` instance, to avoid issues with
+`floating-point precision`_.
+
+.. code-block:: python
+
+   import filters as f
+   from decimal import Decimal
+
+   runner = f.FilterRunner(f.Round('5'), 42)
+   assert runner.is_valid() is True
+   assert isinstance(runner.cleaned_data, Decimal)
+   assert runner.cleaned_data == Decimal('40')
+
+   runner = f.FilterRunner(f.Round('5'), 43)
+   assert runner.is_valid() is True
+   assert isinstance(runner.cleaned_data, Decimal)
+   assert runner.cleaned_data == Decimal('45')
+
+.. important::
+
+   When specifying a decimal value to round to, use a string value, in order
+   to prevent aforementioned issues with `floating-point precision`_.
+
+   .. code-block:: python
+
+      import filters as f
+
+      # ❌ Potentially unsafe; don't do this!
+      runner = f.FilterRunner(f.Round(0.001), '3.1415926')
+
+      # ✅ Do this instead:
+      runner = f.FilterRunner(f.Round('0.001'), '3.1415926')
+
+You can also control the rounding behaviour by specifying a `rounding mode`_:
+
+.. code-block:: python
+
+   import filters as f
+   from decimal import ROUND_CEILING, ROUND_FLOOR
+
+   # Always round up:
+   runner = f.FilterRunner(f.Round('0.25', ROUND_CEILING), '0.26')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == Decimal('0.5')
+
+   # Always round down:
+   runner = f.FilterRunner(f.Round('0.25', ROUND_FLOOR), '0.49')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == Decimal('0.25')
 
 Split
 -----
@@ -1400,6 +1496,8 @@ initialiser to require an exact type match:
       runner = f.FilterRunner(f.Array, 'foo, bar, baz')
       assert runner.is_valid() is False
 
+.. _unicode:
+
 Unicode
 -------
 Converts a value to a unicode string (``str`` type).
@@ -1490,7 +1588,7 @@ version in the filter initialiser:
 
    This flexibility is baked into `Python's UUID class`_; if for some reason you
    do not want to allow alternative formats, chain the filter with
-   :py:class:`filters.Regex`:
+   :ref:`regex`:
 
    .. code-block:: python
 
@@ -1501,18 +1599,16 @@ version in the filter initialiser:
       uuid_regex =\
           r'^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$'
 
-      # Regex filter returns an array, so we have to use FilterRepeater.
-      filter_ = f.Regex(uuid_regex) | f.FilterRepeater(f.Uuid)
+      # ``f.Regex`` returns an array, so we have to use ``f.Item`` to extract
+      # the UUID value before we can pass it along to ``f.Uuid``.
+      runner = f.FilterRunner(f.Regex(uuid_regex) | f.Item | f.Uuid)
 
-      runner = f.FilterRunner(filter_, '3466c56a-2ebc-449d-97d2-9b119721ff0f')
+      runner.apply('3466c56a-2ebc-449d-97d2-9b119721ff0f')
       assert runner.is_valid() is True
       assert runner.cleaned_data ==\
-          [UUID('3466c56a-2ebc-449d-97d2-9b119721ff0f')]
+          UUID('3466c56a-2ebc-449d-97d2-9b119721ff0f')
 
-      runner = f.FilterRunner(
-          filter_,
-          'urn:uuid:3466c56a-2ebc-449d-97d2-9b119721ff0f'
-      )
+      runner.apply('urn:uuid:3466c56a-2ebc-449d-97d2-9b119721ff0f')
       assert runner.is_valid() is False
 
 .. _floating-point precision: https://en.wikipedia.org/wiki/Floating_point#Accuracy_problems
