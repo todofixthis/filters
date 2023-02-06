@@ -1466,5 +1466,6 @@ version in the filter initialiser:
 .. _NFC form: https://en.wikipedia.org/wiki/Unicode_equivalence
 .. _Python's UUID class: https://docs.python.org/3/library/uuid.html#uuid.UUID
 .. _rounding mode: https://docs.python.org/3/library/decimal.html#rounding-modes
+.. _sets are unordered collections: https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset
 .. _short form: https://en.wikipedia.org/wiki/IPv6_address#Representation
 .. _unit tests: https://github.com/todofixthis/filters/tree/master/test
