@@ -1,9 +1,8 @@
 import typing
-from collections import OrderedDict
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
-from filters.simple import Choice, Length
-from filters.string import Unicode
+from filters.simple import Length
+from filters.string import Choice, Unicode
 
 __all__ = [
     'FilterMapper',
@@ -20,7 +19,7 @@ class FilterRepeater(BaseFilter):
     You can apply a FilterRepeater to a dict (or other Mapping).  The
     filters will be applied to the Mapping's values.
 
-    Note:  The resulting value will be coerced to a list or OrderedDict
+    Note:  The resulting value will be coerced to a list or dict
     (depending on the input value).
     """
     CODE_EXTRA_KEY = 'unexpected'
@@ -29,7 +28,7 @@ class FilterRepeater(BaseFilter):
         CODE_EXTRA_KEY: 'Unexpected key "{key}".',
     }
 
-    mapping_result_type = OrderedDict
+    mapping_result_type = dict
     sequence_result_type = list
 
     def __init__(
@@ -175,21 +174,20 @@ class FilterRepeater(BaseFilter):
 
 class FilterMapper(BaseFilter):
     """
-    Given a dict of filters, applies each filter to the corresponding
-    value in incoming mappings.
+    Given a dict of filters, applies each filter to the corresponding value in
+    incoming mappings.
 
-    The resulting value is an OrderedDict.  The order of keys in the
-    ``filter_map`` passed to the initializer determines the order of
-    keys in the filtered value.
+    The resulting value is a dict.  The order of keys in the ``filter_map``
+    passed to the initializer determines the order of keys in the filtered
+    value.
 
-    Note: The order of extra keys is undefined, but they will always be
-    last.
+    Note: The order of extra keys is undefined, but they will always be last.
     """
     CODE_EXTRA_KEY = 'unexpected'
     CODE_MISSING_KEY = 'missing'
 
     templates = {
-        CODE_EXTRA_KEY:   'Unexpected key "{actual_key}".',
+        CODE_EXTRA_KEY: 'Unexpected key "{actual_key}".',
         CODE_MISSING_KEY: '{key} is required.',
     }
 
@@ -202,33 +200,30 @@ class FilterMapper(BaseFilter):
     ) -> None:
         """
         :param filter_map:
-            This mapping also determines the key order of the resulting
-            OrderedDict.  If necessary, make sure that your code
-            provides ``filter_map`` as an OrderedDict.
+            Maps each filter chain to the corresponding key that it will be
+            applied to.
 
         :param allow_missing_keys:
             Determines how values with missing keys (according to
             ``filter_map``) get handled:
 
-            - True: The missing values are set to ``None`` and then
-              filtered as normal.
+            - True: The missing values are set to ``None`` and then filtered as
+              normal.
             - False: Missing keys are treated as invalid values.
-            - <Iterable>: Only the specified keys are allowed to be
-              omitted.
+            - <Iterable>: Only the specified keys are allowed to be omitted.
 
         :param allow_extra_keys:
             Determines how values with extra keys (according to
             ``filter_map``) get handled:
 
-            - True: The extra values are passed through to the filtered
-              value.
-            - False: Extra values are treated as invalid values and
-              omitted from the filtered value.
+            - True: The extra values are passed through to the filtered value.
+            - False: Extra values are treated as invalid values and omitted
+              from the filtered value.
             - <Iterable>: Only the specified extra keys are allowed.
         """
         super().__init__()
 
-        self._filters = OrderedDict()
+        self._filters = {}
 
         self.allow_missing_keys = (
             set(allow_missing_keys)
@@ -257,15 +252,6 @@ class FilterMapper(BaseFilter):
                     key=key,
                 )
 
-        # If the filter map is an OrderedDict, we should try to
-        # preserve order when applying the filter.  Otherwise use a
-        # plain ol' dict to improve readability.
-        self.result_type = (
-            OrderedDict
-            if isinstance(filter_map, OrderedDict)
-            else dict
-        )
-
     def __str__(self):
         return '{type}({filters})'.format(
             type=type(self).__name__,
@@ -276,15 +262,12 @@ class FilterMapper(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(
-            value,
-            Type(typing.Mapping),
-        )  # type: typing.Mapping
+        value: typing.Mapping = self._filter(value, Type(typing.Mapping))
 
         if self._has_errors:
             return None
 
-        return self.result_type(self.iter(value))
+        return dict(self.iter(value))
 
     def iter(self, value: typing.Mapping) -> typing.Generator[
         typing.Tuple[str, typing.Any], None, None]:
@@ -298,8 +281,7 @@ class FilterMapper(BaseFilter):
                     yield key, self._apply_item(key, value[key], filter_chain)
 
                 elif self._missing_key_allowed(key):
-                    # Filter the missing value as if it was set to
-                    # ``None``.
+                    # Filter the missing value as if it was set to ``None``.
                     yield key, self._apply_item(key, None, filter_chain)
 
                 else:
@@ -311,8 +293,8 @@ class FilterMapper(BaseFilter):
                     )
 
             # Extra values go last.
-            # Note that we iterate in sorted order, in case the result
-            # type preserves ordering.
+            # Note that we iterate in sorted order, in case the result type
+            # preserves ordering.
             # https://github.com/eflglobal/filters/issues/13
             for key in sorted(
                     set(value.keys())
@@ -323,9 +305,9 @@ class FilterMapper(BaseFilter):
                 else:
                     unicode_key = self.unicodify_key(key)
 
-                    # Handle the extra value just like any other
-                    # invalid value, but do not include it in the
-                    # result (note that there is no ``yield`` here).
+                    # Handle the extra value just like any other invalid value,
+                    # but do not include it in the result (note that there is
+                    # no ``yield`` here).
                     self._invalid_value(
                         value=value[key],
                         reason=self.CODE_EXTRA_KEY,
@@ -346,15 +328,15 @@ class FilterMapper(BaseFilter):
         """
         Applies filters to a single item in the mapping.
 
-        Override this method in a subclass if you want to customize the
-        way specific items get filtered.
+        Override this method in a subclass if you want to customize the way
+        specific items get filtered.
         """
         return self._filter(value, filter_chain, sub_key=key)
 
     def _missing_key_allowed(self, key: str) -> bool:
         """
-        Returns whether the specified key is allowed to be omitted from
-        the incoming value.
+        Returns whether the specified key is allowed to be omitted from the
+        incoming value.
         """
         if self.allow_missing_keys is True:
             return True
@@ -379,8 +361,8 @@ class FilterMapper(BaseFilter):
     @staticmethod
     def unicodify_key(key: typing.Any) -> str:
         """
-        Converts a key value into a unicode so that it can be
-        represented in e.g., error message contexts.
+        Converts a key value into a unicode so that it can be represented in
+        e.g., error message contexts.
         """
         if key is None:
             return 'None'
@@ -404,8 +386,7 @@ class FilterSwitch(BaseFilter):
     ) -> None:
         """
         :param getter:
-            Callable used to extract the value to match against switch
-            cases.
+            Callable used to extract the value to match against switch cases.
 
         :param cases:
             Mapping of possible values to the corresponding filters.
@@ -413,8 +394,8 @@ class FilterSwitch(BaseFilter):
         :param default:
             Default filter to use, if none of the cases are matched.
 
-            If null (default) then the value will be considered invalid
-            if it doesn't match any cases.
+            If null (default) then the value will be considered invalid if it
+            doesn't match any cases.
         """
         super().__init__()
 
@@ -423,7 +404,7 @@ class FilterSwitch(BaseFilter):
         self.default = default
 
     def _apply(self, value):
-        gotten = self.getter(value)  # type: typing.Hashable
+        gotten: typing.Hashable = self.getter(value)
 
         if not self.default:
             gotten = self._filter(gotten, Choice(self.cases.keys()))
@@ -436,7 +417,6 @@ class FilterSwitch(BaseFilter):
 
         # If we get here, then we have set a default filter.
         return self._filter(value, self.default)
-
 
 
 class NamedTuple(BaseFilter):
@@ -492,8 +472,7 @@ class NamedTuple(BaseFilter):
 
         if not isinstance(value, self.type):
             if isinstance(value, typing.Mapping):
-                # Check that the incoming value has exactly the right
-                # keys.
+                # Check that the incoming value has exactly the right keys.
                 # noinspection PyProtectedMember
                 value = self._filter(value, FilterMapper(
                     dict.fromkeys(self.type._fields),
@@ -506,8 +485,8 @@ class NamedTuple(BaseFilter):
 
                 value = self.type(**value)
             else:
-                # Check that the incoming value has exactly the right
-                # number of values.
+                # Check that the incoming value has exactly the right number of
+                # values.
                 # noinspection PyProtectedMember
                 value = self._filter(value, Length(len(self.type._fields)))
 

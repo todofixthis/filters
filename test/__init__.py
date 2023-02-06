@@ -1,7 +1,6 @@
 import typing
 
 import filters as f
-from filters.macros import filter_macro
 
 
 class TestFilterAlpha(f.BaseFilter):
@@ -19,7 +18,7 @@ class TestFilterBravo(f.BaseFilter):
     """
 
     def __init__(self, name: typing.Optional[str] = None) -> None:
-        super(TestFilterBravo, self).__init__()
+        super().__init__()
 
         self.name = name
 
@@ -27,7 +26,7 @@ class TestFilterBravo(f.BaseFilter):
         return value
 
 
-@filter_macro
+@f.filter_macro
 def TestFilterCharlie():
     """
     A filter macro that can be used for testing.

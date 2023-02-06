@@ -3,6 +3,8 @@ Complex Filters
 Complex filters are filters that work in tandem with other filters, allowing you
 to create complex data schemas and transformation pipelines.
 
+.. _filter-mapper:
+
 FilterMapper
 ------------
 Applies filters to an incoming mapping (e.g., ``dict``).
@@ -138,6 +140,8 @@ You can also provide explicit key names for allowed extra/missing parameters:
 
    This filter is often chained with :py:class:`filters.JsonDecode`, when
    parsing a JSON object into a ``dict``.
+
+.. _filter-repeater:
 
 FilterRepeater
 --------------

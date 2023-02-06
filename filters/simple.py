@@ -1,4 +1,3 @@
-import json
 import typing
 from datetime import date, datetime, time, tzinfo
 
@@ -13,18 +12,108 @@ __all__ = [
     'Array',
     'ByteArray',
     'Call',
-    'Choice',
     'Date',
     'Datetime',
     'Empty',
+    'Item',
     'Length',
     'MaxLength',
     'MinLength',
     'NoOp',
     'NotEmpty',
+    'Omit',
     'Optional',
+    'Pick',
     'Required',
 ]
+
+
+def selective_copy_mapping(
+        source: typing.Mapping,
+        keys: typing.Iterable[typing.Hashable],
+) -> typing.Mapping:
+    """
+    Creates a copy of a mapping, with the same type (if practical).
+
+    :param source:
+        Source mapping, contains values to be copied and determines the type
+        of the result.
+
+    :param keys:
+        List of keys that should be present in the copy.
+
+        Any keys that don't exist in ``source`` will be set to ``None`` in the
+        resulting mapping.
+    """
+    values = {key: source.get(key) for key in keys}
+
+    # Try to return the same type of value as what we received.
+    try:
+        # This should work for just about every mapping.
+        # noinspection PyArgumentList
+        return type(source)(values)
+    except TypeError:
+        pass
+
+    # As a fallback, ``MutableMapping`` gives us an explicit
+    # interface to build the result using the same type as ``value``.
+    if isinstance(source, typing.MutableMapping):
+        result = type(source)()
+
+        for (k, v) in values.items():
+            result[k] = v
+
+        return result
+
+    # As a last resort, return a dict.
+    return values
+
+
+def selective_copy_sequence(
+        source: typing.Sequence,
+        indices: typing.Iterable[int],
+) -> typing.Sequence:
+    """
+    Creates a copy of a sequence, with the same type (if practical).
+
+    :param source:
+        Source sequence, contains values to be copied and determines the type
+        of the result.
+
+    :param indices:
+        List of indices from ``source`` that should be present in the copy.
+
+        Any indices that don't exist in ``source`` will be set to ``None`` in
+        the resulting sequence.
+    """
+    values = []
+
+    for idx in indices:
+        try:
+            values.append(source[idx])
+        except IndexError:
+            values.append(None)
+
+    # Try to return the same type of value as what we received.
+    try:
+        # This should work for just about every sequence.
+        # noinspection PyArgumentList
+        return type(source)(values)
+    except TypeError:
+        pass
+
+    # As a fallback, ``MutableSequence`` gives us an explicit
+    # interface to build the result using the same type as ``value``.
+    if isinstance(source, typing.MutableSequence):
+        result = type(source)()
+
+        for v in values:
+            result.append(v)
+
+        return result
+
+    # As a last resort, return a list.
+    return values
 
 
 class Array(Type):
@@ -51,7 +140,7 @@ class Array(Type):
 
                 template_vars={
                     'incoming': self.get_type_name(type(value)),
-                    'allowed':  self.get_allowed_type_names(),
+                    'allowed': self.get_allowed_type_names(),
                 },
             )
 
@@ -166,46 +255,6 @@ class Call(BaseFilter):
             )
 
 
-class Choice(BaseFilter):
-    """
-    Expects the value to match one of the items in a set.
-
-    Note:  When matching string values, the comparison is case-
-    sensitive!  Use the :py:class:`CaseFold` Filter if you want to
-    perform a case-insensitive comparison.
-    """
-    CODE_INVALID = 'not_valid_choice'
-
-    templates = {
-        CODE_INVALID: 'Valid options are: {choices}',
-    }
-
-    def __init__(self, choices: typing.Iterable[typing.Hashable]) -> None:
-        super().__init__()
-
-        self.choices = set(choices)
-
-    def __str__(self):
-        return '{type}({choices!r})'.format(
-            type=type(self).__name__,
-            choices=json.dumps(sorted(self.choices)),
-        )
-
-    def _apply(self, value):
-        if value not in self.choices:
-            return self._invalid_value(
-                value=value,
-                reason=self.CODE_INVALID,
-                exc_info=True,
-
-                template_vars={
-                    'choices': sorted(self.choices),
-                },
-            )
-
-        return value
-
-
 class Datetime(BaseFilter):
     """
     Interprets the value as a UTC datetime.
@@ -224,24 +273,22 @@ class Datetime(BaseFilter):
     ) -> None:
         """
         :param timezone:
-            Specifies the timezone to use when the *incoming* value is
-            a naive timestamp.  Has no effect on timezone-aware
-            timestamps.
+            Specifies the timezone to use when the *incoming* value is a naive
+            timestamp.  Has no effect on timezone-aware timestamps.
 
-            IMPORTANT:  The result is always converted to UTC,
-            regardless of the value of the ``timezone`` param!
+            IMPORTANT:  The result is always converted to UTC, regardless of
+            the value of the ``timezone`` param!
 
-            You can provide an int/float here, which is the offset from
-            UTC in hours (e.g., 5 = UTC+5).
+            You can provide an int/float here, which is the offset from UTC in
+            hours (e.g., 5 = UTC+5).
 
         :param naive:
-            If True, the filter will *return* naive datetime objects
-            (sans tzinfo).  This is useful e.g., for datetimes that
-            will be stored in a database that doesn't understand aware
-            timestamps.
+            If True, the filter will *return* naive datetime objects (sans
+            tzinfo).  This is useful e.g., for datetime values that will be
+            stored in a database that doesn't understand aware timestamps.
 
-            IMPORTANT:  Incoming values are still converted to UTC
-            before stripping tzinfo!
+            IMPORTANT:  Incoming values are still converted to UTC before
+            stripping tzinfo!
         """
         super().__init__()
 
@@ -356,6 +403,75 @@ class Empty(BaseFilter):
         )
 
 
+class Item(BaseFilter):
+    """
+    Returns a single item from an incoming mapping or sequence.
+    """
+    CODE_MISSING_KEY = 'missing'
+
+    templates = {
+        CODE_MISSING_KEY: '{key} is required.',
+    }
+
+    def __init__(self, key: typing.Optional[typing.Hashable] = None):
+        super().__init__()
+
+        # ``key`` is already defined in ``BaseFilter``, so we have to pick a
+        # different name.
+        self.target = key
+
+    def __str__(self):
+        return '{type}({key})'.format(
+            type=type(self).__name__,
+            key='' if self.target is None else repr(self.target),
+        )
+
+    def _apply(self, value):
+        value = self._filter(
+            value,
+            Type((typing.Mapping, typing.Sequence)) | NotEmpty,
+        )
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Any:
+        """
+        Extracts value from incoming mapping.
+        """
+        if self.target is None:
+            for v in value.values():
+                return v
+
+        try:
+            return value[self.target]
+        except KeyError:
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_MISSING_KEY,
+                sub_key=self.target,
+            )
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Any:
+        """
+        Extracts value from incoming sequence.
+        """
+        try:
+            return value[0 if self.target is None else self.target]
+        except IndexError:
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_MISSING_KEY,
+                sub_key=str(self.target),
+            )
+
+
 class Length(BaseFilter):
     """
     Ensures incoming values have exactly the right length.
@@ -443,7 +559,7 @@ class MaxLength(BaseFilter):
 
                 template_vars={
                     'length': len(value),
-                    'max':    self.max_length,
+                    'max': self.max_length,
                 },
             )
 
@@ -487,7 +603,7 @@ class MinLength(BaseFilter):
 
                 template_vars={
                     'length': len(value),
-                    'min':    self.min_length,
+                    'min': self.min_length,
                 },
             )
 
@@ -553,19 +669,58 @@ class NotEmpty(BaseFilter):
         return None
 
 
-class Required(NotEmpty):
+class Omit(BaseFilter):
     """
-    Same as NotEmpty, but with ``allow_none`` hard-wired to ``False``.
-
-    This filter is the only exception to the "``None`` passes by
-    default" rule.
+    Returns a copy of an incoming mapping or sequence, with the specified keys
+    omitted.  Any other items will be passed through.
     """
-    templates = {
-        NotEmpty.CODE_EMPTY: 'This value is required.',
-    }
 
-    def __init__(self):
-        super().__init__(allow_none=False)
+    def __init__(self, keys: typing.Iterable):
+        """
+        :param: keys
+            List of keys that will be omitted from incoming values.
+        """
+        super().__init__()
+
+        NotEmpty().apply(keys)
+
+        self.keys = set(keys)
+
+    def __str__(self):
+        return '{type}({keys})'.format(
+            type=type(self).__name__,
+            keys=sorted(self.keys),
+        )
+
+    def _apply(self, value):
+        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+        """
+        Filters items from an incoming mapping.
+        """
+        return selective_copy_mapping(
+            value,
+            [key for key in value.keys() if key not in self.keys],
+        )
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+        """
+        Filters items from an incoming sequence.
+        """
+        return selective_copy_sequence(
+            value,
+            [idx for idx in range(len(value)) if idx not in self.keys],
+        )
 
 
 class Optional(BaseFilter):
@@ -603,3 +758,124 @@ class Optional(BaseFilter):
 
     def _apply_none(self):
         return self.default
+
+
+class Pick(BaseFilter):
+    """
+    Returns a copy of an incoming mapping or sequence, with only the specified
+    keys included.
+    """
+    CODE_MISSING_KEY = 'missing'
+
+    templates = {
+        CODE_MISSING_KEY: '{key} is required.',
+    }
+
+    def __init__(self,
+            keys: typing.Iterable,
+            allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
+    ):
+        """
+        :param: keys
+            List of keys that will be picked from incoming values.
+
+        :param allow_missing_keys:
+            Determines how values with missing keys get handled:
+
+            - True (default): Missing keys are ignored.
+            - False: Missing keys are treated as invalid values.
+            - <Iterable>: Only the specified keys are allowed to be
+              omitted.
+        """
+        super().__init__()
+
+        NotEmpty().apply(keys)
+
+        self.keys = keys
+        self.allow_missing_keys = (
+            set(allow_missing_keys)
+            if isinstance(allow_missing_keys, typing.Iterable)
+            else bool(allow_missing_keys)
+        )
+
+    def __str__(self):
+        return '{type}({keys})'.format(
+            type=type(self).__name__,
+            keys=self.keys,
+        )
+
+    def _apply(self, value):
+        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+        """
+        Picks items out of an incoming mapping.
+        """
+        picked_keys = []
+
+        for key in self.keys:
+            if not (key in value or self._missing_key_allowed(key)):
+                self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=key,
+                )
+
+            picked_keys.append(key)
+
+        return selective_copy_mapping(value, picked_keys)
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+        """
+        Picks items out of an incoming sequence.
+        """
+        picked_indices = []
+
+        for idx in self.keys:
+            if not (idx < len(value) or self._missing_key_allowed(idx)):
+                self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=str(idx),
+                )
+
+            picked_indices.append(idx)
+
+        return selective_copy_sequence(value, picked_indices)
+
+    def _missing_key_allowed(self, key: str) -> bool:
+        """
+        Returns whether the specified key is allowed to be omitted from
+        the incoming value.
+        """
+        if self.allow_missing_keys is True:
+            return True
+
+        try:
+            return key in self.allow_missing_keys
+        except TypeError:
+            return False
+
+
+class Required(NotEmpty):
+    """
+    Same as NotEmpty, but with ``allow_none`` hard-wired to ``False``.
+
+    This filter is the only exception to the "``None`` passes by
+    default" rule.
+    """
+    templates = {
+        NotEmpty.CODE_EMPTY: 'This value is required.',
+    }
+
+    def __init__(self):
+        super().__init__(allow_none=False)
