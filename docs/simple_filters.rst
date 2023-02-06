@@ -525,6 +525,8 @@ dict:
 
 Check out :ref:`filterception` for more fun examples 😺
 
+.. _length:
+
 Length
 ------
 Requires that a value's length matches the value specified in the filter
@@ -713,6 +715,8 @@ can specify it when initialising the filter:
    )
    assert len(runner.cleaned_data) == 40
 
+.. _max-length:
+
 MaxLength
 ---------
 Requires that a value's length is less than or equal to the value specified in
@@ -832,6 +836,8 @@ You can also control the rounding behaviour by specifying a `rounding mode`_:
    runner = f.FilterRunner(f.Round('0.25', ROUND_FLOOR), '0.49')
    assert runner.is_valid() is True
    assert runner.cleaned_data == Decimal('0.25')
+
+.. _min-length:
 
 MinLength
 ---------
@@ -1007,6 +1013,53 @@ length (i.e., whose type implements ``typing.Sized``):
 
       runner = f.FilterRunner(f.Required, None)
       assert runner.is_valid() is False
+
+Omit
+----
+Filters an incoming mapping (e.g., ``dict``) or sequence (e.g., ``list``),
+omitting the keys specified when the filter is initialised.
+
+.. code-block:: python
+
+   import filters as f
+
+   # Omit 'alpha' and 'hex' from a mapping
+   runner = f.FilterRunner(
+       f.Omit({'alpha', 'hex'}),
+       {'red': 65, 'green': 105, 'blue': 225, 'alpha': 1, 'hex': '#4169E1'}
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'red': 65, 'green': 105, 'blue': 225}
+
+   # Remove the first 2 items from a sequence:
+   runner = f.FilterRunner(f.Omit({0, 1}), [42, 86, 99])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == [99]
+
+.. note::
+
+   The incoming value is considered valid regardless of whether any values were
+   actually filtered out.  For example, if an incoming mapping doesn't contain
+   any of the keys to be omitted, then it is passed through unmodified:
+
+   .. code-block:: python
+
+      import filters as f
+
+      # Filter omits 'age' and 'profession', but incoming value doesn't have
+      # either of those keys.
+      runner = f.FilterRunner(
+          f.Omit({'age', 'profession'}),
+          {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
+      )
+      assert runner.is_valid() is True
+      assert runner.cleaned_data ==\
+          {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'}
+
+   If you want to validate the shape of an incoming value, then you may prefer:
+
+   - For mappings: :ref:`filter-mapper`.
+   - For sequences: :ref:`length`, :ref:`max-length`, :ref:`min-length`.
 
 Optional
 --------

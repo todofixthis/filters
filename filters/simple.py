@@ -22,10 +22,99 @@ __all__ = [
     'MinLength',
     'NoOp',
     'NotEmpty',
+    'Omit',
     'Optional',
     'Pick',
     'Required',
 ]
+
+
+def selective_copy_mapping(
+        source: typing.Mapping,
+        keys: typing.Iterable[typing.Hashable],
+) -> typing.Mapping:
+    """
+    Creates a copy of a mapping, with the same type (if practical).
+
+    :param source:
+        Source mapping, contains values to be copied and determines the type
+        of the result.
+
+    :param keys:
+        List of keys that should be present in the copy.
+
+        Any keys that don't exist in ``source`` will be set to ``None`` in the
+        resulting mapping.
+    """
+    values = {key: source.get(key) for key in keys}
+
+    # Try to return the same type of value as what we received.
+    try:
+        # This should work for just about every mapping.
+        # noinspection PyArgumentList
+        return type(source)(values)
+    except TypeError:
+        pass
+
+    # As a fallback, ``MutableMapping`` gives us an explicit
+    # interface to build the result using the same type as ``value``.
+    if isinstance(source, typing.MutableMapping):
+        result = type(source)()
+
+        for (k, v) in values.items():
+            result[k] = v
+
+        return result
+
+    # As a last resort, return a dict.
+    return values
+
+
+def selective_copy_sequence(
+        source: typing.Sequence,
+        indices: typing.Iterable[int],
+) -> typing.Sequence:
+    """
+    Creates a copy of a sequence, with the same type (if practical).
+
+    :param source:
+        Source sequence, contains values to be copied and determines the type
+        of the result.
+
+    :param indices:
+        List of indices from ``source`` that should be present in the copy.
+
+        Any indices that don't exist in ``source`` will be set to ``None`` in
+        the resulting sequence.
+    """
+    values = []
+
+    for idx in indices:
+        try:
+            values.append(source[idx])
+        except IndexError:
+            values.append(None)
+
+    # Try to return the same type of value as what we received.
+    try:
+        # This should work for just about every sequence.
+        # noinspection PyArgumentList
+        return type(source)(values)
+    except TypeError:
+        pass
+
+    # As a fallback, ``MutableSequence`` gives us an explicit
+    # interface to build the result using the same type as ``value``.
+    if isinstance(source, typing.MutableSequence):
+        result = type(source)()
+
+        for v in values:
+            result.append(v)
+
+        return result
+
+    # As a last resort, return a list.
+    return values
 
 
 class Array(Type):
@@ -554,6 +643,54 @@ class NotEmpty(BaseFilter):
         return None
 
 
+class Omit(BaseFilter):
+    """
+    Returns a copy of an incoming mapping or sequence, with the specified keys
+    omitted.  Any other items will be passed through.
+    """
+
+    def __init__(self, keys: typing.Iterable):
+        """
+        :param: keys
+            List of keys that will be omitted from incoming values.
+        """
+        super().__init__()
+
+        NotEmpty().apply(keys)
+
+        self.keys = set(keys)
+
+    def _apply(self, value):
+        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+        """
+        Filters items from an incoming mapping.
+        """
+        return selective_copy_mapping(
+            value,
+            [key for key in value.keys() if key not in self.keys],
+        )
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+        """
+        Filters items from an incoming sequence.
+        """
+        return selective_copy_sequence(
+            value,
+            [idx for idx in range(len(value)) if idx not in self.keys],
+        )
+
+
 class Optional(BaseFilter):
     """
     Changes empty and null values into a default value.
@@ -593,8 +730,8 @@ class Optional(BaseFilter):
 
 class Pick(BaseFilter):
     """
-    Given a sequence or mapping, returns a copy of the incoming value with only
-    the specified items.
+    Returns a copy of an incoming mapping or sequence, with only the specified
+    keys included.
     """
     CODE_MISSING_KEY = 'missing'
 
@@ -651,78 +788,37 @@ class Pick(BaseFilter):
         """
         Picks items out of an incoming mapping.
         """
-        picked_values = {}
+        picked_keys = []
+
         for key in self.keys:
-            if key in value:
-                picked_values[key] = value[key]
-            elif self._missing_key_allowed(key):
-                picked_values[key] = None
-            else:
-                picked_values[key] = self._invalid_value(
+            if not (key in value or self._missing_key_allowed(key)):
+                self._invalid_value(
                     value=None,
                     reason=self.CODE_MISSING_KEY,
                     sub_key=key,
                 )
 
-        # Try to return the same type of value as what we received.
-        try:
-            # This should work for just about every mapping.
-            # noinspection PyArgumentList
-            return type(value)(picked_values)
-        except TypeError:
-            pass
+            picked_keys.append(key)
 
-        # As a fallback, ``MutableMapping`` gives us an explicit
-        # interface to build the result using the same type as ``value``.
-        if isinstance(value, typing.MutableMapping):
-            result = type(value)()
-
-            for (k, v) in picked_values.items():
-                result[k] = v
-
-            return result
-
-        # As a last resort, return a dict.
-        return picked_values
+        return selective_copy_mapping(value, picked_keys)
 
     def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
         """
         Picks items out of an incoming sequence.
         """
-        picked_values = []
+        picked_indices = []
 
-        for i in self.keys:
-            if i < len(value):
-                picked_values.append(value[i])
-            elif self._missing_key_allowed(i):
-                picked_values.append(None)
-            else:
-                picked_values.append(self._invalid_value(
+        for idx in self.keys:
+            if not (idx < len(value) or self._missing_key_allowed(idx)):
+                self._invalid_value(
                     value=None,
                     reason=self.CODE_MISSING_KEY,
-                    sub_key=str(i),
-                ))
+                    sub_key=str(idx),
+                )
 
-        # Try to return the same type of value as what we received.
-        try:
-            # This should work for just about every sequence.
-            # noinspection PyArgumentList
-            return type(value)(picked_values)
-        except TypeError:
-            pass
+            picked_indices.append(idx)
 
-        # As a fallback, ``MutableSequence`` gives us an explicit
-        # interface to build the result using the same type as ``value``.
-        if isinstance(value, typing.MutableSequence):
-            result = type(value)()
-
-            for v in picked_values:
-                result.append(v)
-
-            return result
-
-        # As a last resort, return a list.
-        return picked_values
+        return selective_copy_sequence(value, picked_indices)
 
     def _missing_key_allowed(self, key: str) -> bool:
         """
