@@ -1242,7 +1242,7 @@ class SplitTestCase(BaseFilterTestCase):
         This is particularly cool, as it lets you chain a Split with a
         FilterMapper.
         """
-        self.assertFilterPasses(
+        runner = self.assertFilterPasses(
             self._filter(
                 'foo:bar:baz',
                 pattern=':',
@@ -1254,6 +1254,12 @@ class SplitTestCase(BaseFilterTestCase):
                 'b': 'bar',
                 'c': 'baz',
             },
+        )
+
+        # The order of keys is also preserved, just in case.
+        self.assertListEqual(
+            list(runner.cleaned_data.keys()),
+            ['a', 'b', 'c'],
         )
 
     # noinspection SpellCheckingInspection
