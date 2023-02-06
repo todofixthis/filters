@@ -1052,6 +1052,86 @@ to be *not* empty.  In particular, this means that ``0`` and ``False`` are
       assert runner.is_valid() is False
       assert runner.cleaned_data is None
 
+Pick
+----
+Filters an incoming mapping (e.g., ``dict``) or sequence (e.g., ``list``),
+collecting only the keys specified when the filter is initialised and omitting
+the rest:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Pick 'red', 'green', and 'blue' items from a mapping:
+   runner = f.FilterRunner(
+       f.Pick({'red', 'green', 'blue'}),
+       {'red': 65, 'green': 105, 'blue': 225, 'alpha': 1, 'hex': '#4169E1'}
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'red': 65, 'green': 105, 'blue': 225}
+
+   # Pick the first 2 items from a sequence:
+   runner = f.FilterRunner(f.Pick({0, 1}), [42, 86, 99])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == [42, 86]
+
+By default, any picked keys that aren't present in the incoming value are
+set to ``None``:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Incoming mapping is missing ``age`` key, so ``None`` is substituted:
+   runner = f.FilterRunner(
+       f.Pick({'name', 'age'}),
+       {'name': 'Indiana', 'job': 'Archaeologist'},
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'name': 'Indiana', 'age': None}
+
+   # Incoming sequence doesn't have a 4th item, so ``None`` is substituted:
+   runner = f.FilterRunner(f.Pick({0, 2, 4}), ['Indiana', 'Marion', 'Marcus'])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['Indiana', 'Marcus', None]
+
+If you want the filter to treat values with missing keys as invalid, pass an
+optional ``allow_missing_keys`` argument to the filter initialiser:
+
+.. code-block:: python
+
+   import filters as f
+
+   # All keys are required:
+   runner = f.FilterRunner(
+       f.Pick({'name', 'age'}, allow_missing_keys=False),
+       {'name': 'Indiana', 'job': 'Archaeologist'},
+   )
+   assert runner.is_valid() is False
+
+   # Or, only specified keys are required:
+   runner = f.FilterRunner(
+       f.Pick({'name', 'age'}, allow_missing_keys={'age'}),
+       {'name': 'Indiana', 'job': 'Archaeologist'},
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'name': 'Indiana', 'age': None}
+
+   # Also works for sequences:
+   runner = f.FilterRunner(
+       f.Pick({0, 2, 4}, allow_missing_keys=False),
+       ['Indiana', 'Marion', 'Marcus'],
+   )
+   assert runner.is_valid() is False
+
+   runner = f.FilterRunner(
+       f.Pick({0, 2, 4}, allow_missing_keys={4}),
+       ['Indiana', 'Marion', 'Marcus'],
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['Indiana', 'Marcus', None]
+
+
 Regex
 -----
 Executes a regular expression against a string value.  The regex must match in

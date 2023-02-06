@@ -61,7 +61,10 @@ class BaseFilterTestCase(TestCase):
         """
         pass
 
-    def assertFilterPasses(self, runner, expected_value=unmodified):
+    def assertFilterPasses(self,
+            runner: typing.Any,
+            expected_value: typing.Any = unmodified,
+    ) -> FilterRunner:
         """
         Asserts that the FilterRunner returns the specified value, without
         errors.
@@ -77,9 +80,16 @@ class BaseFilterTestCase(TestCase):
             If omitted, the assertion will check that the incoming value is
             returned unmodified.
         """
-        self.assertFilterErrors(runner, {}, expected_value)
+        return self.assertFilterErrors(runner, {}, expected_value)
 
-    def assertFilterErrors(self, runner, expected_codes, expected_value=None):
+    def assertFilterErrors(self,
+            runner: typing.Any,
+            expected_codes: typing.Union[
+                typing.Mapping[str, typing.Sequence[str]],
+                typing.Sequence[str],
+            ],
+            expected_value: typing.Any = None,
+    ) -> FilterRunner:
         """
         Asserts that the FilterRunner generates the specified error codes.
 
@@ -106,9 +116,9 @@ class BaseFilterTestCase(TestCase):
                 'Filter Messages:\n\n{messages}'.format(
                     messages=pformat(dict(runner.filter_messages)),
 
-                    tracebacks=pformat(list(
-                        starmap(format_exception, runner.exc_info)
-                    )),
+                    tracebacks=pformat(
+                        list(starmap(format_exception, runner.exc_info))
+                    ),
                 )
             )
 
@@ -116,7 +126,6 @@ class BaseFilterTestCase(TestCase):
             expected_codes = {'': expected_codes}
 
         if runner.error_codes != expected_codes:
-            # noinspection PyTypeChecker
             self.fail(
                 'Filter generated unexpected error codes (expected '
                 '{expected}):\n\n{messages}'.format(
@@ -137,6 +146,10 @@ class BaseFilterTestCase(TestCase):
                 if expected_value is self.unmodified
                 else expected_value
             )
+
+        # Return the ``FilterRunner`` instance, so that we can do some
+        # additional checks if needed.
+        return runner
 
     def _filter(self, *args, **kwargs) -> FilterRunner:
         """
