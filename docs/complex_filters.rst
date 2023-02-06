@@ -141,6 +141,8 @@ You can also provide explicit key names for allowed extra/missing parameters:
    This filter is often chained with :py:class:`filters.JsonDecode`, when
    parsing a JSON object into a ``dict``.
 
+.. _filter-repeater:
+
 FilterRepeater
 --------------
 Applies a filter chain to every value in an incoming iterable (e.g., ``list``)

@@ -795,6 +795,87 @@ class EmptyTestCase(BaseFilterTestCase):
         self.assertFilterErrors(False, [f.Empty.CODE_NOT_EMPTY])
 
 
+class ItemTestCase(BaseFilterTestCase):
+    filter_type = f.Item
+
+    def test_pass_none(self):
+        """
+        ``None`` always passes this Filter.
+
+        Use ``Required | Item`` if you want to reject null values.
+        """
+        self.assertFilterPasses(None)
+
+    def test_pass_mapping_default(self):
+        """
+        By default, returns the first item in a mapping.
+        """
+        self.assertFilterPasses(
+            {'foo': 'bar', 'baz': 'luhrmann'},
+            'bar',
+        )
+
+    def test_fail_mapping_empty(self):
+        """
+        The incoming value is an empty mapping, so no value to extract.
+        """
+        self.assertFilterErrors({}, [f.NotEmpty.CODE_EMPTY])
+
+    def test_pass_mapping_specific_key(self):
+        """
+        Specify the key to extract from a mapping.
+        """
+        self.assertFilterPasses(
+            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, key='baz'),
+            'luhrmann',
+        )
+
+    def test_fail_mapping_specific_key_missing(self):
+        """
+        The incoming mapping does not contain the specified key.
+        """
+        self.assertFilterErrors(
+            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, key='foobie'),
+            {'foobie': [f.Item.CODE_MISSING_KEY]},
+        )
+
+    def test_pass_sequence_default(self):
+        """
+        By default, returns the first item in a sequence.
+        """
+        self.assertFilterPasses(['foo', 'bar', 'baz', 'luhrmann'], 'foo')
+
+    def test_fail_sequence_empty(self):
+        """
+        The incoming value is an empty sequence, so no value to extract.
+        """
+        self.assertFilterErrors([], [f.NotEmpty.CODE_EMPTY])
+
+    def test_pass_sequence_specific_index(self):
+        """
+        Specify the index to extract from a mapping.
+        """
+        self.assertFilterPasses(
+            self._filter(['foo', 'bar', 'baz'], key=2),
+            'baz',
+        )
+
+    def test_fail_sequence_specific_index_missing(self):
+        """
+        The incoming sequence does not contain the specified index.
+        """
+        self.assertFilterErrors(
+            self._filter(['foo', 'bar', 'baz'], key=42),
+            {'42': [f.Item.CODE_MISSING_KEY]},
+        )
+
+    def test_fail_wrong_type(self):
+        """
+        The incoming value is not a mapping nor sequence.
+        """
+        self.assertFilterErrors(42, [f.Type.CODE_WRONG_TYPE])
+
+
 class MaxLengthTestCase(BaseFilterTestCase):
     filter_type = f.MaxLength
 

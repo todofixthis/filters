@@ -1,4 +1,3 @@
-import json
 import typing
 from datetime import date, datetime, time, tzinfo
 
@@ -17,6 +16,7 @@ __all__ = [
     'Date',
     'Datetime',
     'Empty',
+    'Item',
     'Length',
     'MaxLength',
     'MinLength',
@@ -278,7 +278,7 @@ class Choice(BaseFilter):
     def __str__(self):
         return '{type}({choices!r})'.format(
             type=type(self).__name__,
-            choices=json.dumps(sorted(self.choices)),
+            choices=sorted(map(str, self.choices)),
         )
 
     def _apply(self, value):
@@ -289,7 +289,7 @@ class Choice(BaseFilter):
                 exc_info=True,
 
                 template_vars={
-                    'choices': sorted(self.choices),
+                    'choices': sorted(map(str, self.choices)),
                 },
             )
 
@@ -314,24 +314,22 @@ class Datetime(BaseFilter):
     ) -> None:
         """
         :param timezone:
-            Specifies the timezone to use when the *incoming* value is
-            a naive timestamp.  Has no effect on timezone-aware
-            timestamps.
+            Specifies the timezone to use when the *incoming* value is a naive
+            timestamp.  Has no effect on timezone-aware timestamps.
 
-            IMPORTANT:  The result is always converted to UTC,
-            regardless of the value of the ``timezone`` param!
+            IMPORTANT:  The result is always converted to UTC, regardless of
+            the value of the ``timezone`` param!
 
-            You can provide an int/float here, which is the offset from
-            UTC in hours (e.g., 5 = UTC+5).
+            You can provide an int/float here, which is the offset from UTC in
+            hours (e.g., 5 = UTC+5).
 
         :param naive:
-            If True, the filter will *return* naive datetime objects
-            (sans tzinfo).  This is useful e.g., for datetimes that
-            will be stored in a database that doesn't understand aware
-            timestamps.
+            If True, the filter will *return* naive datetime objects (sans
+            tzinfo).  This is useful e.g., for datetime values that will be
+            stored in a database that doesn't understand aware timestamps.
 
-            IMPORTANT:  Incoming values are still converted to UTC
-            before stripping tzinfo!
+            IMPORTANT:  Incoming values are still converted to UTC before
+            stripping tzinfo!
         """
         super().__init__()
 
@@ -444,6 +442,75 @@ class Empty(BaseFilter):
             if length
             else value
         )
+
+
+class Item(BaseFilter):
+    """
+    Returns a single item from an incoming mapping or sequence.
+    """
+    CODE_MISSING_KEY = 'missing'
+
+    templates = {
+        CODE_MISSING_KEY: '{key} is required.',
+    }
+
+    def __init__(self, key: typing.Optional[typing.Hashable] = None):
+        super().__init__()
+
+        # ``key`` is already defined in ``BaseFilter``, so we have to pick a
+        # different name.
+        self.target = key
+
+    def __str__(self):
+        return '{type}({key})'.format(
+            type=type(self).__name__,
+            key='' if self.target is None else repr(self.target),
+        )
+
+    def _apply(self, value):
+        value = self._filter(
+            value,
+            Type((typing.Mapping, typing.Sequence)) | NotEmpty,
+        )
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Any:
+        """
+        Extracts value from incoming mapping.
+        """
+        if self.target is None:
+            for v in value.values():
+                return v
+
+        try:
+            return value[self.target]
+        except KeyError:
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_MISSING_KEY,
+                sub_key=self.target,
+            )
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Any:
+        """
+        Extracts value from incoming sequence.
+        """
+        try:
+            return value[0 if self.target is None else self.target]
+        except IndexError:
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_MISSING_KEY,
+                sub_key=str(self.target),
+            )
 
 
 class Length(BaseFilter):
@@ -660,6 +727,12 @@ class Omit(BaseFilter):
 
         self.keys = set(keys)
 
+    def __str__(self):
+        return '{type}({keys})'.format(
+            type=type(self).__name__,
+            keys=sorted(self.keys),
+        )
+
     def _apply(self, value):
         value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
 
@@ -769,7 +842,7 @@ class Pick(BaseFilter):
     def __str__(self):
         return '{type}({keys})'.format(
             type=type(self).__name__,
-            keys=sorted(self.keys),
+            keys=self.keys,
         )
 
     def _apply(self, value):
