@@ -23,6 +23,7 @@ __all__ = [
     'NoOp',
     'NotEmpty',
     'Optional',
+    'Pick',
     'Required',
 ]
 
@@ -51,7 +52,7 @@ class Array(Type):
 
                 template_vars={
                     'incoming': self.get_type_name(type(value)),
-                    'allowed':  self.get_allowed_type_names(),
+                    'allowed': self.get_allowed_type_names(),
                 },
             )
 
@@ -443,7 +444,7 @@ class MaxLength(BaseFilter):
 
                 template_vars={
                     'length': len(value),
-                    'max':    self.max_length,
+                    'max': self.max_length,
                 },
             )
 
@@ -487,7 +488,7 @@ class MinLength(BaseFilter):
 
                 template_vars={
                     'length': len(value),
-                    'min':    self.min_length,
+                    'min': self.min_length,
                 },
             )
 
@@ -553,21 +554,6 @@ class NotEmpty(BaseFilter):
         return None
 
 
-class Required(NotEmpty):
-    """
-    Same as NotEmpty, but with ``allow_none`` hard-wired to ``False``.
-
-    This filter is the only exception to the "``None`` passes by
-    default" rule.
-    """
-    templates = {
-        NotEmpty.CODE_EMPTY: 'This value is required.',
-    }
-
-    def __init__(self):
-        super().__init__(allow_none=False)
-
-
 class Optional(BaseFilter):
     """
     Changes empty and null values into a default value.
@@ -603,3 +589,165 @@ class Optional(BaseFilter):
 
     def _apply_none(self):
         return self.default
+
+
+class Pick(BaseFilter):
+    """
+    Given a sequence or mapping, returns a copy of the incoming value with only
+    the specified items.
+    """
+    CODE_MISSING_KEY = 'missing'
+
+    templates = {
+        CODE_MISSING_KEY: '{key} is required.',
+    }
+
+    def __init__(self,
+            keys: typing.Iterable,
+            allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
+    ):
+        """
+        :param: keys
+            List of keys that will be picked from incoming values.
+
+        :param allow_missing_keys:
+            Determines how values with missing keys get handled:
+
+            - True (default): Missing keys are ignored.
+            - False: Missing keys are treated as invalid values.
+            - <Iterable>: Only the specified keys are allowed to be
+              omitted.
+        """
+        super().__init__()
+
+        NotEmpty().apply(keys)
+
+        self.keys = keys
+        self.allow_missing_keys = (
+            set(allow_missing_keys)
+            if isinstance(allow_missing_keys, typing.Iterable)
+            else bool(allow_missing_keys)
+        )
+
+    def __str__(self):
+        return '{type}({keys})'.format(
+            type=type(self).__name__,
+            keys=sorted(self.keys),
+        )
+
+    def _apply(self, value):
+        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+
+        if self._has_errors:
+            return None
+
+        return (
+            self._apply_mapping(value)
+            if isinstance(value, typing.Mapping)
+            else self._apply_sequence(value)
+        )
+
+    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+        """
+        Picks items out of an incoming mapping.
+        """
+        picked_values = {}
+        for key in self.keys:
+            if key in value:
+                picked_values[key] = value[key]
+            elif self._missing_key_allowed(key):
+                picked_values[key] = None
+            else:
+                picked_values[key] = self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=key,
+                )
+
+        # Try to return the same type of value as what we received.
+        try:
+            # This should work for just about every mapping.
+            # noinspection PyArgumentList
+            return type(value)(picked_values)
+        except TypeError:
+            pass
+
+        # As a fallback, ``MutableMapping`` gives us an explicit
+        # interface to build the result using the same type as ``value``.
+        if isinstance(value, typing.MutableMapping):
+            result = type(value)()
+
+            for (k, v) in picked_values.items():
+                result[k] = v
+
+            return result
+
+        # As a last resort, return a dict.
+        return picked_values
+
+    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+        """
+        Picks items out of an incoming sequence.
+        """
+        picked_values = []
+
+        for i in self.keys:
+            if i < len(value):
+                picked_values.append(value[i])
+            elif self._missing_key_allowed(i):
+                picked_values.append(None)
+            else:
+                picked_values.append(self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=str(i),
+                ))
+
+        # Try to return the same type of value as what we received.
+        try:
+            # This should work for just about every sequence.
+            # noinspection PyArgumentList
+            return type(value)(picked_values)
+        except TypeError:
+            pass
+
+        # As a fallback, ``MutableSequence`` gives us an explicit
+        # interface to build the result using the same type as ``value``.
+        if isinstance(value, typing.MutableSequence):
+            result = type(value)()
+
+            for v in picked_values:
+                result.append(v)
+
+            return result
+
+        # As a last resort, return a list.
+        return picked_values
+
+    def _missing_key_allowed(self, key: str) -> bool:
+        """
+        Returns whether the specified key is allowed to be omitted from
+        the incoming value.
+        """
+        if self.allow_missing_keys is True:
+            return True
+
+        try:
+            return key in self.allow_missing_keys
+        except TypeError:
+            return False
+
+
+class Required(NotEmpty):
+    """
+    Same as NotEmpty, but with ``allow_none`` hard-wired to ``False``.
+
+    This filter is the only exception to the "``None`` passes by
+    default" rule.
+    """
+    templates = {
+        NotEmpty.CODE_EMPTY: 'This value is required.',
+    }
+
+    def __init__(self):
+        super().__init__(allow_none=False)

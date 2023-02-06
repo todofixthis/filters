@@ -1,4 +1,5 @@
 import typing
+from collections import OrderedDict
 from datetime import date, datetime
 
 from dateutil.tz import tzoffset
@@ -1161,6 +1162,222 @@ class OptionalTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             self._filter(False, default='fail'),
         )
+
+
+class PickTestCase(BaseFilterTestCase):
+    filter_type = f.Pick
+
+    def test_pass_none(self):
+        """
+        ``None`` always passes this filter.
+
+        Use ``Required | Pick`` to reject ``None``.
+        """
+        self.assertFilterPasses(
+            self._filter(None, keys={'test'}),
+        )
+
+    def test_pass_mapping(self):
+        """
+        Using the filter to pick specific keys from a mapping.
+        """
+        self.assertFilterPasses(
+            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, keys={'foo'}),
+            {'foo': 'bar'},
+        )
+
+    def test_pass_mapping_ordered_keys(self):
+        """
+        When keys are provided in an ordered collection, the order of keys
+        determines the order of the items in the result.
+        """
+        runner = self.assertFilterPasses(
+            self._filter(
+                {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
+                keys=('actor', 'name', 'job'),
+            ),
+            {'actor': 'Harrison', 'name': 'Indy', 'job': 'archaeologist'},
+        )
+
+        self.assertListEqual(
+            list(runner.cleaned_data.keys()),
+            ['actor', 'name', 'job'],
+        )
+
+    def test_pass_mapping_missing_values(self):
+        """
+        Any keys not present in the incoming value are set to ``None``.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                {'foo': 'bar', 'baz': 'luhrmann'},
+                keys=['foo', 'foobie'],
+            ),
+            {'foo': 'bar', 'foobie': None},
+        )
+
+    def test_pass_mapping_empty(self):
+        """
+        An empty mapping always passes this filter by default.
+
+        Chain with :py:class:`MinLength` or :py:class:`NotEmpty` to reject
+        empty mappings, or set ``allow_missing_keys`` when initialising the
+        filter.
+        """
+        self.assertFilterPasses(
+            self._filter({}, keys=['foo', 'baz']),
+            {'foo': None, 'baz': None},
+        )
+
+    def test_pass_mapping_match_type(self):
+        """
+        Whenever practical, the filter will try to return the same type of
+        value that it received.
+        """
+        runner = self.assertFilterPasses(
+            self._filter(
+                OrderedDict(foo='bar', baz='luhrmann'),
+                keys=('baz',)
+            ),
+            OrderedDict(baz='luhrmann')
+        )
+
+        self.assertIsInstance(runner.cleaned_data, OrderedDict)
+
+    def test_fail_mapping_allow_missing_keys_false(self):
+        """
+        Incoming value is missing one or more requested keys, and the filter
+        was initialised with ``allow_missing_keys=False``.
+        """
+        self.assertFilterErrors(
+            self._filter(
+                {'foo': 'bar', 'baz': 'luhrmann'},
+                keys=['foo', 'foobie', 'foobar'],
+                allow_missing_keys=False,
+            ),
+            {
+                'foobie': [f.Pick.CODE_MISSING_KEY],
+                'foobar': [f.Pick.CODE_MISSING_KEY],
+            },
+            {'foo': 'bar', 'foobie': None, 'foobar': None},
+        )
+
+    def test_pass_mapping_allow_missing_keys_iterable(self):
+        """
+        An incoming value is missing one or more requested keys, but they are
+        allowed to be missing because of ``allow_missing_keys``.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                {'foo': 'bar', 'baz': 'luhrmann'},
+                keys=['foo', 'foobie', 'foobar'],
+                allow_missing_keys={'foobie', 'foobar'},
+            ),
+            {'foo': 'bar', 'foobie': None, 'foobar': None},
+        )
+
+    def test_pass_sequence(self):
+        """
+        Using the filter to pick specific indices from a sequence.
+        """
+        self.assertFilterPasses(
+            self._filter(['foo', 'bar', 'baz'], keys=[0, 2]),
+            ['foo', 'baz'],
+        )
+
+    def test_pass_sequence_ordered_keys(self):
+        """
+        When keys are provided in an ordered collection, the order of keys
+        determines the order of the items in the result.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                ['Indiana', 'Marion', 'Marcus'],
+                keys=[1, 0, 2],
+            ),
+            ['Marion', 'Indiana', 'Marcus'],
+        )
+
+    def test_pass_sequence_missing_values(self):
+        """
+        Any indices not present in the incoming value are set to ``None``.
+        """
+        self.assertFilterPasses(
+            self._filter(['foo', 'bar', 'baz'], keys=[0, 2, 4]),
+            ['foo', 'baz', None],
+        )
+
+    def test_pass_sequence_empty(self):
+        """
+        An empty sequence always passes this filter.
+
+        Chain with :py:class:`MinLength` or :py:class:`NotEmpty` to reject
+        empty sequences, or set ``allow_missing_keys`` when initialising the
+        filter.
+        """
+        self.assertFilterPasses(
+            self._filter([], keys=[1]),
+            [None],
+        )
+
+    def test_pass_sequence_match_type(self):
+        """
+        Whenever practical, the filter will try to return the same type of
+        value that it received.
+        """
+        runner = self.assertFilterPasses(
+            self._filter(('foo', 'bar', 'baz'), keys=(1,)),
+            ('bar',),
+        )
+
+        self.assertIsInstance(runner.cleaned_data, tuple)
+
+    def test_fail_sequence_allow_missing_keys_false(self):
+        """
+        Incoming value is missing one or more requested indices, and the filter
+        was initialised with ``allow_missing_keys=False``.
+        """
+        self.assertFilterErrors(
+            self._filter(
+                ['foo', 'bar'],
+                keys={0, 2, 4},
+                allow_missing_keys=False,
+            ),
+            {
+                '2': [f.Pick.CODE_MISSING_KEY],
+                '4': [f.Pick.CODE_MISSING_KEY],
+            },
+            ['foo', None, None],
+        )
+
+    def test_pass_sequence_allow_missing_keys_iterable(self):
+        """
+        An incoming value is missing one or more requested indices, but they
+        are allowed to be missing because of ``allow_missing_keys``.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                ['foo', 'bar'],
+                keys={0, 2, 4},
+                allow_missing_keys={2, 4},
+            ),
+            ['foo', None, None],
+        )
+
+    def test_fail_wrong_type(self):
+        """
+        The incoming value is neither a mapping nor a sequence.
+        """
+        self.assertFilterErrors(
+            self._filter(42, keys={0}),
+            [f.Type.CODE_WRONG_TYPE],
+        )
+
+    def test_error_empty_keys(self):
+        """
+        The ``keys`` param must not be empty.
+        """
+        self.assertRaises(f.FilterError, lambda: self.filter_type(keys=[]))
 
 
 class RequiredTestCase(BaseFilterTestCase):
