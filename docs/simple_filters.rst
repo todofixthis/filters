@@ -1064,14 +1064,14 @@ the rest:
 
    # Pick 'red', 'green', and 'blue' items from a mapping:
    runner = f.FilterRunner(
-       f.Pick({'red', 'green', 'blue'}),
+       f.Pick(['red', 'green', 'blue']),
        {'red': 65, 'green': 105, 'blue': 225, 'alpha': 1, 'hex': '#4169E1'}
    )
    assert runner.is_valid() is True
    assert runner.cleaned_data == {'red': 65, 'green': 105, 'blue': 225}
 
    # Pick the first 2 items from a sequence:
-   runner = f.FilterRunner(f.Pick({0, 1}), [42, 86, 99])
+   runner = f.FilterRunner(f.Pick([0, 1]), [42, 86, 99])
    assert runner.is_valid() is True
    assert runner.cleaned_data == [42, 86]
 
@@ -1091,6 +1091,17 @@ the rest:
       assert runner.is_valid() is True
       assert runner.cleaned_data == ['Marion', 'Indiana', 'Marcus']
 
+   In particular, note that `sets are unordered collections`_, so you probably
+   want to avoid using them to specify keys to pick:
+
+   .. code-block:: python
+
+      # ❌ Order of items is not guaranteed, because sets are unordered.
+      f.Pick({1, 2, 3})
+
+      # ✅ Order of items is guaranteed, because lists are ordered.
+      f.Pick([1, 2, 3])
+
 By default, any picked keys that aren't present in the incoming value are
 set to ``None``:
 
@@ -1100,14 +1111,14 @@ set to ``None``:
 
    # Incoming mapping is missing ``age`` key, so ``None`` is substituted:
    runner = f.FilterRunner(
-       f.Pick({'name', 'age'}),
+       f.Pick(['name', 'age']),
        {'name': 'Indiana', 'job': 'Archaeologist'},
    )
    assert runner.is_valid() is True
    assert runner.cleaned_data == {'name': 'Indiana', 'age': None}
 
    # Incoming sequence doesn't have a 4th item, so ``None`` is substituted:
-   runner = f.FilterRunner(f.Pick({0, 2, 4}), ['Indiana', 'Marion', 'Marcus'])
+   runner = f.FilterRunner(f.Pick([0, 2, 4]), ['Indiana', 'Marion', 'Marcus'])
    assert runner.is_valid() is True
    assert runner.cleaned_data == ['Indiana', 'Marcus', None]
 
@@ -1120,14 +1131,14 @@ optional ``allow_missing_keys`` argument to the filter initialiser:
 
    # All keys are required:
    runner = f.FilterRunner(
-       f.Pick({'name', 'age'}, allow_missing_keys=False),
+       f.Pick(['name', 'age'], allow_missing_keys=False),
        {'name': 'Indiana', 'job': 'Archaeologist'},
    )
    assert runner.is_valid() is False
 
    # Or, only specified keys are required:
    runner = f.FilterRunner(
-       f.Pick({'name', 'age'}, allow_missing_keys={'age'}),
+       f.Pick(['name', 'age'], allow_missing_keys={'age'}),
        {'name': 'Indiana', 'job': 'Archaeologist'},
    )
    assert runner.is_valid() is True
@@ -1135,13 +1146,13 @@ optional ``allow_missing_keys`` argument to the filter initialiser:
 
    # Also works for sequences:
    runner = f.FilterRunner(
-       f.Pick({0, 2, 4}, allow_missing_keys=False),
+       f.Pick([0, 2, 4], allow_missing_keys=False),
        ['Indiana', 'Marion', 'Marcus'],
    )
    assert runner.is_valid() is False
 
    runner = f.FilterRunner(
-       f.Pick({0, 2, 4}, allow_missing_keys={4}),
+       f.Pick([0, 2, 4], allow_missing_keys={4}),
        ['Indiana', 'Marion', 'Marcus'],
    )
    assert runner.is_valid() is True
