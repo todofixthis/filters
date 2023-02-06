@@ -32,6 +32,13 @@ class FilterRunnerTestCase(TestCase):
             {'': [f.Decimal.CODE_INVALID]},
         )
 
+        # One more; make sure that the error messages from the invalid value
+        # also get cleared out.
+        runner.apply(86.0)
+        self.assertTrue(runner.is_valid())
+        self.assertDictEqual(runner.error_codes, {})
+        self.assertEqual(runner.cleaned_data, 86)
+
 
 class ExceptionHandlerTestCase(TestCase):
     def setUp(self):
