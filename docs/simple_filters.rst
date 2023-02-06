@@ -219,20 +219,36 @@ initialiser.
 
    import filters as f
 
-   filter_ = f.Choice(choices=('Moe', 'Larry', 'Curly'))
+   runner = f.FilterRunner(f.Choice(choices=('Moe', 'Larry', 'Curly')))
 
-   runner = f.FilterRunner(filter_, 'Curly')
+   runner.apply('Curly')
    assert runner.is_valid() is True
    assert runner.cleaned_data == 'Curly'
 
-   runner = f.FilterRunner(filter_, 'Shemp')
+   runner.apply('Shemp')
    assert runner.is_valid() is False
 
-.. note::
+The comparison is case-sensitive by default; you can override this by passing
+``case_sensitive=False`` to the filter initialiser.
 
-   The comparison is case-sensitive; chain this filter with :ref:`case-fold` for
-   case-insensitive comparison (but note that this will modify the resulting
-   value).
+The ``choices`` passed to the filter initialiser are the 'canonical' ones; when
+a match is found, the filter will always return the matching choice, rather than
+the raw input.
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(
+       f.Choice(
+           choices=['Weiße Taube', 'Wellensittich', 'Spatz'],
+           case_sensitive=False
+       )
+   )
+
+   runner.apply('weisse taube')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Weiße Taube'
 
 .. _date:
 
