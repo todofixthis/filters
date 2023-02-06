@@ -172,14 +172,14 @@ class Choice(BaseFilter):
         )
 
     def _apply(self, value):
-        comparison = (
-            value
-            if self.case_sensitive or not isinstance(value, typing.Text)
-            else CaseFold().apply(value)
-        )
+        if (not self.case_sensitive) and isinstance(value, typing.Text):
+            value = self._filter(value, CaseFold)
+
+            if self._has_errors:
+                return None
 
         try:
-            return self.choice_map[comparison]
+            return self.choice_map[value]
         except KeyError:
             return self._invalid_value(
                 value=value,
