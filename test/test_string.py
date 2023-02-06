@@ -1,5 +1,4 @@
 import re
-from collections import OrderedDict
 from decimal import Decimal
 from uuid import UUID
 from xml.etree.ElementTree import Element
@@ -223,7 +222,7 @@ class ByteStringTestCase(BaseFilterTestCase):
         The incoming value is a Decimal that was parsed from scientific
         notation.
         """
-        # Note that ``bytes(Decimal('2.8E6')`` yields b'2.8E+6', which
+        # Note that ``bytes(Decimal('2.8E6'))`` yields b'2.8E+6', which
         # is not what we want!
         self.assertFilterPasses(
             Decimal('2.8E6'),
@@ -246,7 +245,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
-          - http://stackoverflow.com/q/16467479
+          - https://stackoverflow.com/q/16467479
         """
         self.assertFilterPasses(
             #   U+0065 LATIN SMALL LETTER E
@@ -264,7 +263,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
-          - http://stackoverflow.com/q/16467479
+          - https://stackoverflow.com/q/16467479
         """
         self.assertFilterPasses(
             self._filter(
@@ -286,6 +285,7 @@ class ByteStringTestCase(BaseFilterTestCase):
         By default, the Filter does not remove non-printable
         characters.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             # \u0000-\u001f are ASCII control characters.
             # \uffff is a Unicode control character.
@@ -299,6 +299,7 @@ class ByteStringTestCase(BaseFilterTestCase):
         You can force the Filter to remove non-printable characters
         before encoding.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 '\u0010Hell\u0000o,\u001f wor\uffffld!',
@@ -382,9 +383,68 @@ class CaseFoldTestCase(BaseFilterTestCase):
         """
         The incoming value is not a string.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterErrors(
             ['Weißkopfseeadler', 'İstanbul'],
             [f.Type.CODE_WRONG_TYPE],
+        )
+
+
+class ChoiceTestCase(BaseFilterTestCase):
+    filter_type = f.Choice
+
+    def test_pass_none(self):
+        """
+        ``None`` always passes this Filter.
+
+        Use ``Required | Choice`` if you want to reject null values.
+        """
+        self.assertFilterPasses(
+            # Even if you specify no valid choices, `None` still
+            # passes.
+            self._filter(None, choices=()),
+        )
+
+    def test_pass_valid(self):
+        """
+        The incoming value matches one of the choices.
+        """
+        self.assertFilterPasses(
+            self._filter('Curly', choices=('Moe', 'Larry', 'Curly')),
+        )
+
+    def test_fail_invalid(self):
+        """
+        The incoming value does not match any of the choices.
+        """
+        self.assertFilterErrors(
+            self._filter('Shemp', choices=('Moe', 'Larry', 'Curly')),
+            [f.Choice.CODE_INVALID],
+        )
+
+    def test_pass_case_insensitive_valid(self):
+        """
+        The incoming value matches a choice using case-insensitive comparison.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'mOE',
+                choices=('Moe', 'Larry', 'Curly'),
+                case_sensitive=False,
+            ),
+
+            # The ``choices`` passed to the filter initialiser define the
+            # canonical choices.
+            'Moe',
+        )
+
+    def test_fail_case_insensitive_type_mismatch(self):
+        """
+        The incoming value has a different type, so it does not match.
+        """
+        self.assertFilterErrors(
+            self._filter(42, choices=('42',), case_sensitive=False),
+            [f.Choice.CODE_INVALID],
         )
 
 
@@ -594,9 +654,6 @@ class JsonDecodeTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             '{"foo": "bar", "baz": "luhrmann"}',
-
-            # Technically, the return value is an OrderedDict, but to
-            # keep things simple, we will compare them as dicts.
             {'foo': 'bar', 'baz': 'luhrmann'},
         )
 
@@ -647,6 +704,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         """
         The incoming value is a string that is short enough.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter('Γειάσου Κόσμε', max_bytes=25),
 
@@ -662,6 +720,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         # If we were to apply the prefix to the incoming string, it
         # would be too long to fit, but the filter will only apply
         # the prefix if the value needs to be truncated.
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -679,6 +738,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to apply a suffix to values that are too long,
         but the incoming value is a unicode string that is short enough.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -695,6 +755,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         """
         The incoming value is a string that is too long.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterErrors(
             self._filter('Γειάσου Κόσμε', max_bytes=24),
             [f.MaxBytes.CODE_TOO_LONG],
@@ -705,6 +766,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The incoming value is a string that is too long, and the filter is
         configured to truncate it.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter('Γειάσου Κόσμε', max_bytes=24, truncate=True),
 
@@ -720,6 +782,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The incoming value is a string that is too long, and the
         filter is configured to apply a prefix before truncating.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -740,6 +803,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The incoming value is a string that is too long, and the filter is
         configured to apply a suffix after truncating.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'หวัดดีชาวโลก',
@@ -781,7 +845,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         """
         The filter is configured with ``max_bytes`` so tiny that it is
         impossible to fit any multibyte sequences into a truncated string...
-        but just big enough to fit in some of the prefix+suffix.
+        but just big enough to fit in some prefix+suffix.
 
         Why do I do this to myself?
         """
@@ -804,6 +868,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to use an encoding other than UTF-8,
         and the incoming value is a string that is short enough.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -823,6 +888,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to use an encoding that uses a BOM,
         and the incoming value is a string that is too long.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterErrors(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -838,6 +904,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to use an encoding that uses a BOM,
         and the incoming value is a string that will be truncated.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -859,6 +926,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to use an encoding that uses a BOM,
         and to apply a prefix to truncated values.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'Γειάσου Κόσμε',
@@ -885,6 +953,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         The filter is configured to use an encoding that uses a BOM,
         and to apply a suffix to the truncated values.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'หวัดดีชาวโลก',
@@ -905,6 +974,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
         """
         Because my life wasn't hard enough already...
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 'मैं अपने आप से ऐसा क्यों करता हूं?',
@@ -1054,6 +1124,7 @@ class RegexTestCase(BaseFilterTestCase):
             [word],
         )
 
+    # noinspection SpellCheckingInspection
     def test_pass_precompiled_regex(self):
         """
         You can alternatively provide a precompiled regex to the Filter
@@ -1166,35 +1237,26 @@ class SplitTestCase(BaseFilterTestCase):
     def test_pass_keys(self):
         """
         If desired, you can map a collection of keys onto the resulting
-        list, which creates an OrderedDict.
+        list, which creates a dict.
 
         This is particularly cool, as it lets you chain a Split with a
         FilterMapper.
         """
-        filtered = self._filter(
-            'foo:bar:baz',
-            pattern=':',
-            keys=('a', 'b', 'c',),
+        self.assertFilterPasses(
+            self._filter(
+                'foo:bar:baz',
+                pattern=':',
+                keys=('a', 'b', 'c',),
+            ),
+
+            {
+                'a': 'foo',
+                'b': 'bar',
+                'c': 'baz',
+            },
         )
 
-        self.assertFilterPasses(filtered, self.skip_value_check)
-
-        cleaned = filtered.cleaned_data
-        self.assertIsInstance(cleaned, OrderedDict)
-
-        self.assertDictEqual(cleaned, {
-            'a': 'foo',
-            'b': 'bar',
-            'c': 'baz',
-        })
-
-        # Because the result is an OrderedDict, the order is preserved
-        # as well.
-        self.assertListEqual(
-            list(cleaned.values()),
-            ['foo', 'bar', 'baz'],
-        )
-
+    # noinspection SpellCheckingInspection
     def test_pass_precompiled_regex(self):
         """
         You can alternatively provide a precompiled regex to the Filter
@@ -1568,6 +1630,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
         # In order for this to work, we have to tell the Filter what
         # encoding to use:
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(incoming, encoding='iso-8859-1'),
             'Äpple',
@@ -1607,7 +1670,7 @@ class UnicodeTestCase(BaseFilterTestCase):
         The incoming value is a Decimal that was parsed from scientific
         notation.
         """
-        # Note that `text_type(Decimal('2.8E6')` yields '2.8E+6', which
+        # Note that `str(Decimal('2.8E6'))` yields '2.8E+6', which
         # is not what we want!
         self.assertFilterPasses(
             Decimal('2.8E6'),
@@ -1629,7 +1692,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
-          - http://stackoverflow.com/q/16467479
+          - https://stackoverflow.com/q/16467479
         """
         #   U+0065 LATIN SMALL LETTER E
         # + U+0301 COMBINING ACUTE ACCENT
@@ -1658,6 +1721,7 @@ class UnicodeTestCase(BaseFilterTestCase):
         By default, this Filter also removes non-printable characters
         (both ASCII and Unicode varieties).
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             # \x00-\x1f are ASCII control characters.
             # \xef\xbf\xbf is the Unicode control character \uffff,
@@ -1671,6 +1735,7 @@ class UnicodeTestCase(BaseFilterTestCase):
         """
         You can force the Filter not to remove non-printable characters.
         """
+        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(
                 b'\x10Hell\x00o,\x1f wor\xef\xbf\xbfld!',

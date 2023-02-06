@@ -1,4 +1,4 @@
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 
 import filters as f
 from filters.test import BaseFilterTestCase
@@ -245,22 +245,20 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
 
     def test_repeater_chained_with_repeater(self):
         """
-        Chaining two FilterRepeaters together has basically the same
-        effect as combining their Filters, except for one very
-        important difference:  The two sets of Filters are applied
-        in sequence.
+        Chaining two FilterRepeaters together has basically the same effect as
+        combining their Filters, except for one very important difference:  The
+        two sets of Filters are applied in sequence.
 
-        That is, the second set of Filters only get applied if ALL
-        of the Filters in the first set pass!
+        That is, the second set of Filters only get applied if ALL the Filters
+        in the first set pass!
 
-        Generally, combining two FilterRepeaters into a single instance
-        is much easier to read/maintain than chaining them, but
-        should you ever come across a situation where you need to
-        apply two FilterRepeaters in sequence, you can do so.
+        Generally, combining two FilterRepeaters into a single instance is much
+        easier to read/maintain than chaining them, but should you ever come
+        across a situation where you need to apply two FilterRepeaters in
+        sequence, you can do so.
         """
         self.filter_type = \
-            lambda: f.FilterRepeater(f.NotEmpty) | f.FilterRepeater(
-                f.Int)
+            lambda: f.FilterRepeater(f.NotEmpty) | f.FilterRepeater(f.Int)
 
         # The values in this list pass through both FilterRepeaters
         # successfully.
@@ -278,22 +276,21 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
                 # Fails the NotEmpty filter in the first FilterRepeater.
                 '0': [f.NotEmpty.CODE_EMPTY],
 
-                # IMPORTANT:  Because the first FilterRepeater had one
-                # or more errors, the outer FilterChain stopped.
-                # # Fails the Int filter in the second FilterRepeater.
+                # IMPORTANT:  Because the first FilterRepeater had one or more
+                # errors, the outer FilterChain stopped.
                 # '1': [f.Decimal.CODE_NON_FINITE],
                 # '4': [f.Int.CODE_INVALID],
             },
 
-            # The result is the same as if we only ran the value
-            # through the first FilterRepeater.
+            # The result is the same as if we only ran the value through the
+            # first FilterRepeater.
             expected_value=[
                 None, 'NaN', 0, None, 'FOO'
             ]
         )
 
-        # The values in this list pass the first FilterRepeater but
-        # fail the second one.
+        # The values in this list pass the first FilterRepeater but fail the
+        # second one.
         self.assertFilterErrors(
             ['1', 'NaN', 0, None, 'FOO'],
 
@@ -307,21 +304,18 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
 
     def test_repeater_chained_with_filter(self):
         """
-        Chaining a Filter with a FilterRepeater causes the chained
-        Filter to operate on the entire collection.
+        Chaining a Filter with a FilterRepeater causes the chained Filter to
+        operate on the entire collection.
         """
-        # This chain will apply NotEmpty to every item in the
-        # collection, and then apply MaxLength to the collection as a
-        # whole.
+        # This chain will apply NotEmpty to every item in the collection, and
+        # then apply MaxLength to the collection as a whole.
         self.filter_type = \
             lambda: f.FilterRepeater(f.NotEmpty) | f.MaxLength(2)
 
-        # The collection has a length of 2, so it passes the MaxLength
-        # filter.
+        # The collection has a length of 2, so it passes the MaxLength filter.
         self.assertFilterPasses(['foo', 'bar'])
 
-        # The collection has a length of 3, so it fails the MaxLength
-        # filter.
+        # The collection has a length of 3, so it fails the MaxLength filter.
         self.assertFilterErrors(
             ['a', 'b', 'c'],
             [f.MaxLength.CODE_TOO_LONG],
@@ -333,8 +327,7 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
         FilterRepeaters can contain other FilterRepeaters.
         """
         self.filter_type = lambda: (
-            # Apply the following filters to each item in the incoming
-            # value:
+            # Apply the following filters to each item in the incoming value:
             f.FilterRepeater(
 
                 # 1. It must be a list.
@@ -350,11 +343,11 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
 
         self.assertFilterPasses(
             #
-            # Note that the INCOMING VALUE ITSELF does not have to be a
-            # list, nor does it have to have a max length <= 3.
+            # Note that the INCOMING VALUE ITSELF does not have to be a list,
+            # nor does it have to have a max length <= 3.
             #
-            # These Filters are applied to the items INSIDE THE
-            # INCOMING VALUE (because of the outer FilterRepeater).
+            # These Filters are applied to the items INSIDE THE INCOMING VALUE
+            # (because of the outer FilterRepeater).
             #
             {
                 'foo': ['1', '2', '3'],
@@ -394,12 +387,12 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
 
             {
                 #
-                # The error keys are the dotted paths to the invalid
-                # values (in this case, they are numeric because we
-                # are working with lists).
+                # The error keys are the dotted paths to the invalid values (in
+                # this case, they are numeric because we are working with
+                # lists).
                 #
-                # This way, we don't have to deal with nested dicts
-                # when processing error codes.
+                # This way, we don't have to deal with nested dicts when
+                # processing error codes.
                 #
                 '1.0': [f.Decimal.CODE_NON_FINITE],
                 '1.1': [f.Int.CODE_DECIMAL],
@@ -427,9 +420,9 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
 class FilterMapperTestCase(BaseFilterTestCase):
     def test_pass_none(self):
         """
-        For consistency with all the other Filter classes, `None` is
-        considered a valid value to pass to a FilterMapper, even
-        though it is not iterable.
+        For consistency with all the other Filter classes, ``None`` is
+        considered a valid value to pass to a FilterMapper, even though it is
+        not iterable.
         """
         self.filter_type = lambda: f.FilterMapper({'id': f.Int})
 
@@ -444,13 +437,11 @@ class FilterMapperTestCase(BaseFilterTestCase):
             'subject': f.NotEmpty | f.MaxLength(16),
         })
 
-        filter_ = self._filter({
-            'id': '42',
-            'subject': 'Hello, world!',
-        })
-
-        self.assertFilterPasses(
-            filter_,
+        runner = self.assertFilterPasses(
+            self._filter({
+                'subject': 'Hello, world!',
+                'id': '42',
+            }),
 
             {
                 'id': 42,
@@ -458,41 +449,15 @@ class FilterMapperTestCase(BaseFilterTestCase):
             },
         )
 
-        # The result is a dict, to match the type of the filter map.
-        self.assertIs(type(filter_.cleaned_data), dict)
-
-    def test_pass_ordered_mapping(self):
-        """
-        Configuring the FilterRepeater to return an OrderedDict.
-        """
-        # Note that we pass an OrderedDict to the filter initializer.
-        self.filter_type = lambda: f.FilterMapper(OrderedDict((
-            ('subject', f.NotEmpty | f.MaxLength(16)),
-            ('id', f.Required | f.Int | f.Min(1)),
-        )))
-
-        filter_ = self._filter({
-            'id': '42',
-            'subject': 'Hello, world!',
-        })
-
-        self.assertFilterPasses(
-            filter_,
-
-            OrderedDict((
-                ('subject', 'Hello, world!'),
-                ('id', 42),
-            )),
+        # Key order matches the filter map passed to the filter initialiser.
+        self.assertListEqual(
+            list(runner.cleaned_data.keys()),
+            ['id', 'subject'],
         )
-
-        # The result is an OrderedDict, to match the type of the filter
-        # map.
-        self.assertIs(type(filter_.cleaned_data), OrderedDict)
 
     def test_fail_mapping(self):
         """
-        A FilterRepeater is applied to a dict containing invalid
-        values.
+        A FilterRepeater is applied to a dict containing invalid values.
         """
         self.filter_type = lambda: f.FilterMapper({
             'id': f.Required | f.Int | f.Min(1),
@@ -518,66 +483,42 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_extra_keys_allowed(self):
         """
-        By default, FilterMappers passthru extra keys.
+        By default, FilterMappers pass-thru extra keys.
         """
         self.filter_type = lambda: f.FilterMapper({
             'id': f.Required | f.Int | f.Min(1),
             'subject': f.NotEmpty | f.MaxLength(16),
         })
 
-        self.assertFilterPasses(
-            {
-                'id': '42',
+        runner = self.assertFilterPasses(
+            self._filter({
+                'cat': 'felix',
                 'subject': 'Hello, world!',
-                'extra': 'ignored',
-            },
+                'id': '42',
+                'fox': 'fennecs',
+                'bird': 'phoenix',
+            }),
 
             {
-                'id': 42,
                 'subject': 'Hello, world!',
-                'extra': 'ignored',
-            }
+                'id': 42,
+                'bird': 'phoenix',
+                'cat': 'felix',
+                'fox': 'fennecs',
+            },
         )
 
-    def test_extra_keys_ordered(self):
-        """
-        When the filter map is an OrderedDict, extra keys are
-        alphabetized.
-        """
-        # Note that we pass an OrderedDict to the filter initializer.
-        self.filter_type = lambda: f.FilterMapper(OrderedDict((
-            ('subject', f.NotEmpty | f.MaxLength(16)),
-            ('id', f.Required | f.Int | f.Min(1)),
-        )))
-
-        filter_ = self._filter({
-            'id': '42',
-            'subject': 'Hello, world!',
-            'cat': 'felix',
-            'bird': 'phoenix',
-            'fox': 'fennecs',
-        })
-
-        self.assertFilterPasses(
-            filter_,
-
-            OrderedDict((
-                # The filtered keys are always listed first.
-                ('subject', 'Hello, world!'),
-                ('id', 42),
-
-                    # Extra keys are listed afterward, in alphabetical
-                    # order.
-                ('bird', 'phoenix'),
-                ('cat', 'felix'),
-                ('fox', 'fennecs'),
-            )),
+        # Filtered keys are always first, followed by extra keys in
+        # alphabetical order.
+        self.assertListEqual(
+            list(runner.cleaned_data.keys()),
+            ['id', 'subject', 'bird', 'cat', 'fox']
         )
 
     def test_extra_keys_disallowed(self):
         """
-        FilterMappers can be configured to treat any extra key as an
-        invalid value.
+        FilterMappers can be configured to treat any extra key as an invalid
+        value.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -600,8 +541,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 'extra': [f.FilterMapper.CODE_EXTRA_KEY],
             },
 
-            # The valid fields were still included in the return value,
-            # but the invalid field was removed.
+            # The valid fields were still included in the return value, but the
+            # invalid field was removed.
             expected_value={
                 'id': 42,
                 'subject': 'Hello, world!',
@@ -610,8 +551,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_extra_keys_specified(self):
         """
-        FilterMappers can be configured only to allow certain extra
-        keys.
+        FilterMappers can be configured only to allow certain extra keys.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -638,8 +578,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
             },
         )
 
-        # But, add a key that isn't in ``allow_extra_keys``, and you've
-        # got a problem.
+        # But, add a key that isn't in ``allow_extra_keys``, and you've got a
+        # problem.
         self.assertFilterErrors(
             {
                 'id': '42',
@@ -681,8 +621,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
             },
         )
 
-        # However, 'id' has Required in its FilterChain, so a missing
-        # 'id' is still an error.
+        # However, 'id' has Required in its FilterChain, so a missing 'id' is
+        # still an error.
         self.assertFilterErrors(
             {
                 'subject': 'Hello, world!',
@@ -700,8 +640,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_missing_keys_disallowed(self):
         """
-        FilterMappers can be configured to treat missing keys as
-        invalid values.
+        FilterMappers can be configured to treat missing keys as invalid
+        values.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -729,8 +669,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_missing_keys_specified(self):
         """
-        FilterMappers can be configured to allow some missing keys but
-        not others.
+        FilterMappers can be configured to allow some missing keys but not
+        others.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -741,8 +681,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
             allow_missing_keys={'subject'},
         )
 
-        # The FilterMapper is configured to treat missing 'subject' as
-        # if it were set to `None`.
+        # The FilterMapper is configured to treat missing 'subject' as if it
+        # were set to `None`.
         self.assertFilterPasses(
             {
                 'id': '42'
@@ -770,10 +710,10 @@ class FilterMapperTestCase(BaseFilterTestCase):
             }
         )
 
-    def test_passthru_key(self):
+    def test_pass_thru_key(self):
         """
-        If you want to make a key required but do not want to run any
-        Filters on it, set its FilterChain to `None`.
+        If you want to make a key required but do not want to run any Filters
+        on it, set its FilterChain to `None`.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -781,8 +721,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 'subject': None,
             },
 
-            # If you configure a FilterMapper with passthru keys(s),
-            # you generally also want to disallow missing keys.
+            # If you configure a FilterMapper with pass-thru keys(s), you
+            # generally also want to disallow missing keys.
             allow_missing_keys=False,
         )
 
@@ -826,7 +766,9 @@ class FilterMapperTestCase(BaseFilterTestCase):
         )
 
     def test_fail_non_mapping(self):
-        """The incoming value is not a mapping."""
+        """
+        The incoming value is not a mapping.
+        """
         self.filter_type = lambda: f.FilterMapper({
             'id': f.Required | f.Int | f.Min(1),
             'subject': f.NotEmpty | f.MaxLength(16),
@@ -840,14 +782,13 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_mapper_chained_with_mapper(self):
         """
-        Chaining two FilterMappers together has basically the same
-        effect as combining their Filters.
+        Chaining two FilterMappers together has basically the same effect as
+        combining their Filters.
 
-        Generally, combining two FilterMappers into a single instance
-        is much easier to read/maintain than chaining them, but in
-        a few cases it may be unavoidable (for example, if you need
-        each FilterMapper to handle extra and/or missing keys
-        differently).
+        Generally, combining two FilterMappers into a single instance is much
+        easier to read/maintain than chaining them, but in a few cases it may
+        be unavoidable (for example, if you need each FilterMapper to handle
+        extra and/or missing keys differently).
         """
         fm1 = f.FilterMapper(
             {
@@ -886,14 +827,13 @@ class FilterMapperTestCase(BaseFilterTestCase):
             {},
 
             {
-                # ``fm1`` allows missing keys, so it sets 'id' to
-                # ``None``.
-                # However, ``fm2`` does not allow ``None`` for 'id'
-                # (because of the ``Required`` filter).
+                # ``fm1`` allows missing keys, so it sets 'id' to ``None``.
+                # However, ``fm2`` does not allow ``None`` for 'id' (because of
+                # the ``Required`` filter).
                 'id': [f.Required.CODE_EMPTY],
 
-                # `fm1` does not care about `subject`, but `fm2`
-                # expects it to be there.
+                # `fm1` does not care about `subject`, but `fm2` expects it to
+                # be there.
                 'subject': [f.FilterMapper.CODE_MISSING_KEY],
             },
 
@@ -905,8 +845,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
     def test_filter_mapper_chained_with_filter(self):
         """
-        Chaining a Filter with a FilterMapper causes the chained Filter
-        to operate on the entire mapping.
+        Chaining a Filter with a FilterMapper causes the chained Filter to
+        operate on the entire mapping.
         """
         fm = f.FilterMapper({
             'id': f.Required | f.Int | f.Min(1),
@@ -937,16 +877,14 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 'attachment': None,
             },
 
-            # The incoming value has 4 items, which fails the MaxLength
-            # filter.
+            # The incoming value has 4 items, which fails the MaxLength filter.
             [f.MaxLength.CODE_TOO_LONG],
         )
 
     # noinspection SpellCheckingInspection
     def test_mapperception(self):
         """
-        Want to filter dicts that contain other dicts?
-        We need to go deeper.
+        Want to filter dicts that contain other dicts?  We need to go deeper.
         """
         self.filter_type = lambda: f.FilterMapper(
             {
@@ -956,8 +894,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
                     {
                         'type':
                             f.Required
-                            | f.Choice(
-                                choices={'image/jpeg', 'image/png'}),
+                            | f.Choice(choices={'image/jpeg', 'image/png'}),
 
                         'data': f.Required | f.Base64Decode,
                     },
@@ -1017,18 +954,17 @@ class FilterMapperTestCase(BaseFilterTestCase):
             },
 
             {
-                # The error keys are the dotted paths to the invalid
-                # values.
-                # This way, we don't have to deal with nested dicts
-                # when processing error codes.
+                # The error keys are the dotted paths to the invalid values.
+                # This way, we don't have to deal with nested dicts when
+                # processing error codes.
                 'id': [f.Decimal.CODE_NON_FINITE],
                 'subject': [f.FilterMapper.CODE_MISSING_KEY],
                 'attachment.type': [f.Choice.CODE_INVALID],
                 'attachment.data': [f.Type.CODE_WRONG_TYPE],
             },
 
-            # The resulting value has the expected structure, but it's
-            # a ghost town.
+            # The resulting value has the expected structure, but it's a ghost
+            # town.
             expected_value={
                 'id': None,
                 'subject': None,
@@ -1053,8 +989,7 @@ class NamedTupleTestCase(BaseFilterTestCase):
         """
         ``None`` always passes this filter.
 
-        Chain with :py:class:`f.Required` if you want to disallow null
-        values.
+        Chain with :py:class:`f.Required` if you want to disallow null values.
         """
         self.assertFilterPasses(None)
 
@@ -1066,20 +1001,22 @@ class NamedTupleTestCase(BaseFilterTestCase):
 
     def test_success_namedtuple_different_type(self):
         """
-        Incoming value is a namedtuple instance, but of a different
-        type.
+        Incoming value is a namedtuple instance, but of a different type.
 
-        Since namedtuples are still tuples, this has the same result as
-        for any other incoming iterable.
+        Since namedtuples are still tuples, this has the same result as for any
+        other incoming iterable.
         """
-        # Just to be tricky, we'll make it look very close to the
-        # expected type.
+        # Just to be tricky, we'll make it look very close to the expected
+        # type.
         AltColour = namedtuple('AltColour', Colour._fields)
 
-        self.assertFilterPasses(
+        # noinspection PyArgumentList
+        runner = self.assertFilterPasses(
             AltColour(64, 128, 192),
             Colour(64, 128, 192),
         )
+
+        self.assertIsInstance(runner.cleaned_data, Colour)
 
     def test_success_iterable(self):
         """
@@ -1091,7 +1028,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
     def test_success_iterable_compat(self):
         """
         Incoming value is an iterable, formatted for compatibility with
-        Python < 3.6.
+        Python < 3.6 (even though technically we don't support it anymore;
+        don't tell anyone).
         """
         value = [('b', 192), ('g', 128), ('r', 64)]
         self.assertFilterPasses(value, Colour(*value))
@@ -1111,8 +1049,7 @@ class NamedTupleTestCase(BaseFilterTestCase):
 
     def test_fail_iterable_too_short(self):
         """
-        Incoming value is an iterable that is missing one or more
-        values.
+        Incoming value is an iterable that is missing one or more values.
         """
         self.assertFilterErrors((64, 128,), [f.MinLength.CODE_TOO_SHORT])
 
@@ -1141,8 +1078,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
 
     def test_fail_mapping_extra_keys(self):
         """
-        Incoming value is a mapping that has extra keys that we don't
-        know what to do with.
+        Incoming value is a mapping that has extra keys that we don't know what
+        to do with.
         """
         self.assertFilterErrors(
             {
@@ -1159,8 +1096,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
 
     def test_success_filter_map(self):
         """
-        Applying a :py:class:`f.FilterMap` to the values in a namedtuple
-        after converting (success case).
+        Applying a :py:class:`f.FilterMap` to the values in a namedtuple after
+        converting (success case).
         """
         self.filter_type = lambda: f.NamedTuple(Colour, {
             # For whatever reason, we decide not to filter ``r``.
@@ -1175,8 +1112,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
 
     def test_fail_filter_map(self):
         """
-        Applying a :py:class:`f.FilterMap` to the values in a namedtuple
-        after converting (failure case).
+        Applying a :py:class:`f.FilterMap` to the values in a namedtuple after
+        converting (failure case).
         """
         self.filter_type = lambda: f.NamedTuple(Colour, {
             # For whatever reason, we decide not to filter ``r``.
@@ -1229,8 +1166,8 @@ class FilterSwitchTestCase(BaseFilterTestCase):
 
     def test_fail_match_case(self):
         """
-        The incoming value matches one of the switch cases, but it is
-        not valid, according to the corresponding filter.
+        The incoming value matches one of the switch cases, but it is not
+        valid, according to the corresponding filter.
         """
         self.assertFilterErrors(
             self._filter(
@@ -1243,15 +1180,15 @@ class FilterSwitchTestCase(BaseFilterTestCase):
             ),
             {'value': [f.Min.CODE_TOO_SMALL]},
 
-            # The result is the exact same as if the value were passed
-            # directly to the corresponding filter.
+            # The result is the exact same as if the value were passed directly
+            # to the corresponding filter.
             expected_value={'name': 'positive', 'value': None},
         )
 
     def test_pass_default(self):
         """
-        The incoming value does not match any of the switch cases, but
-        we defined a default filter.
+        The incoming value does not match any of the switch cases, but we
+        defined a default filter.
         """
         self.assertFilterPasses(
             self._filter(
@@ -1267,8 +1204,8 @@ class FilterSwitchTestCase(BaseFilterTestCase):
 
     def test_fail_no_default(self):
         """
-        The incoming value does not match any of the switch cases, and
-        we did not define a default filter.
+        The incoming value does not match any of the switch cases, and we did
+        not define a default filter.
         """
         self.assertFilterErrors(
             self._filter(

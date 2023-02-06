@@ -1,6 +1,5 @@
 import json
 import typing
-from collections import OrderedDict
 from itertools import starmap
 from pprint import pformat
 from traceback import format_exception
@@ -20,7 +19,9 @@ def sorted_dict(value: typing.Mapping) -> typing.Any:
     handling of unordered dicts.
     """
     if isinstance(value, typing.Mapping):
-        return OrderedDict(
+        # ``dict`` preserves key insertion order since Python 3.6.
+        # https://docs.python.org/3/library/stdtypes.html#dict
+        return dict(
             (key, sorted_dict(value[key]))
                 for key in sorted(value.keys())
         )

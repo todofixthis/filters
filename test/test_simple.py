@@ -387,39 +387,6 @@ class CallTestCase(BaseFilterTestCase):
         self.assertTrue(filter_.has_exceptions)
 
 
-class ChoiceTestCase(BaseFilterTestCase):
-    filter_type = f.Choice
-
-    def test_pass_none(self):
-        """
-        ``None`` always passes this Filter.
-
-        Use ``Required | Choice`` if you want to reject null values.
-        """
-        self.assertFilterPasses(
-            # Even if you specify no valid choices, `None` still
-            # passes.
-            self._filter(None, choices=()),
-        )
-
-    def test_pass_valid_value(self):
-        """
-        The incoming value matches one of the choices.
-        """
-        self.assertFilterPasses(
-            self._filter('Curly', choices=('Moe', 'Larry', 'Curly')),
-        )
-
-    def test_fail_invalid_value(self):
-        """
-        The incoming value does not match any of the choices.
-        """
-        self.assertFilterErrors(
-            self._filter('Shemp', choices=('Moe', 'Larry', 'Curly')),
-            [f.Choice.CODE_INVALID],
-        )
-
-
 class DateTestCase(BaseFilterTestCase):
     filter_type = f.Date
 
