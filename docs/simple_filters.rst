@@ -1096,7 +1096,7 @@ omitting the keys specified when the filter is initialised.
 Optional
 --------
 Provides a default value that will be returned if the incoming value is
-``None`` or empty (has a length of zero or is ``None``).
+empty (has a length of zero) or is ``None``.
 
 Values that are not ``Sized`` (i.e., do not have ``__len__``) are considered
 to be *not* empty.  In particular, this means that ``0`` and ``False`` are
@@ -1106,36 +1106,91 @@ to be *not* empty.  In particular, this means that ``0`` and ``False`` are
 
    import filters as f
 
-   filter_ = f.Optional('t') | f.Choice({'t', 'f'})
+   runner = f.FilterRunner(f.Optional('t') | f.Choice({'t', 'f'}))
 
-   runner = f.FilterRunner(filter_, 'f')
+   runner.apply('f')
    assert runner.is_valid() is True
    assert runner.cleaned_data == 'f'
 
-   runner = f.FilterRunner(filter_, '')
+   runner.apply('')
    assert runner.is_valid() is True
    assert runner.cleaned_data == 't'
 
    # Also returns the default when the incoming value is ``None``:
-   runner = f.FilterRunner(filter_, None)
+   runner.apply(None)
    assert runner.is_valid() is True
    assert runner.cleaned_data == 't'
 
+If the default value is callable, then the filter will call it instead:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.Optional(list), None)
+
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == []
+
+To pass arguments to the default callable, use a partial or a lambda:
+
+.. code-block:: python
+
+   import filters as f
+
+   def power_of_two(power):
+       return pow(2, power)
+
+   # Using a partial:
+   from functools import partial
+   runner = f.FilterRunner(f.Optional(partial(power_of_two, power=8)), None)
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 256
+
+   # Using a lambda:
+   runner = f.FilterRunner(f.Optional(lambda: power_of_two(power=8)), None)
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 256
+
 .. important::
 
-   :py:class:`filters.FilterRunner` stops processing filters as soon as a
-   value is determined to be invalid, so putting this filter at the end of
-   a chain very likely will not do what you expect.
+   This filter only substitutes a default for **empty** values, not **invalid**
+   ones.
+
+   A filter chain stops processing as soon as any filter in the chain flags an
+   invalid value, so putting this filter at the end of a chain very likely will
+   not do what you expect.
 
    .. code-block:: python
 
       import filters as f
 
       runner = f.FilterRunner(f.Choice({'t', 'f'}) | f.Optional('t'), '')
-      # Incoming value ``''`` does not match any valid choices, so the runner
-      # stops before it gets to the ``Optional`` filter!
+      # Incoming value ``''`` does not match any valid choices, so the filter
+      # chain stops before it gets to the ``Optional`` filter!
       assert runner.is_valid() is False
       assert runner.cleaned_data is None
+
+   This is how the above example could be rewritten:
+
+   .. code-block:: python
+
+      import filters as f
+
+      runner = f.FilterRunner(
+          # ``f.Optional`` comes after ``f.Strip``, so that if the incoming
+          # string is empty or only contains whitespace, the default value is
+          # substituted instead.
+          f.Unicode | f.Strip | f.Optional('t') | f.Choice({'t', 'f'})
+      )
+
+      runner.apply('      ')
+      assert runner.is_valid() is True
+      assert runner.cleaned_data == 't'
+
+      # ``f.Optional`` does not do anything for invalid values; only empty ones!
+      runner.apply('n')
+      assert runner.is_valid() is False
 
 Pick
 ----

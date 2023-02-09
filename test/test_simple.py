@@ -1,6 +1,7 @@
 import typing
 from collections import OrderedDict
 from datetime import date, datetime
+from functools import partial
 
 from dateutil.tz import tzoffset
 from pytz import utc
@@ -1307,6 +1308,27 @@ class OptionalTestCase(BaseFilterTestCase):
 
         # A new list is created each time.
         self.assertIsNot(runner1.cleaned_data, runner2.cleaned_data)
+
+    def test_pass_default_callable_partial(self):
+        """
+        To pass args or kwargs to a callable ``default``, use a partial or a
+        lambda.
+        """
+
+        def power_of_two(power):
+            return pow(2, power)
+
+        # Use a partial:
+        self.assertFilterPasses(
+            self._filter({}, partial(power_of_two, power=8)),
+            256,
+        )
+
+        # Or, use a lambda:
+        self.assertFilterPasses(
+            self._filter([], lambda: power_of_two(power=4)),
+            16,
+        )
 
     def test_pass_default_callable_but_do_not_call_it(self):
         """
