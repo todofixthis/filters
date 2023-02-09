@@ -727,37 +727,91 @@ class Optional(BaseFilter):
     """
     Changes empty and null values into a default value.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this Filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length.
+
+    .. note::
+
+       If an incoming value does not have a length, it is considered to be not
+       empty (in particular, note that ``False`` and ``0`` are considered not
+       empty in this context).
     """
 
-    def __init__(self, default=None):
+    def __init__(self,
+            default: typing.Any = None,
+            call_default: typing.Optional[bool] = None,
+    ):
         """
         :param default:
             The default value used to replace empty values.
+
+            If ``default`` is callable, then when the filter encounters an
+            empty incoming value, it will call ``default`` and use the return
+            value as the replacement, instead of using ``default`` itself.
+
+            For example, if ``default=list``, then each time the filter
+            encounters an empty value, it will create a new ``list`` to use as
+            the replacement.
+
+        :param call_default:
+            Whether to call ``default`` to determine the replacement value.
+
+            Effect:
+
+            - ``None`` (default) - only call ``default`` if it is callable.
+            - ``False`` - do not call ``default`` even if it is callable.
+            - ``True`` - call ``default`` even if it is not callable (pretty
+              sure you'd never need this, but we're all consenting adults
+              here).
         """
         super().__init__()
 
-        self.default = default
+        self.call_default = call_default
+
+        # Compat for Python 3.9: ``staticmethod.__wrapped__`` was added in
+        # Python 3.10, so we have to store the original value separately.
+        self.actual_default = default
+        self.callable_default = (
+            # https://stackoverflow.com/a/41921291
+            staticmethod(default).__get__(object)
+            if self.call_default is True or
+               (self.call_default is None and callable(default))
+            else None
+        )
 
     def __str__(self):
         return '{type}(default={default!r})'.format(
             type=type(self).__name__,
-            default=self.default,
+            default=self.actual_default,
         )
 
     def _apply(self, value):
         try:
             length = len(value)
         except TypeError:
+            # Values that don't have a length are considered not empty.
             length = 1
 
-        return value if length > 0 else self.default
+        if length > 0:
+            return value
+
+        return self._get_default()
 
     def _apply_none(self):
-        return self.default
+        # ``None`` is considered empty by this filter.
+        return self._get_default()
+
+    def _get_default(self):
+        """
+        Returns the default value that should be used to replace an empty
+        value.
+        """
+        return (
+            self.callable_default()
+            if self.call_default is True or
+               (self.call_default is None and
+                self.callable_default is not None)
+            else self.actual_default
+        )
 
 
 class Pick(BaseFilter):
