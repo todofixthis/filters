@@ -1,4 +1,5 @@
 import re
+from codecs import BOM_UTF16
 from decimal import Decimal
 from uuid import UUID
 from xml.etree.ElementTree import Element
@@ -15,10 +16,9 @@ class Base64DecodeTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
-        Use ``Required | Base64Decode`` if you want to reject null
-        values.
+        Use ``Required | Base64Decode`` if you want to reject null values.
         """
         self.assertFilterPasses(None)
 
@@ -32,10 +32,6 @@ class Base64DecodeTestCase(BaseFilterTestCase):
     def test_pass_url_safe(self):
         """
         The incoming value is Base64-encoded using a URL-safe variant.
-
-        This actually doesn't happen that often, as most human-readable
-        strings tend not to contain any URL-unsafe characters when
-        they are base64-encoded.
         """
         self.assertFilterPasses(
             b'--___w==',
@@ -44,8 +40,7 @@ class Base64DecodeTestCase(BaseFilterTestCase):
 
     def test_fail_mixed_dialects(self):
         """
-        The incoming value contains both URL-safe and URL-unsafe
-        characters.
+        The incoming value contains both URL-safe and URL-unsafe characters.
         """
         self.assertFilterErrors(
             b'+-_/_w==',
@@ -56,9 +51,9 @@ class Base64DecodeTestCase(BaseFilterTestCase):
         """
         The incoming value includes whitespace characters.
 
-        Technically, whitespace chars are not part of the Base64
-        alphabet.  But, virtually every implementation includes
-        support for whitespace, so we will, too.
+        Technically, whitespace chars are not part of the Base64 alphabet.
+        But, virtually every implementation includes support for whitespace, so
+        we will, too.
         """
         self.assertFilterPasses(
             # Tab chars are especially weird, but eh, why not..
@@ -68,14 +63,12 @@ class Base64DecodeTestCase(BaseFilterTestCase):
 
     def test_pass_padding_missing(self):
         """
-        The incoming value is Base64-encoded, but it has the wrong
-        length.
+        The incoming value is Base64-encoded, but it has the wrong length.
 
-        Base64 works by splitting up the string into chunks of 3 bytes
-        (24 bits) each, then dividing each chunk into 4 smaller
-        chunks of 6 bits each.  If the string's length is not
-        divisible by 3, then the last chunk will have too few
-        bytes, so we have to pad it out.
+        Base64 works by splitting up the string into chunks of 3 bytes (24
+        bits) each, then dividing each chunk into 4 smaller chunks of 6 bits
+        each.  If the string's length is not divisible by 3, then the last
+        chunk will have too few bytes, so we have to pad it out.
 
         References:
           - https://en.wikipedia.org/wiki/Base64#Padding
@@ -85,30 +78,35 @@ class Base64DecodeTestCase(BaseFilterTestCase):
 
     def test_pass_padding_excessive(self):
         """
-        The incoming value is Base64-encoded, but for some reason it
-        has too much padding.
+        The incoming value is Base64-encoded, but for some reason it has too
+        much padding.
+
+        This is weird, but it doesn't prevent the filter from decoding the
+        value, so the filter agrees to turn a conspiratorial blind eye.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(b'SGVsbG8sIHdvcmxkIQ=====', b'Hello, world!')
 
     def test_fail_invalid(self):
         """
-        The incoming value is not Base64-encoded.
+        The incoming value contains values that are not compatible with
+        Base64.
         """
         self.assertFilterErrors(
-            # Interestingly, Python's ``base64`` functions will attempt to
-            # decode this string anyway, by ignoring the invalid
-            # characters.
-            # https://docs.python.org/2/library/base64.html#base64.b64decode
             b'$Hello, world!===$',
             [f.Base64Decode.CODE_INVALID],
         )
 
     def test_fail_string(self):
         """
-        To ensure consistent behavior between Python 2 and Python 3,
-        character strings are not allowed; only binary strings can be
-        decoded.
+        For parity with :py:func:`codecs.decode`, unicode strings are not
+        allowed; only binary strings can be decoded.
+
+        To decode unicode strings, chain this filter with ``ByteString``:
+
+        .. code-block:: python
+
+           runner = f.FilterRunner(f.ByteString | f.Base64Decode)
         """
         # noinspection SpellCheckingInspection
         self.assertFilterErrors(
@@ -132,7 +130,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | ByteString`` if you want to reject null values.
         """
@@ -161,8 +159,8 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_fail_bytes_non_utf8(self):
         """
-        The incoming value is a byte string, but encoded using a
-        different codec.
+        The incoming value is a byte string, but encoded using a different
+        codec.
         """
         # 'Iñtërnâtiônàlizætiøn' encoded as bytes using ISO-8859-1:
         incoming = b'I\xf1t\xebrn\xe2ti\xf4n\xe0liz\xe6ti\xf8n'
@@ -172,8 +170,8 @@ class ByteStringTestCase(BaseFilterTestCase):
             [f.ByteString.CODE_DECODE_ERROR],
         )
 
-        # In order for this to work, we have to tell the Filter what
-        # encoding to use:
+        # In order for this to work, we have to tell the filter what encoding
+        # to use:
         self.assertFilterPasses(
             self._filter(incoming, encoding='iso-8859-1'),
 
@@ -197,8 +195,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_pass_bytes_like_object(self):
         """
-        The incoming value is an object that can be cast as a byte
-        string.
+        The incoming value is an object that can be cast as a byte string.
         """
         value = (
             # Person
@@ -222,8 +219,8 @@ class ByteStringTestCase(BaseFilterTestCase):
         The incoming value is a Decimal that was parsed from scientific
         notation.
         """
-        # Note that ``bytes(Decimal('2.8E6'))`` yields b'2.8E+6', which
-        # is not what we want!
+        # Note that ``bytes(Decimal('2.8E6'))`` yields b'2.8E+6', which is not
+        # what we want!
         self.assertFilterPasses(
             Decimal('2.8E6'),
             b'2800000',
@@ -240,16 +237,15 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_unicode_normalization_off_by_default(self):
         """
-        By default, the Filter does not apply normalization before
-        encoding.
+        By default, the filter does not apply normalization before encoding.
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
           - https://stackoverflow.com/q/16467479
         """
         self.assertFilterPasses(
-            #   U+0065 LATIN SMALL LETTER E
-            # + U+0301 COMBINING ACUTE ACCENT
+            # 'e'      = U+0065 LATIN SMALL LETTER E
+            # '\u0301' = U+0301 COMBINING ACUTE ACCENT
             # (2 code points)
             'Ame\u0301lie',
 
@@ -259,7 +255,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_unicode_normalization_forced(self):
         """
-        You can force the Filter to apply normalization before encoding.
+        You can force the filter to apply normalization before encoding.
 
         References:
           - https://en.wikipedia.org/wiki/Unicode_equivalence
@@ -270,8 +266,8 @@ class ByteStringTestCase(BaseFilterTestCase):
                 # Same decomposed sequence from previous test...
                 'Ame\u0301lie',
 
-                # ... but this time we tell the Filter to normalize the
-                # value before encoding it.
+                # ... but this time we tell the filter to normalize the value
+                # before encoding it.
                 normalize=True,
             ),
 
@@ -282,8 +278,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_remove_non_printables_off_by_default(self):
         """
-        By default, the Filter does not remove non-printable
-        characters.
+        By default, the filter does not remove non-printable characters.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -296,8 +291,8 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_remove_non_printables_forced(self):
         """
-        You can force the Filter to remove non-printable characters
-        before encoding.
+        You can force the filter to remove non-printable characters before
+        encoding.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -310,7 +305,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_newline_normalization_off_by_default(self):
         """
-        By default, the Filter does not normalize line endings.
+        By default, the filter does not normalize line endings.
         """
         self.assertFilterPasses(
             'unix\n - windows\r\n - weird\r\r\n',
@@ -319,7 +314,7 @@ class ByteStringTestCase(BaseFilterTestCase):
 
     def test_newline_normalization_forced(self):
         """
-        You can force the Filter to normalize line endings.
+        You can force the filter to normalize line endings.
         """
         self.assertFilterPasses(
             self._filter('unix\n - windows\r\n - weird\r\r\n', normalize=True),
@@ -332,7 +327,7 @@ class CaseFoldTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | CaseFold`` if you want to reject null values.
         """
@@ -348,8 +343,8 @@ class CaseFoldTestCase(BaseFilterTestCase):
         """
         The incoming value is not ASCII.
         """
-        # For some reason, the internet really loves to use ß to test
-        # case folding functionality.
+        # For some reason, the internet really loves to use ß to test case
+        # folding functionality.
         # noinspection SpellCheckingInspection
         self.assertFilterPasses('Weißkopfseeadler', 'weisskopfseeadler')
 
@@ -359,19 +354,17 @@ class CaseFoldTestCase(BaseFilterTestCase):
 
     def test_pass_unfoldable(self):
         """
-        There are some Unicode characters that look foldable but
-        actually aren't.
+        There are some Unicode characters that look foldable but actually
+        aren't.
 
-        Spotify learned this the hard way.
-
-        References:
-          - https://labs.spotify.com/2013/06/18/creative-usernames/
+        Spotify learned this the hard way:
+        https://labs.spotify.com/2013/06/18/creative-usernames/
         """
         self.assertFilterPasses(u'\u1d2e\u1d35\u1d33\u1d2e\u1d35\u1d3f\u1d30')
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(
@@ -395,14 +388,12 @@ class ChoiceTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | Choice`` if you want to reject null values.
         """
         self.assertFilterPasses(
-            # Even if you specify no valid choices, `None` still
-            # passes.
-            self._filter(None, choices=()),
+            self._filter(None, choices=('anything')),
         )
 
     def test_pass_valid(self):
@@ -447,13 +438,19 @@ class ChoiceTestCase(BaseFilterTestCase):
             [f.Choice.CODE_INVALID],
         )
 
+    def test_error_choices_empty(self):
+        """
+        The filter must be configured with at least one valid choice.
+        """
+        self.assertRaises(f.FilterError, lambda: self.filter_type(choices=[]))
+
 
 class IpAddressTestCase(BaseFilterTestCase):
     filter_type = f.IpAddress
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | IpAddress`` if you want to reject null values.
         """
@@ -475,21 +472,21 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_ipv4_error_too_short(self):
         """
-        Technically, an IPv4 address can contain less than 4 octets,
-        but this Filter always expects exactly 4.
+        Technically, an IPv4 address can contain less than 4 octets, but this
+        filter always expects exactly 4.
         """
         self.assertFilterErrors('127.1', [f.IpAddress.CODE_INVALID])
 
     def test_ipv4_error_too_long(self):
         """
-        The incoming value looks like an IPv4 address, except it
-        contains too many octets.
+        The incoming value looks like an IPv4 address, except it contains too
+        many octets.
         """
         self.assertFilterErrors('127.0.0.1.32', [f.IpAddress.CODE_INVALID])
 
     def test_ipv4_error_ipv6(self):
         """
-        By default, this Filter does not accept IPv6 addresses.
+        By default, this filter does not accept IPv6 addresses.
         """
         self.assertFilterErrors(
             '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
@@ -504,14 +501,14 @@ class IpAddressTestCase(BaseFilterTestCase):
             self._filter(
                 '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
 
-                # You must explicitly configure the filter to accept
-                # IPv6 addresses.
+                # You must explicitly configure the filter to accept IPv6
+                # addresses.
                 ipv4=False,
                 ipv6=True,
             ),
 
-            # Note that the resulting value is automatically
-            # abbreviated, if possible.
+            # Note that the resulting value is automatically abbreviated, if
+            # possible.
             # https://en.wikipedia.org/wiki/IPv6_address#Presentation
             '2001:db8:85a3::8a2e:370:7334',
         )
@@ -558,8 +555,8 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_ipv6_success_dotted_quad(self):
         """
-        IPv6 supports "dotted quad" notation for IPv4 addresses that
-        are mid-transition.
+        IPv6 supports "dotted quad" notation for IPv4 addresses that are
+        mid-transition.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -577,8 +574,7 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_ipv6_error_too_long(self):
         """
-        If the incoming value has too many groups to be IPv6, it is
-        invalid.
+        If the incoming value has too many groups to be IPv6, it is invalid.
         """
         self.assertFilterErrors(
             self._filter(
@@ -592,7 +588,7 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_ipv6_error_ipv4(self):
         """
-        If the Filter is configured only to accept IPv6 addresses, IPv4
+        If the filter is configured only to accept IPv6 addresses, IPv4
         addresses are invalid.
         """
         self.assertFilterErrors(
@@ -602,8 +598,7 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_pass_allow_ipv4_and_ipv6(self):
         """
-        You can configure the Filter to accept both IPv4 and IPv6
-        addresses.
+        You can configure the filter to accept both IPv4 and IPv6 addresses.
         """
         self.assertFilterPasses(
             self._filter('127.0.0.1', ipv4=True, ipv6=True),
@@ -621,7 +616,7 @@ class IpAddressTestCase(BaseFilterTestCase):
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(b'127.0.0.1', [f.Type.CODE_WRONG_TYPE])
@@ -641,10 +636,9 @@ class JsonDecodeTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
-        Use ``Required | JsonDecode`` if you want to reject null
-        values.
+        Use ``Required | JsonDecode`` if you want to reject null values.
         """
         self.assertFilterPasses(None)
 
@@ -670,14 +664,14 @@ class JsonDecodeTestCase(BaseFilterTestCase):
         """
         The incoming value is an empty string.
 
-        Consider using ``NotEmpty | Json`` so that users get more
-        meaningful feedback for empty strings.
+        Consider using ``NotEmpty | Json`` so that users get more meaningful
+        feedback for empty strings.
         """
         self.assertFilterErrors('', [f.JsonDecode.CODE_INVALID])
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(b'{"blends": false}', [f.Type.CODE_WRONG_TYPE])
@@ -694,7 +688,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | MaxBytes`` if you want to reject null values.
         """
@@ -779,8 +773,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_string_truncated_with_prefix(self):
         """
-        The incoming value is a string that is too long, and the
-        filter is configured to apply a prefix before truncating.
+        The incoming value is a string that is too long, and the filter is
+        configured to apply a prefix before truncating.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -791,8 +785,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 prefix='σφάλμα:'
             ),
 
-            # Note that the prefix reduces the number of bytes
-            # available when truncating the value.
+            # Note that the prefix reduces the number of bytes available when
+            # truncating the value.
             expected_value=
             b'\xcf\x83\xcf\x86\xce\xac\xce\xbb\xce\xbc\xce\xb1:'  # Prefix
             b'\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83'
@@ -821,8 +815,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
     def test_pass_string_truncated_max_bytes_param_too_small(self):
         """
         The filter is configured with a ``max_bytes`` so tiny that it is
-        impossible to fit any multibyte sequences into a truncated
-        string.
+        impossible to fit any multibyte sequences into a truncated string.
 
         This will probably never happen outside of this unit test, but if
         there's one thing I've learned, it's that customers never walk into a
@@ -865,8 +858,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_string_short_alt_encoding(self):
         """
-        The filter is configured to use an encoding other than UTF-8,
-        and the incoming value is a string that is short enough.
+        The filter is configured to use an encoding other than UTF-8, and the
+        incoming value is a string that is short enough.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -878,15 +871,14 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 encoding='iso-8859-7',
             ),
 
-            # The resulting value is encoded using ISO-8859-7 (Latin-1
-            # Greek).
+            # The resulting value is encoded using ISO-8859-7 (Latin-1 Greek).
             b'\xc3\xe5\xe9\xdc\xf3\xef\xf5 \xca\xfc\xf3\xec\xe5',
         )
 
     def test_fail_string_too_long_alt_encoding_has_bom(self):
         """
-        The filter is configured to use an encoding that uses a BOM,
-        and the incoming value is a string that is too long.
+        The filter is configured to use an encoding that uses a BOM, and the
+        incoming value is a string that is too long.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterErrors(
@@ -901,8 +893,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_string_truncated_alt_encoding_has_bom(self):
         """
-        The filter is configured to use an encoding that uses a BOM,
-        and the incoming value is a string that will be truncated.
+        The filter is configured to use an encoding that uses a BOM, and the
+        incoming value is a string that will be truncated.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -914,17 +906,17 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 encoding='utf-16',
             ),
 
-            # End result is only 12 bytes because UTF-16 uses 2 bytes
-            # per character, plus 2 bytes for the BOM.
+            # End result is only 12 bytes instead of 13 because UTF-16 uses 2
+            # bytes per character.
             expected_value=
-            b'\xff\xfe'  # BOM
+            BOM_UTF16 +
             b'\x93\x03\xb5\x03\xb9\x03\xac\x03\xc3\x03'  # Truncated string
         )
 
     def test_pass_string_truncated_alt_encoding_has_bom_with_prefix(self):
         """
-        The filter is configured to use an encoding that uses a BOM,
-        and to apply a prefix to truncated values.
+        The filter is configured to use an encoding that uses a BOM, and to
+        apply a prefix to truncated values.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -939,8 +931,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
             # Note that the BOM is only applied once.
             expected_value=
-            # BOM:
-            b'\xff\xfe'
+            BOM_UTF16 +
             # Prefix:
             b'\xc3\x03\xc6\x03\xac\x03\xbb'
             b'\x03\xbc\x03\xb1\x03:\x00'
@@ -950,8 +941,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
     def test_pass_string_truncated_alt_encoding_has_bom_with_suffix(self):
         """
-        The filter is configured to use an encoding that uses a BOM,
-        and to apply a suffix to the truncated values.
+        The filter is configured to use an encoding that uses a BOM, and to
+        apply a suffix to the truncated values.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -964,13 +955,14 @@ class MaxBytesTestCase(BaseFilterTestCase):
             ),
 
             expected_value=
-            b"\xff\xfe"  # BOM
+            BOM_UTF16 +
             b"+\x0e'\x0e1\x0e"  # Truncated string
             b' \x00(\x00-\x0e5\x0e\x01\x0e)\x00'  # Suffix
         )
 
     def test_pass_string_truncated_alt_encoding_has_bom_with_prefix_and_suffix(
-            self):
+            self
+    ):
         """
         Because my life wasn't hard enough already...
         """
@@ -986,14 +978,15 @@ class MaxBytesTestCase(BaseFilterTestCase):
             ),
 
             expected_value=
-            b"\xff\xfe"  # BOM
+            BOM_UTF16 +
             b"[\x00\x05\t'\t?\t\x15\t]\x00 \x00"  # Prefix
             b'.\tH\t\x02\t \x00\x05\t'  # Truncated string
             b" \x00(\x00\x05\t'\t?\t\x15\t)\x00"  # Suffix
         )
 
     def test_pass_string_truncated_max_bytes_param_almost_too_small_alt_encoding_has_bom(
-            self):
+            self
+    ):
         """
         Unrealistically tiny ``max_bytes``, part 2: the revenge!
         """
@@ -1009,7 +1002,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
 
             # The suffix has priority over the prefix.
             # Because I had to pick one :shrug:
-            expected_value=b'\xff\xfe<\x00',
+            expected_value=BOM_UTF16 + b'<\x00',
         )
 
     def test_pass_bytes_short(self):
@@ -1053,9 +1046,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 truncate=True,
             ),
 
-            # Note that the resulting value is truncated to 15 bytes
-            # instead of 17, so as not to orphan a multibyte
-            # sequence.
+            # Note that the resulting value is truncated to 15 bytes instead of
+            # 17, so as not to orphan a multibyte sequence.
             expected_value=
             b'\xe4\xbd\xa0\xe5\xa5\xbd\xef'
             b'\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c',
@@ -1070,13 +1062,200 @@ class MaxBytesTestCase(BaseFilterTestCase):
             [f.Type.CODE_WRONG_TYPE],
         )
 
+    def test_error_max_bytes_too_small(self):
+        """
+        ``max_bytes`` must be at least 1.
+        """
+        self.assertRaises(f.FilterError, lambda: self.filter_type(max_bytes=0))
+
+
+class MaxCharsTestCase(BaseFilterTestCase):
+    filter_type = f.MaxChars
+
+    def test_pass_none(self):
+        """
+        ``None`` always passes this filter.
+        """
+        self.assertFilterPasses(self._filter(None, max_chars=1))
+
+    def test_pass_string_short(self):
+        """
+        The string is short enough to fit within ``max_chars``.
+        """
+        self.assertFilterPasses(self._filter('Hello, world!', max_chars=13))
+
+    def test_pass_string_short_with_prefix_and_suffix(self):
+        """
+        Neither prefix nor suffix are applied when the incoming string is short
+        enough.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=13,
+                prefix='!',
+                suffix='!',
+            ),
+        )
+
+    def test_fail_string_too_long(self):
+        """
+        The incoming string has too many characters.
+        """
+        self.assertFilterErrors(
+            self._filter('Hello, world!', max_chars=12),
+            [f.MaxChars.CODE_TOO_LONG]
+        )
+
+    def test_pass_string_truncated(self):
+        """
+        The filter is configured to truncate too-long values.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=12,
+                truncate=True,
+            ),
+            'Hello, world',
+        )
+
+    def test_pass_string_truncated_with_prefix(self):
+        """
+        The filter is configured to apply a prefix to truncated values.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=12,
+                truncate=True,
+                prefix='[More] ',
+            ),
+
+            # Note that the prefix takes up some allowed characters.
+            '[More] Hello',
+        )
+
+    def test_pass_string_truncated_with_suffix(self):
+        """
+        The filter is configured to apply a suffix to truncated values.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=12,
+                truncate=True,
+                suffix='...',
+            ),
+
+            # Note that the suffix takes up some allowed characters.
+            'Hello, wo...',
+        )
+
+    def test_pass_string_truncated_with_prefix_and_suffix(self):
+        """
+        Putting it all together now.
+        """
+        # noinspection SpellCheckingInspection
+        self.assertFilterPasses(
+            self._filter(
+                # 'Hello world' in Vietnamese, according to the internet.
+                'Chào thế giới!',
+                max_chars=10,
+                truncate=True,
+                prefix='>> ',
+                suffix='...'
+            ),
+            '>> Chào...',
+        )
+
+    def test_pass_string_truncated_with_prefix_max_chars_too_small(self):
+        """
+        The filter is configured with a ``prefix`` and a ``max_chars`` value
+        that is too small to fit it.
+
+        This will probably never happen, but I've been wrong about this sort of
+        thing before....
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=5,
+                truncate=True,
+                prefix='(more) ',
+            ),
+            '(more',
+        )
+
+    def test_pass_string_truncated_with_suffix_max_chars_too_small(self):
+        """
+        The filter is configured with a ``suffix`` and a ``max_chars`` value
+        that is too small to fit it.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=5,
+                truncate=True,
+                suffix=' (continued)',
+            ),
+            ' (con',
+        )
+
+    def test_pass_string_truncated_with_prefix_and_suffix_max_chars_too_small(
+            self
+    ):
+        """
+        Because you know that SOMEONE is going to try it just to see what
+        happens.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                'Hello, world!',
+                max_chars=3,
+                truncate=True,
+                prefix='->',
+                suffix='<-',
+            ),
+            # Suffix has priority over prefix.
+            # Because I had to pick one :shrug:
+            '-<-',
+        )
+
+    def test_fail_bytes(self):
+        """
+        This filter does not accept byte strings (``bytes`` type).
+
+        Chain with ``Unicode`` or use ``MaxBytes`` if you want to filter byte
+        strings.
+        """
+        self.assertFilterErrors(
+            self._filter(b'Hello, world!', max_chars=1000),
+            [f.Type.CODE_WRONG_TYPE],
+        )
+
+    def test_fail_wrong_type(self):
+        """
+        The incoming value is not a string.
+        """
+        self.assertFilterErrors(
+            self._filter(['foo', 'bar', 'baz'], max_chars=1000),
+            [f.Type.CODE_WRONG_TYPE],
+        )
+
+    def test_error_max_chars_too_small(self):
+        """
+        ``max_chars`` must be at least 1.
+        """
+        self.assertRaises(f.FilterError, lambda: self.filter_type(max_chars=0))
+
 
 class RegexTestCase(BaseFilterTestCase):
     filter_type = f.Regex
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | Regex`` if you want to reject null values.
         """
@@ -1086,9 +1265,8 @@ class RegexTestCase(BaseFilterTestCase):
         """
         The incoming value matches the regex pattern.
         """
-        # noinspection SpellCheckingInspection
         self.assertFilterPasses(
-            # Note:  Regexes are case-sensitive by default.
+            # Note: regexes are case-sensitive by default.
             self._filter(
                 'test march of the TEST penguins',
                 pattern=r'\btest\b',
@@ -1101,7 +1279,6 @@ class RegexTestCase(BaseFilterTestCase):
         """
         The incoming value does not match the regex pattern.
         """
-        # noinspection SpellCheckingInspection
         self.assertFilterErrors(
             self._filter(
                 'contested march of the tester penguins',
@@ -1116,7 +1293,7 @@ class RegexTestCase(BaseFilterTestCase):
         By default, character classes like ``\w`` will take unicode into
         account.
         """
-        # Roughly, "Hi there!" in Japanese.
+        # "Hi, there!" in Japanese, according to the internet :innocent:
         word = '\u304a\u306f\u3088\u3046'
 
         self.assertFilterPasses(
@@ -1127,14 +1304,13 @@ class RegexTestCase(BaseFilterTestCase):
     # noinspection SpellCheckingInspection
     def test_pass_precompiled_regex(self):
         """
-        You can alternatively provide a precompiled regex to the Filter
-        instead of a string pattern.
+        You can alternatively provide a precompiled regex to the filter instead
+        of a string pattern.
         """
-        # Compile our own pattern so that we can specify the
-        # ``IGNORECASE`` flag.
-        # Note that you are responsible for adding the ``UNICODE`` flag
-        # to your compiled regex!
-        # noinspection SpellCheckingInspection
+        # Compile our own pattern so that we can specify the ``IGNORECASE``
+        # flag.
+        # Note that you are responsible for adding the ``UNICODE`` flag to your
+        # compiled regex!
         pattern = re.compile(r'\btest\b', re.IGNORECASE | re.UNICODE)
 
         self.assertFilterPasses(
@@ -1144,14 +1320,14 @@ class RegexTestCase(BaseFilterTestCase):
 
     def test_pass_regex_library_support(self):
         """
-        The Regex Filter also supports precompiled patterns using the
-        ``regex`` library.
+        The Regex filter also supports precompiled patterns using the ``regex``
+        library.
         """
-        # Roughly, "Hi there!" in Burmese.
+        # "Hi, there!" in Burmese, according to the internet :innocent:
         word = '\u101f\u102d\u102f\u1004\u103a\u1038'
 
-        # Note that :py:func:`regex.compile` automatically adds the
-        # ``UNICODE`` flag for you when the pattern is a unicode.
+        # Note that :py:func:`regex.compile` automatically adds the ``UNICODE``
+        # flag for you when the pattern is a unicode.
         pattern = regex.compile(r'\w+')
 
         self.assertFilterPasses(
@@ -1161,7 +1337,7 @@ class RegexTestCase(BaseFilterTestCase):
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(
@@ -1184,7 +1360,7 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | Split`` if you want to reject null values.
         """
@@ -1212,8 +1388,8 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_pattern_split_with_groups(self):
         """
-        If you include capturing parentheses in the pattern, the
-        matched groups are included in the resulting list.
+        If you include capturing parentheses in the pattern, the matched groups
+        are included in the resulting list.
         """
         self.assertFilterPasses(
             # Note grouping parentheses in the regex.
@@ -1223,11 +1399,10 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_no_split(self):
         """
-        A string that does not match the regex at all is also
-        considered valid.
+        A string that does not match the regex at all is also considered valid.
 
-        Use ``Split | MinLength`` if you want to require a minimum
-        number of parts.
+        Use ``Split | MinLength`` if you want to require a minimum number of
+        parts.
         """
         self.assertFilterPasses(
             self._filter('foo:bar:baz', pattern='[-\d]+'),
@@ -1236,11 +1411,8 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_keys(self):
         """
-        If desired, you can map a collection of keys onto the resulting
-        list, which creates a dict.
-
-        This is particularly cool, as it lets you chain a Split with a
-        FilterMapper.
+        If desired, you can map a collection of keys onto the resulting list,
+        which creates a dict.
         """
         runner = self.assertFilterPasses(
             self._filter(
@@ -1265,13 +1437,13 @@ class SplitTestCase(BaseFilterTestCase):
     # noinspection SpellCheckingInspection
     def test_pass_precompiled_regex(self):
         """
-        You can alternatively provide a precompiled regex to the Filter
-        instead of a string pattern.
+        You can alternatively provide a precompiled regex to the filter instead
+        of a string pattern.
         """
-        # Compile our own pattern so that we can specify the
-        # ``IGNORECASE`` flag.
-        # Note that you are responsible for adding the ``UNICODE`` flag
-        # to your compiled regex!
+        # Compile our own pattern so that we can specify the ``IGNORECASE``
+        # flag.
+        # Note that you are responsible for adding the ``UNICODE`` flag to your
+        # compiled regex!
         # noinspection SpellCheckingInspection
         pattern = re.compile(r'\btest\b', re.IGNORECASE | re.UNICODE)
 
@@ -1282,14 +1454,14 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_regex_library_support(self):
         """
-        The Regex Filter also supports precompiled patterns using the
-        ``regex`` library.
+        The Regex filter also supports precompiled patterns using the ``regex``
+        library.
         """
-        # Roughly, "Hi there!" in Burmese.
+        # "Hi, there!" in Burmese, according to the internet :innocent:
         word = '\u101f\u102d\u102f\u1004\u103a\u1038!'
 
-        # Note that :py:func:`regex.compile` automatically adds the
-        # ``UNICODE`` flag for you when the pattern is a unicode.
+        # Note that :py:func:`regex.compile` automatically adds the ``UNICODE``
+        # flag for you when the pattern is a unicode.
         pattern = regex.compile(r'\w+')
 
         self.assertFilterPasses(
@@ -1299,8 +1471,8 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_fail_too_long(self):
         """
-        The incoming value has too many parts to assign a key to each
-        one, so it fails validation.
+        The incoming value has too many parts to assign a key to each one, so
+        it fails validation.
         """
         self.assertFilterErrors(
             self._filter('foo:bar:baz', pattern=':', keys=('a', 'b',)),
@@ -1309,13 +1481,12 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_pass_too_short(self):
         """
-        The incoming value does not have enough parts to use all the
-        keys, so extra ``None`` values are inserted.
+        The incoming value does not have enough parts to use all the keys, so
+        extra ``None`` values are inserted.
 
-        If you want to ensure that the incoming value has exactly the
-        right number of values, add a MinLength filter to the chain
-        (you do not have to provide a MaxLength; the Split filter
-        does that automatically).
+        If you want to ensure that the incoming value has exactly the right
+        number of values, add a MinLength filter to the chain (you do not have
+        to chain a MaxLength; the Split filter does that automatically).
         """
         self.assertFilterPasses(
             self._filter(
@@ -1334,7 +1505,7 @@ class SplitTestCase(BaseFilterTestCase):
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(
@@ -1357,7 +1528,7 @@ class StripTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use `Required | Strip` if you want to reject null values.
         """
@@ -1365,8 +1536,8 @@ class StripTestCase(BaseFilterTestCase):
 
     def test_pass_happy_path(self):
         """
-        The Filter strips away all leading/trailing whitespace and
-        unprintables from the incoming value.
+        The filter strips away all leading/trailing whitespace and unprintables
+        from the incoming value.
         """
         self.assertFilterPasses(
             '  \r  \t \x00 Hello, world! \x00 \t  \n  ',
@@ -1411,8 +1582,7 @@ class StripTestCase(BaseFilterTestCase):
 
     def test_pass_custom_regexes(self):
         """
-        You can also use regexes to specify which characters get
-        removed.
+        You can also use regexes to specify which characters get removed.
         """
         self.assertFilterPasses(
             self._filter(
@@ -1427,7 +1597,7 @@ class StripTestCase(BaseFilterTestCase):
 
     def test_fail_bytes(self):
         """
-        To ensure consistent behavior in Python 2 and Python 3, byte
+        For backwards-compatibility with previous versions of the library, byte
         strings are not allowed.
         """
         self.assertFilterErrors(
@@ -1450,7 +1620,7 @@ class UuidTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | Uuid`` if you want to reject null values.
         """
@@ -1489,8 +1659,8 @@ class UuidTestCase(BaseFilterTestCase):
         """
         You can include curly braces around hex values.
 
-        Use ``Regex(r'^[\da-f]+$') | Uuid`` if you only want to allow
-        plain hex.
+        Use ``Regex(r'^[\da-f]+$') | Uuid`` if you only want to allow plain
+        hex.
         """
         filtered = self._filter('{54d6ebf8a3f55ed59becdedfb3b0773f}')
 
@@ -1507,10 +1677,11 @@ class UuidTestCase(BaseFilterTestCase):
         You can also specify a URN.  The term (and format) is somewhat
         antiquated, but still valid.
 
-        If you want to prohibit URNs, chain this Filter with
+        If you want to prohibit URNs, chain this filter with
         ``Regex(r'^[\da-f]+$')``.
 
         References:
+
           - https://en.wikipedia.org/wiki/Uniform_resource_name
         """
         filtered = self._filter(
@@ -1527,8 +1698,7 @@ class UuidTestCase(BaseFilterTestCase):
 
     def test_fail_wrong_version(self):
         """
-        The incoming value is a valid UUID, but its version doesn't
-        match the expected one.
+        Configuring the filter to only accept a specific UUID version.
         """
         self.assertFilterErrors(
             # Incoming value is a v1 UUID, but we're expecting a v4.
@@ -1538,8 +1708,8 @@ class UuidTestCase(BaseFilterTestCase):
 
     def test_fail_int(self):
         """
-        The incoming value must be a HEX representation of a UUID.
-        Decimal values are not valid.
+        The incoming value must be a HEX representation of a UUID. Decimal
+        values are not valid.
         """
         self.assertFilterErrors(
             '306707680894066278898485957190279549189',
@@ -1548,8 +1718,8 @@ class UuidTestCase(BaseFilterTestCase):
 
     def test_fail_wrong_type(self):
         """
-        Attempting to Filter anything other than a string value fails
-        rather spectacularly.
+        Attempting to filter anything other than a string value fails rather
+        spectacularly.
         """
         self.assertFilterErrors(
             [
@@ -1568,8 +1738,8 @@ class UuidTestCase(BaseFilterTestCase):
 
     def test_fail_uuid_object_wrong_version(self):
         """
-        The incoming value is already a UUID object, but its version
-        doesn't match the expected one.
+        The incoming value is already a UUID object, but its version doesn't
+        match the expected one.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterErrors(
@@ -1584,7 +1754,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_pass_none(self):
         """
-        ``None`` always passes this Filter.
+        ``None`` always passes this filter.
 
         Use ``Required | Unicode`` if you want to reject null values.
         """
@@ -1615,17 +1785,15 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_fail_bytes_non_utf8(self):
         """
-        The incoming value is a byte string that is encoded using a
-        codec other than UTF-8.
-
-        Note that there is no such thing as a unicode object with
-        the "wrong encoding".
+        The incoming value is a byte string that is encoded using a codec other
+        than UTF-8.
 
         References:
-          - https://docs.python.org/2/howto/unicode.html
+
+          - https://docs.python.org/3/howto/unicode.html
         """
-        # How about something a bit more realistic for this test?
-        # Like the Swedish word for 'Apple'.
+        # 'Apple' in Swedish.
+        # :sigh: Come on, spellcheck; where's your sense of adventure?
         # noinspection SpellCheckingInspection
         incoming = b'\xc4pple'
 
@@ -1634,8 +1802,8 @@ class UnicodeTestCase(BaseFilterTestCase):
             [f.Unicode.CODE_DECODE_ERROR],
         )
 
-        # In order for this to work, we have to tell the Filter what
-        # encoding to use:
+        # In order for this to work, we have to tell the filter what encoding
+        # to use:
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             self._filter(incoming, encoding='iso-8859-1'),
@@ -1655,8 +1823,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_pass_bytes_like_object(self):
         """
-        The incoming value is an object that can be cast as a byte
-        string.
+        The incoming value is an object that can be cast as a byte string.
         """
         self.assertFilterPasses(
             Bytesy(b'(\xe2\x99\xa5\xe2\x80\xbf\xe2\x99\xa5)'),
@@ -1676,8 +1843,8 @@ class UnicodeTestCase(BaseFilterTestCase):
         The incoming value is a Decimal that was parsed from scientific
         notation.
         """
-        # Note that `str(Decimal('2.8E6'))` yields '2.8E+6', which
-        # is not what we want!
+        # Note that `str(Decimal('2.8E6'))` yields '2.8E+6', which is not what
+        # we want!
         self.assertFilterPasses(
             Decimal('2.8E6'),
             '2800000',
@@ -1694,14 +1861,15 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_unicode_normalization(self):
         """
-        The Filter always returns the NFC form of the unicode string.
+        The filter always returns the NFC form of the unicode string.
 
         References:
+
           - https://en.wikipedia.org/wiki/Unicode_equivalence
           - https://stackoverflow.com/q/16467479
         """
-        #   U+0065 LATIN SMALL LETTER E
-        # + U+0301 COMBINING ACUTE ACCENT
+        # 'e'      = U+0065 LATIN SMALL LETTER E
+        # '\u0301' = U+0301 COMBINING ACUTE ACCENT
         # (2 code points)
         decomposed = 'Ame\u0301lie'
 
@@ -1713,7 +1881,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_unicode_normalization_disabled(self):
         """
-        You can force the Filter not to perform normalization.
+        You can force the filter not to perform normalization.
         """
         decomposed = 'Ame\u0301lie'
 
@@ -1724,14 +1892,14 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_remove_non_printables(self):
         """
-        By default, this Filter also removes non-printable characters
-        (both ASCII and Unicode varieties).
+        By default, this filter also removes non-printable characters (both
+        ASCII and Unicode varieties).
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
             # \x00-\x1f are ASCII control characters.
-            # \xef\xbf\xbf is the Unicode control character \uffff,
-            # encoded as UTF-8.
+            # \xef\xbf\xbf is the Unicode control character \uffff, encoded as
+            # UTF-8.
             b'\x10Hell\x00o,\x1f wor\xef\xbf\xbfld!',
 
             'Hello, world!',
@@ -1739,7 +1907,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_remove_non_printables_disabled(self):
         """
-        You can force the Filter not to remove non-printable characters.
+        You can force the filter not to remove non-printable characters.
         """
         # noinspection SpellCheckingInspection
         self.assertFilterPasses(
@@ -1753,8 +1921,8 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_newline_normalization(self):
         """
-        By default, any newlines in the string are automatically
-        converted to unix-style ('\n').
+        By default, any newlines in the string are automatically converted to
+        unix-style ('\n').
         """
         self.assertFilterPasses(
             b'unix\n - windows\r\n - weird\r\r\n',
@@ -1763,7 +1931,7 @@ class UnicodeTestCase(BaseFilterTestCase):
 
     def test_newline_normalization_disabled(self):
         """
-        You can force the Filter not to normalize line endings.
+        You can force the filter not to normalize line endings.
         """
         self.assertFilterPasses(
             self._filter(

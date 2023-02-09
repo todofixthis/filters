@@ -1,8 +1,6 @@
 .. image:: https://readthedocs.org/projects/filters/badge/?version=latest
    :target: http://filters.readthedocs.io/
 
-
-=======
 Filters
 =======
 The Filters library provides an easy and readable way to create complex
