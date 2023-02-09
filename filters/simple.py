@@ -765,13 +765,23 @@ class Optional(BaseFilter):
         """
         super().__init__()
 
-        self.default = default
         self.call_default = call_default
+
+        # Compat for Python 3.9: ``staticmethod.__wrapped__`` was added in
+        # Python 3.10, so we have to store the original value separately.
+        self.actual_default = default
+        self.callable_default = (
+            # https://stackoverflow.com/a/41921291
+            staticmethod(default).__get__(object)
+            if self.call_default is True or
+               (self.call_default is None and callable(default))
+            else None
+        )
 
     def __str__(self):
         return '{type}(default={default!r})'.format(
             type=type(self).__name__,
-            default=self.default,
+            default=self.actual_default,
         )
 
     def _apply(self, value):
@@ -796,10 +806,11 @@ class Optional(BaseFilter):
         value.
         """
         return (
-            self.default
-            if self.call_default is False or
-               (self.call_default is None and not callable(self.default))
-            else staticmethod(self.default)()
+            self.callable_default()
+            if self.call_default is True or
+               (self.call_default is None and
+                self.callable_default is not None)
+            else self.actual_default
         )
 
 
