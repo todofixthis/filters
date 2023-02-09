@@ -535,10 +535,18 @@ class MaxLength(BaseFilter):
         CODE_TOO_LONG: 'Value is too long (length must be < {max}).',
     }
 
-    def __init__(self, max_length: int) -> None:
+    def __init__(self, max_length: int, truncate: bool = False) -> None:
+        """
+        :param max_length:
+            Incoming value must have at most this many items to be valid.
+
+        :param truncate:
+            Whether to truncate values that are too long.
+        """
         super().__init__()
 
         self.max_length = max_length
+        self.truncate = truncate
 
     def __str__(self):
         return '{type}({max_length!r})'.format(
@@ -548,11 +556,9 @@ class MaxLength(BaseFilter):
 
     def _apply(self, value):
         if len(value) > self.max_length:
-            # Note that we do not truncate the value:
-            #   - It's not always clear which end we should truncate
-            #     from.
-            #   - We should keep this filter's behavior consistent with
-            #     that of MinLength.
+            if self.truncate:
+                return value[0:self.max_length]
+
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_LONG,

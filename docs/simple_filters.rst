@@ -686,6 +686,8 @@ max value, set ``exclusive=True`` in the filter's initialiser:
    runner = f.FilterRunner(f.Max(5, exclusive=True), 5)
    assert runner.is_valid() is False
 
+.. _max-bytes:
+
 MaxBytes
 --------
 Checks that a string will fit into a max number of bytes when encoded (using
@@ -695,6 +697,11 @@ UTF-8 by default).
 
    The resulting value will be a byte string (``bytes`` type), not a unicode
    string!
+
+   - If you want to check the length of a unicode string (``str`` type), use
+     :ref:`max-chars`.
+   - If you want to check the length of a list or other arbitrary sequence,
+     use :ref:`max-length`.
 
 .. code-block:: python
 
@@ -737,9 +744,10 @@ truncate them instead:
       # Result is truncated to 19 bytes instead of 21, so as not to orphan a
       # multibyte sequence.
       assert len(runner.cleaned_data) == 19
+      assert runner.cleaned_data.decode('utf-8') == 'हैलो वर'
 
-You can configure the filter to apply a prefix and/or suffix to the value when
-truncating:
+You can also configure the filter to apply a prefix and/or suffix to the value
+when truncating:
 
 .. code-block:: python
 
@@ -801,6 +809,78 @@ can specify it when initialising the filter:
    )
    assert len(runner.cleaned_data) == 40
 
+.. _max-chars:
+
+MaxChars
+--------
+Requires that a string's length is less than or equal to the value specified in
+the filter initialiser.
+
+.. note::
+
+   This filter only works on string values.
+
+   - If you want to check the length of a byte string, use :ref:`max-bytes`.
+   - If you want to check the length of a list or other arbitrary sequence,
+     use :ref:`max-length`.
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.MaxChars(12))
+
+   runner.apply('Hello, world')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Hello, world'
+
+   runner.apply('Hello, world!')
+   assert runner.is_valid() is False
+
+Instead of treating too-long values as invalid, you can configure the filter to
+truncate them instead:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.MaxChars(4, truncate=True), 'Chào thế giới!')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Chào'
+
+You can also configure the filter to apply a prefix and/or suffix to the value
+when truncating:
+
+.. code-block:: python
+
+   import filters as f
+
+   # Apply a prefix to truncated values:
+   runner = f.FilterRunner(
+       f.MaxChars(12, truncate=True, prefix='(more) '),
+       'Hello, world!'
+   )
+   assert runner.is_valid() is True
+   # The length of the prefix is taken into account, so that the result is still
+   # 12 characters long.
+   assert runner.cleaned_data == '(more) Hello'
+
+   # Apply a suffix to truncated values:
+   runner = f.FilterRunner(
+       f.MaxChars(12, truncate=True, suffix='...'),
+       'Hello, world!',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'Hello, wo...'
+
+   # Apply both, why not..
+   runner = f.FilterRunner(
+       f.MaxChars(12, truncate=True, prefix='->', suffix='<-'),
+       'Hello, world!',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == '->Hello, w<-'
+
 .. _max-length:
 
 MaxLength
@@ -811,15 +891,27 @@ the filter initialiser.
 Values that are not ``Sized`` (i.e., do not have ``__len__``) automatically
 fail.
 
+.. note::
+
+   If you are working with a unicode string (``str`` type) or byte string
+   (``bytes`` type), you might want to use :ref:`max-chars` or :ref:`max-bytes`,
+   respectively.
+
+   :py:class:`filters.MaxLength` will still work on strings, but it doesn't have
+   advanced capabilities like applying prefix and/or suffix to truncated values,
+   avoiding orphaned multibyte sequences, etc.
+
 .. code-block:: python
 
    import filters as f
 
-   runner = f.FilterRunner(f.MaxLength(3), ['foo', 'bar', 'baz'])
+   runner = f.FilterRunner(f.MaxLength(3))
+
+   runner.apply(['foo', 'bar', 'baz'])
    assert runner.is_valid() is True
    assert runner.cleaned_data == ['foo', 'bar', 'baz']
 
-   runner = f.FilterRunner(f.MaxLength(3), ['foo', 'bar', 'baz', 'luhrmann'])
+   runner.apply(['foo', 'bar', 'baz', 'luhrmann'])
    assert runner.is_valid() is False
 
 This filter also works on strings, as well as anything else that has a length
@@ -829,12 +921,61 @@ This filter also works on strings, as well as anything else that has a length
 
    import filters as f
 
-   runner = f.FilterRunner(f.MaxLength(20), '¡Hola, mundo!')
+   runner = f.FilterRunner(f.MaxLength(20))
+
+   runner.apply('¡Hola, mundo!')
    assert runner.is_valid() is True
    assert runner.cleaned_data == '¡Hola, mundo!'
 
-   runner = f.FilterRunner(f.MaxLength(20), 'Kia ora e te ao whānui!')
+   runner.apply('Kia ora e te ao whānui!')
    assert runner.is_valid() is False
+
+Instead of treating too-long values as invalid, you can configure the filter to
+truncate them instead:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.MaxLength(3, truncate=True))
+
+   runner.apply(['foo', 'bar', 'baz', 'luhrmann'])
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['foo', 'bar', 'baz']
+
+.. caution::
+
+   When truncating a byte string (``bytes`` type), you can end up with invalid
+   multibyte sequences, resulting in a value that cannot be decoded back into a
+   unicode string!
+
+   If you want to truncate a byte string (``bytes`` type) use :ref:`max-bytes`
+   instead, which knows how to avoid this problem.
+
+   .. code-block:: python
+
+      import filters as f
+
+      value = 'हैलो वर्ल्ड'.encode('utf-8')
+
+      runner = f.FilterRunner(f.MaxLength(21, truncate=True), value)
+      assert runner.is_valid() is True
+      # The resulting sequence is exactly 21 bytes long, but the last 2 bytes
+      # cannot be decoded because the last code point in the truncated value
+      # ``्`` requires 3 bytes to encode in UTF-8.
+      assert len(runner.cleaned_data) == 21
+      try:
+          runner.cleaned_data.decode('utf-8')
+      except UnicodeDecodeError:
+          pass
+
+      # MaxBytes knows how to avoid this problem.
+      runner = f.FilterRunner(f.MaxBytes(21, truncate=True), value)
+      assert runner.is_valid() is True
+      # Result is truncated to 19 bytes instead of 21, so as not to orphan a
+      # multibyte sequence.
+      assert len(runner.cleaned_data) == 19
+      assert runner.cleaned_data.decode('utf-8') == 'हैलो वर'
 
 Min
 ---

@@ -11,7 +11,8 @@ from xml.etree.ElementTree import Element, tostring
 import regex
 
 from filters.base import BaseFilter, Type
-from filters.simple import MaxLength
+from filters.number import Min
+from filters.simple import MaxLength, MinLength
 
 __all__ = [
     'Base64Decode',
@@ -21,6 +22,7 @@ __all__ = [
     'IpAddress',
     'JsonDecode',
     'MaxBytes',
+    'MaxChars',
     'Regex',
     'Split',
     'Strip',
@@ -158,6 +160,8 @@ class Choice(BaseFilter):
         self.case_sensitive: bool = case_sensitive
 
         self.choice_map: typing.Dict[typing.Hashable, typing.Hashable] = {}
+
+        MinLength(1).apply(choices)
 
         for choice in choices:
             if self.case_sensitive or not isinstance(choice, typing.Text):
@@ -297,7 +301,7 @@ class MaxBytes(BaseFilter):
 
     .. note::
 
-        The resulting value is always byte string.
+        The resulting value is always byte string (``bytes`` type).
     """
     CODE_TOO_LONG = 'too_long'
 
@@ -347,16 +351,16 @@ class MaxBytes(BaseFilter):
 
         :param encoding:
             The character encoding to check against.
-
-            Note: This filter is optimized for UTF-8.
         """
         super().__init__()
 
-        self.encoding = encoding
+        Min(1).apply(max_bytes)
+
         self.max_bytes = max_bytes
+        self.truncate = truncate
         self.prefix = prefix
         self.suffix = suffix
-        self.truncate = truncate
+        self.encoding = encoding
 
     def __str__(self):
         return '{type}({max_bytes!r}, encoding={encoding!r})'.format(
@@ -523,6 +527,95 @@ class MaxBytes(BaseFilter):
                             encoding=self.encoding,
                         ),
                     )
+
+
+class MaxChars(BaseFilter):
+    """
+    Ensures the incoming value is small enough to fit in a certain number of
+    characters.
+
+    .. note::
+
+       The resulting value is always a unicode string (``str`` type).
+    """
+
+    CODE_TOO_LONG = 'too_long'
+
+    templates = {
+        CODE_TOO_LONG:
+            'Value is too long (must be < {max_chars} characters).',
+    }
+
+    def __init__(self,
+            max_chars: int,
+            truncate: bool = False,
+            prefix: typing.Text = '',
+            suffix: typing.Text = '',
+    ) -> None:
+        """
+        :param max_chars:
+            Max number of characters to allow.
+
+        :param truncate:
+            How to handle values that are too long:
+
+            - ``truncate is True``:  Return truncated string.
+            - ``truncate is False``:  Treat as invalid value.
+
+        :param prefix:
+            Prefix to apply to truncated values.
+
+            The prefix will count towards the max number of characters, so even
+            with a prefix the resulting string will not exceed ``max_chars`` in
+            length.
+
+            Ignored when the incoming value is short enough, or when
+            ``truncate is False``.
+
+        :param suffix:
+            Suffix to apply to truncated values.
+
+            The suffix will count towards the max number of characters, so even
+            with a suffix the resulting string will not exceed ``max_chars`` in
+            length.
+
+            Ignored when the incoming value is short enough, or when
+            ``truncate is False``.
+        """
+        super().__init__()
+
+        Min(1).apply(max_chars)
+        self.max_chars = max_chars
+        self.truncate = truncate
+        self.prefix = prefix
+        self.suffix = suffix
+
+    def _apply(self, value):
+        value: typing.Text = self._filter(value, Type(typing.Text))
+
+        if self._has_errors:
+            return None
+
+        if len(value) > self.max_chars:
+            if self.truncate:
+                target_chars = self.max_chars - len(self.suffix)
+
+                # Edge case where ``self.max_chars`` isn't big enough to fit
+                # even ``self.suffix`` by itself.
+                if target_chars < 0:
+                    return self.suffix[0:self.max_chars]
+
+                return (self.prefix + value)[0:target_chars] + self.suffix
+
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_TOO_LONG,
+                template_vars={
+                    'max_chars': self.max_chars,
+                },
+            )
+
+        return value
 
 
 class Regex(BaseFilter):
