@@ -866,6 +866,19 @@ class MaxLengthTestCase(BaseFilterTestCase):
             [f.MaxLength.CODE_TOO_LONG],
         )
 
+    def test_pass_truncated(self):
+        """
+        The filter is configured to truncate values that are too long.
+        """
+        self.assertFilterPasses(
+            self._filter(
+                ['foo', 'bar', 'baz', 'luhrmann'],
+                max_length=3,
+                truncate=True,
+            ),
+            ['foo', 'bar', 'baz'],
+        )
+
     def test_multi_byte_characters(self):
         """
         Multibyte characters are treated differently depending on whether you
