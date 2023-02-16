@@ -1,3 +1,5 @@
+.. image:: https://github.com/todofixthis/filters/actions/workflows/build.yml/badge.svg
+   :target: https://github.com/todofixthis/filters/actions/workflows/build.yml
 .. image:: https://readthedocs.org/projects/filters/badge/?version=latest
    :target: http://filters.readthedocs.io/
 
