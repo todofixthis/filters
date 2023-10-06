@@ -5,7 +5,7 @@ name = "phx-filters"
 version = "3.3.0"
 description = "Validation and data pipelines made easy!"
 readme = "README.rst"
-requires-python = ">= 3.6"
+requires-python = ">= 3.10"
 license = { file = "LICENCE.txt" }
 authors = [
     { email = "Phoenix Zerin <phx@phx.nz>" }
@@ -23,16 +23,16 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
     'Topic :: Text Processing :: Filters',
 ]
 
 dependencies = [
-    "phx-class-registry",
+    "phx-class-registry >= 4.1.0",
     "python-dateutil",
     "pytz",
     "regex >= 2018.8.17",
