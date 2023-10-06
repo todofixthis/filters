@@ -8,7 +8,7 @@ class DummyDistributionFinder(DistributionFinder):
     """
     Injects a dummy distribution into the meta path finder, so that we can
     pretend like it's been pip installed during unit tests (i.e., so that we
-    can test ``EntryPointsClassRegistry``), without polluting the persistent
+    can test ``FilterExtensionRegistry``), without polluting the persistent
     virtualenv.
     """
 
