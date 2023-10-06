@@ -378,7 +378,7 @@ class Date(Datetime, BaseFilter[date]):
         return filtered if self._has_errors else filtered.date()
 
 
-class Empty(BaseFilter):
+class Empty(BaseFilter[T]):
     """
     Expects the value to be empty.
 
@@ -405,7 +405,7 @@ class Empty(BaseFilter):
         )
 
 
-class Item(BaseFilter):
+class Item(BaseFilter[T]):
     """
     Returns a single item from an incoming mapping or sequence.
     """
@@ -474,7 +474,7 @@ class Item(BaseFilter):
             )
 
 
-class Length(BaseFilter):
+class Length(BaseFilter[T]):
     """
     Ensures incoming values have exactly the right length.
     """
@@ -527,7 +527,7 @@ class Length(BaseFilter):
         return value
 
 
-class MaxLength(BaseFilter):
+class MaxLength(BaseFilter[T]):
     """
     Enforces a maximum length on the value.
     """
@@ -574,7 +574,7 @@ class MaxLength(BaseFilter):
         return value
 
 
-class MinLength(BaseFilter):
+class MinLength(BaseFilter[T]):
     """
     Enforces a minimum length on the value.
     """
@@ -617,7 +617,7 @@ class MinLength(BaseFilter):
         return value
 
 
-class NoOp(BaseFilter):
+class NoOp(BaseFilter[T]):
     """
     Filter that does nothing, used when you need a placeholder Filter in a
     FilterChain.
@@ -627,7 +627,7 @@ class NoOp(BaseFilter):
         return value
 
 
-class NotEmpty(BaseFilter):
+class NotEmpty(BaseFilter[T]):
     """
     Expects the value not to be empty.
 
@@ -675,7 +675,7 @@ class NotEmpty(BaseFilter):
         return None
 
 
-class Omit(BaseFilter):
+class Omit(BaseFilter[T]):
     """
     Returns a copy of an incoming mapping or sequence, with the specified keys
     omitted.  Any other items will be passed through.
@@ -815,7 +815,7 @@ class Optional(BaseFilter[T]):
         )
 
 
-class Pick(BaseFilter):
+class Pick(BaseFilter[T]):
     """
     Returns a copy of an incoming mapping or sequence, with only the specified
     keys included.

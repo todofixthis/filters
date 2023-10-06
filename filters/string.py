@@ -30,8 +30,10 @@ __all__ = [
     'Uuid',
 ]
 
+T = typing.TypeVar('T')
 
-class Base64Decode(BaseFilter):
+
+class Base64Decode(BaseFilter[str]):
     """
     Decodes an incoming value using the Base64 algo.
     """
@@ -59,9 +61,6 @@ class Base64Decode(BaseFilter):
         value = self.whitespace_re.sub(b'', value)
 
         # Check for invalid characters.
-        # Note that Python 3's b64decode does this for us, but we also have to
-        # support Python 2.
-        # https://docs.python.org/3/library/base64.html#base64.b64decode
         if not self.base64_re.match(value):
             return self._invalid_value(
                 value=value,
@@ -97,7 +96,7 @@ class Base64Decode(BaseFilter):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class CaseFold(BaseFilter):
+class CaseFold(BaseFilter[str]):
     """
     Applies case folding to an incoming string, allowing you to perform
     case-insensitive comparisons.
@@ -125,7 +124,10 @@ class CaseFold(BaseFilter):
         return value.casefold()
 
 
-class Choice(BaseFilter):
+H = typing.TypeVar('H', bound=typing.Hashable)
+
+
+class Choice(BaseFilter[H]):
     """
     Requires an incoming value to match one of a set of allowed options.
 
@@ -144,7 +146,7 @@ class Choice(BaseFilter):
     }
 
     def __init__(self,
-            choices: typing.Iterable[typing.Hashable],
+            choices: typing.Iterable[H],
             case_sensitive: bool = True,
     ) -> None:
         """
@@ -159,12 +161,12 @@ class Choice(BaseFilter):
 
         self.case_sensitive: bool = case_sensitive
 
-        self.choice_map: typing.Dict[typing.Hashable, typing.Hashable] = {}
+        self.choice_map: dict[typing.Union[H, str], H] = {}
 
         MinLength(1).apply(choices)
 
         for choice in choices:
-            if self.case_sensitive or not isinstance(choice, typing.Text):
+            if self.case_sensitive or not isinstance(choice, str):
                 self.choice_map[choice] = choice
             else:
                 self.choice_map[CaseFold().apply(choice)] = choice
@@ -176,7 +178,7 @@ class Choice(BaseFilter):
         )
 
     def _apply(self, value):
-        if (not self.case_sensitive) and isinstance(value, typing.Text):
+        if (not self.case_sensitive) and isinstance(value, str):
             value = self._filter(value, CaseFold)
 
             if self._has_errors:
@@ -196,7 +198,7 @@ class Choice(BaseFilter):
             )
 
 
-class IpAddress(BaseFilter):
+class IpAddress(BaseFilter[str]):
     """
     Validates an incoming value as an IPv[46] address.
     """
@@ -220,7 +222,7 @@ class IpAddress(BaseFilter):
         )
 
     @property
-    def ip_type(self) -> typing.Text:
+    def ip_type(self) -> str:
         """
         Returns the IP address versions that this Filter accepts.
         """
@@ -230,7 +232,7 @@ class IpAddress(BaseFilter):
         ]))
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -267,7 +269,7 @@ class IpAddress(BaseFilter):
         )
 
 
-class JsonDecode(BaseFilter):
+class JsonDecode(BaseFilter[T]):
     """
     Interprets the value as JSON.
     """
@@ -283,7 +285,7 @@ class JsonDecode(BaseFilter):
         self.decoder = decoder
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -294,14 +296,14 @@ class JsonDecode(BaseFilter):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class MaxBytes(BaseFilter):
+class MaxBytes(BaseFilter[bytes]):
     """
     Ensures that an incoming string value is small enough to fit into a
     specified number of bytes when encoded.
 
     .. note::
 
-        The resulting value is always byte string (``bytes`` type).
+        The resulting value is always be a byte string (``bytes`` type).
     """
     CODE_TOO_LONG = 'too_long'
 
@@ -315,9 +317,9 @@ class MaxBytes(BaseFilter):
             self,
             max_bytes: int,
             truncate: bool = False,
-            prefix: typing.Text = '',
-            suffix: typing.Text = '',
-            encoding: typing.Text = 'utf-8',
+            prefix: str = '',
+            suffix: str = '',
+            encoding: str = 'utf-8',
     ) -> None:
         """
         :param max_bytes:
@@ -377,7 +379,7 @@ class MaxBytes(BaseFilter):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value: typing.Text = self._filter(
+        value: str = self._filter(
             value=value,
 
             filter_chain=(
@@ -529,7 +531,7 @@ class MaxBytes(BaseFilter):
                     )
 
 
-class MaxChars(BaseFilter):
+class MaxChars(BaseFilter[str]):
     """
     Ensures the incoming value is small enough to fit in a certain number of
     characters.
@@ -549,8 +551,8 @@ class MaxChars(BaseFilter):
     def __init__(self,
             max_chars: int,
             truncate: bool = False,
-            prefix: typing.Text = '',
-            suffix: typing.Text = '',
+            prefix: str = '',
+            suffix: str = '',
     ) -> None:
         """
         :param max_chars:
@@ -591,7 +593,7 @@ class MaxChars(BaseFilter):
         self.suffix = suffix
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -618,7 +620,7 @@ class MaxChars(BaseFilter):
         return value
 
 
-class Regex(BaseFilter):
+class Regex(BaseFilter[list[str]]):
     """
     Matches a regular expression in the value.
 
@@ -647,7 +649,7 @@ class Regex(BaseFilter):
     )
 
     def __init__(self,
-            pattern: typing.Union[typing.Text, typing.Pattern],
+            pattern: typing.Union[str, typing.Pattern],
     ) -> None:
         """
         :param pattern:
@@ -671,7 +673,7 @@ class Regex(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -694,7 +696,7 @@ class Regex(BaseFilter):
         return matches
 
 
-class Split(BaseFilter):
+class Split(BaseFilter[typing.Union[list[str], dict[str]]]):
     """
     Splits an incoming string into parts.
 
@@ -705,8 +707,8 @@ class Split(BaseFilter):
     # noinspection PyProtectedMember
     def __init__(
             self,
-            pattern: typing.Union[typing.Text, typing.Pattern],
-            keys: typing.Optional[typing.Sequence[typing.Text]] = None,
+            pattern: typing.Union[str, typing.Pattern],
+            keys: typing.Optional[typing.Sequence[str]] = None,
     ) -> None:
         """
         :param pattern:
@@ -742,7 +744,7 @@ class Split(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -761,7 +763,7 @@ class Split(BaseFilter):
             return split
 
 
-class Strip(BaseFilter):
+class Strip(BaseFilter[str]):
     """
     Strips characters (whitespace and non-printables by default) from the
     end(s) of a string.
@@ -775,8 +777,8 @@ class Strip(BaseFilter):
 
     def __init__(
             self,
-            leading: typing.Text = r'[\p{C}\s]+',
-            trailing: typing.Text = r'[\p{C}\s]+',
+            leading: str = r'[\p{C}\s]+',
+            trailing: str = r'[\p{C}\s]+',
     ) -> None:
         """
         :param leading:
@@ -811,7 +813,7 @@ class Strip(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -825,7 +827,7 @@ class Strip(BaseFilter):
         return value
 
 
-class Unicode(BaseFilter):
+class Unicode(BaseFilter[str]):
     """
     Converts a value into a unicode string.
 
@@ -844,7 +846,7 @@ class Unicode(BaseFilter):
 
     def __init__(
             self,
-            encoding: typing.Text = 'utf-8',
+            encoding: str = 'utf-8',
             normalize: bool = True,
     ) -> None:
         """
@@ -882,7 +884,7 @@ class Unicode(BaseFilter):
 
     def _apply(self, value):
         try:
-            if isinstance(value, typing.Text):
+            if isinstance(value, str):
                 decoded = value
 
             elif isinstance(value, bytes):
@@ -937,7 +939,7 @@ class Unicode(BaseFilter):
             return decoded
 
 
-class ByteString(Unicode):
+class ByteString(Unicode, BaseFilter[bytes]):
     """
     Converts a value into a byte string, encoded as UTF-8.
 
@@ -946,7 +948,7 @@ class ByteString(Unicode):
 
     def __init__(
             self,
-            encoding: typing.Text = 'utf-8',
+            encoding: str = 'utf-8',
             normalize: bool = False,
     ) -> None:
         """
@@ -954,8 +956,8 @@ class ByteString(Unicode):
             Used to decode non-unicode values.
 
         :param normalize:
-            Whether to normalize the unicode value before converting
-            back into bytes:
+            Whether to normalize the unicode value before converting back into
+            bytes:
 
                 - Convert to NFC form.
                 - Remove non-printable characters.
@@ -967,9 +969,8 @@ class ByteString(Unicode):
         """
         super().__init__(encoding, normalize)
 
-    # noinspection SpellCheckingInspection
     def _apply(self, value):
-        decoded: typing.Text = super()._apply(value)
+        decoded: str = super()._apply(value)
 
         #
         # No need to catch UnicodeEncodeErrors here; UTF-8 can handle any
@@ -1001,7 +1002,7 @@ class ByteString(Unicode):
         return decoded if self._has_errors else decoded.encode('utf-8')
 
 
-class Uuid(BaseFilter):
+class Uuid(BaseFilter[UUID]):
     """
     Interprets an incoming value as a UUID.
     """
@@ -1035,9 +1036,9 @@ class Uuid(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Union[typing.Text, UUID] = self._filter(
+        value: typing.Union[str, UUID] = self._filter(
             value,
-            Type((typing.Text, UUID)),
+            Type((str, UUID)),
         )
 
         if self._has_errors:
