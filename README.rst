@@ -16,8 +16,8 @@ data validation and processing pipelines, including:
 
 And much more!
 
-The output from one filter can be "piped" into the input of another, enabling
-you to "chain" filters together to quickly and easily create complex data
+The output from one filter can be piped into the input of another, enabling you
+to chain filters together to quickly and easily create complex data schemas and
 pipelines.
 
 
@@ -64,7 +64,7 @@ Parse a JSON string and check that it has correct structure:
        f.FilterMapper(
            {
                'birthday':  f.Date,
-               'gender':    f.CaseFold | f.Choice(choices={'m', 'f', 'x'}),
+               'gender':    f.CaseFold | f.Choice(choices={'f', 'm', 'n'}),
 
                'utcOffset':
                    f.Decimal |
