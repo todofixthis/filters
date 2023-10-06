@@ -11,8 +11,10 @@ __all__ = [
     'Round',
 ]
 
+T = typing.TypeVar('T')
 
-class Decimal(BaseFilter):
+
+class Decimal(BaseFilter[DecimalType]):
     """
     Interprets the value as a :py:class:`decimal.Decimal` object.
     """
@@ -32,9 +34,8 @@ class Decimal(BaseFilter):
     ) -> None:
         """
         :param max_precision:
-            Max number of decimal places the resulting value is allowed
-            to have.  Values that are too precise will be rounded to
-            fit.
+            Max number of decimal places the resulting value is allowed to have.
+            Values that are too precise will be rounded to fit.
 
             To avoid ambiguity, specify ``max_precision`` as a
             ``decimal.Decimal`` object.
@@ -46,9 +47,8 @@ class Decimal(BaseFilter):
         :param allow_tuples:
             Whether to allow tuple-like inputs.
 
-            Allowing tuple inputs might couple the implementation more
-            tightly to Python's Decimal type, so you have the option
-            to disallow it.
+            Allowing tuple inputs might couple the implementation more tightly
+            to Python's Decimal type, so you have the option to disallow it.
         """
         super().__init__()
 
@@ -101,15 +101,15 @@ class Decimal(BaseFilter):
         return d
 
 
-class Int(BaseFilter):
+class Int(BaseFilter[int]):
     """
     Interprets the value as an int.
 
-    Strings and other compatible values will be converted, but floats
-    will be treated as INVALID.
+    Strings and other compatible values will be converted, but floats will be
+    treated as invalid.
 
-    Note that Python handles really, really big int values
-    transparently, so you don't need to worry about overflow.
+    Note that Python handles really big int values transparently, so you don't
+    need to worry about overflow.
 
     References:
       - http://stackoverflow.com/a/538583
@@ -131,19 +131,17 @@ class Int(BaseFilter):
         if decimal % 1:
             return self._invalid_value(value, self.CODE_DECIMAL)
 
-        # Once we get to this point, we're pretty confident that we've
-        # got something that can be converted into an int.
-        # noinspection PyTypeChecker
+        # Once we get to this point, we're pretty confident that we've got
+        # something that can be converted into an int.
         return int(decimal)
 
 
-class Max(BaseFilter):
+class Max(BaseFilter[T]):
     """
     Enforces a maximum value.
 
-    Note:  Technically, this filter can operate on any type that
-    supports comparison, but it tends to be used exclusively with
-    numeric types.
+    Note:  Technically, this filter can operate on any type that supports
+    comparison, but it tends to be used exclusively with numeric types.
     """
     CODE_TOO_BIG = 'too_big'
 
@@ -160,8 +158,8 @@ class Max(BaseFilter):
             Whether to exclude the max value itself as a valid value:
 
             - True: The incoming value must be _less than_ the max value.
-            - False (default): The incoming value must be _less than
-              or equal to_ the max value.
+            - False (default): The incoming value must be _less than or equal
+              to_ the max value.
         """
         super().__init__()
 
@@ -190,8 +188,8 @@ class Max(BaseFilter):
                 reason=self.CODE_TOO_BIG,
 
                 # This only makes sense if `self.exclusive` is False.
-                # Better to be consistent and replace all invalid
-                # values with `None`.
+                # Better to be consistent and replace all invalid values with
+                # `None`.
                 # replacement = self.max_value,
 
                 template_vars={
@@ -203,7 +201,7 @@ class Max(BaseFilter):
         return value
 
 
-class Min(BaseFilter):
+class Min(BaseFilter[T]):
     """
     Enforces a minimum value.
 
@@ -270,7 +268,7 @@ class Min(BaseFilter):
         return value
 
 
-class Round(BaseFilter):
+class Round(BaseFilter[T]):
     """
     Rounds incoming values to whole numbers or decimals.
     """
