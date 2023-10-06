@@ -1,8 +1,3 @@
-from importlib.metadata import distribution
-
-__version__ = distribution('phx-filters').version
-del distribution
-
 # Make the base filters accessible from the top level of the package.
 # Note that the order is important here, due to dependencies.
 from .base import *
