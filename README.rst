@@ -1,3 +1,5 @@
+.. image:: https://github.com/todofixthis/filters/actions/workflows/build.yml/badge.svg
+   :target: https://github.com/todofixthis/filters/actions/workflows/build.yml
 .. image:: https://readthedocs.org/projects/filters/badge/?version=latest
    :target: http://filters.readthedocs.io/
 
@@ -14,8 +16,8 @@ data validation and processing pipelines, including:
 
 And much more!
 
-The output from one filter can be "piped" into the input of another, enabling
-you to "chain" filters together to quickly and easily create complex data
+The output from one filter can be piped into the input of another, enabling you
+to chain filters together to quickly and easily create complex data schemas and
 pipelines.
 
 
@@ -62,7 +64,7 @@ Parse a JSON string and check that it has correct structure:
        f.FilterMapper(
            {
                'birthday':  f.Date,
-               'gender':    f.CaseFold | f.Choice(choices={'m', 'f', 'x'}),
+               'gender':    f.CaseFold | f.Choice(choices={'f', 'm', 'n'}),
 
                'utcOffset':
                    f.Decimal |
@@ -81,9 +83,9 @@ Requirements
 ------------
 Filters is known to be compatible with the following Python versions:
 
+- 3.12
 - 3.11
 - 3.10
-- 3.9
 
 .. note::
    I'm only one person, so to keep from getting overwhelmed, I'm only committing

@@ -1290,7 +1290,7 @@ class RegexTestCase(BaseFilterTestCase):
 
     def test_pass_unicode_character_class(self):
         """
-        By default, character classes like ``\w`` will take unicode into
+        By default, character classes like ``\\w`` will take unicode into
         account.
         """
         # "Hi, there!" in Japanese, according to the internet :innocent:
@@ -1382,7 +1382,7 @@ class SplitTestCase(BaseFilterTestCase):
         You can also use a regex to split the string.
         """
         self.assertFilterPasses(
-            self._filter('foo-12-bar-34-baz', pattern='[-\d]+'),
+            self._filter('foo-12-bar-34-baz', pattern=r'[-\d]+'),
             ['foo', 'bar', 'baz'],
         )
 
@@ -1393,7 +1393,7 @@ class SplitTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             # Note grouping parentheses in the regex.
-            self._filter('foo-12-bar-34-baz', pattern='([-\d]+)'),
+            self._filter('foo-12-bar-34-baz', pattern=r'([-\d]+)'),
             ['foo', '-12-', 'bar', '-34-', 'baz'],
         )
 
@@ -1405,7 +1405,7 @@ class SplitTestCase(BaseFilterTestCase):
         parts.
         """
         self.assertFilterPasses(
-            self._filter('foo:bar:baz', pattern='[-\d]+'),
+            self._filter('foo:bar:baz', pattern=r'[-\d]+'),
             ['foo:bar:baz'],
         )
 
@@ -1659,7 +1659,7 @@ class UuidTestCase(BaseFilterTestCase):
         """
         You can include curly braces around hex values.
 
-        Use ``Regex(r'^[\da-f]+$') | Uuid`` if you only want to allow plain
+        Use ``Regex(r'^[\\da-f]+$') | Uuid`` if you only want to allow plain
         hex.
         """
         filtered = self._filter('{54d6ebf8a3f55ed59becdedfb3b0773f}')
@@ -1678,7 +1678,7 @@ class UuidTestCase(BaseFilterTestCase):
         antiquated, but still valid.
 
         If you want to prohibit URNs, chain this filter with
-        ``Regex(r'^[\da-f]+$')``.
+        ``Regex(r'^[\\da-f]+$')``.
 
         References:
 
@@ -1764,7 +1764,7 @@ class UnicodeTestCase(BaseFilterTestCase):
         """
         The incoming value is a unicode.
         """
-        self.assertFilterPasses('┻━┻︵ \(°□°)/ ︵ ┻━┻ ')  # RAWR!
+        self.assertFilterPasses(r'┻━┻︵ \(°□°)/ ︵ ┻━┻ ')  # RAWR!
 
     def test_pass_bytes_utf8(self):
         """
