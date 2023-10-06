@@ -1,7 +1,6 @@
 import json
 import socket
 import typing
-import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
@@ -9,6 +8,7 @@ from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
 import regex
+import unicodedata
 
 from filters.base import BaseFilter, Type
 from filters.number import Min
@@ -48,7 +48,7 @@ class Base64Decode(BaseFilter):
         self.base64_re = regex.compile(b'^[-+_/A-Za-z0-9=]+$', regex.ASCII)
 
     def _apply(self, value):
-        value = self._filter(value, Type(bytes))  # type: bytes
+        value: bytes = self._filter(value, Type(bytes))
 
         if self._has_errors:
             return None
@@ -117,7 +117,7 @@ class CaseFold(BaseFilter):
     """
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None

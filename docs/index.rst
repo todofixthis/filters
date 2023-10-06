@@ -71,7 +71,7 @@ Parse a JSON string and check that it has correct structure:
        f.FilterMapper(
            {
                'birthday':  f.Date,
-               'gender':    f.CaseFold | f.Choice(choices={'m', 'f', 'x'}),
+               'gender':    f.CaseFold | f.Choice(choices={'m', 'f', 'n'}),
 
                'utcOffset':
                    f.Decimal |

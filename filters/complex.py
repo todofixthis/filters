@@ -81,10 +81,10 @@ class FilterRepeater(BaseFilter):
         return new_filter
 
     def _apply(self, value):
-        value = self._filter(
+        value: typing.Iterable = self._filter(
             value,
             Type(typing.Iterable),
-        )  # type: typing.Iterable
+        )
 
         if self._has_errors:
             return None

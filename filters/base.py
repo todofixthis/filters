@@ -1,7 +1,6 @@
+import typing
 from abc import ABCMeta, abstractmethod as abstract_method
 from copy import copy
-from typing import Any, Callable, Iterable, List, Mapping, \
-    MutableMapping, Optional as OptionalType, Tuple, Union
 from weakref import ProxyTypes, proxy
 
 __all__ = [
@@ -15,8 +14,10 @@ __all__ = [
     'Type',
 ]
 
-FilterCompatible = \
-    OptionalType[Union['BaseFilter', 'FilterMeta', Callable[[], 'BaseFilter']]]
+FilterCompatible = typing.Optional[
+    typing.Union[
+        'BaseFilter', 'FilterMeta', typing.Callable[[], 'BaseFilter']]
+]
 """
 Used in PEP-484 type hints to indicate a value that can be normalized
 into an instance of a :py:class:`filters.base.BaseFilter` subclass.
@@ -30,15 +31,13 @@ class FilterMeta(ABCMeta):
 
     # noinspection PyShadowingBuiltins
     def __init__(cls, what, bases=None, dict=None, **kwargs):
-        # noinspection PyArgumentList
         super().__init__(what, bases, dict, **kwargs)
 
         if not hasattr(cls, 'templates'):
             cls.templates = {}
 
-        # Copy error templates from base class to derived class, but
-        # in the event of a conflict, preserve the derived class'
-        # template.
+        # Copy error templates from base class to derived class, but in the
+        # event of a conflict, preserve the derived class' template.
         templates = {}
         for base in bases:
             if isinstance(base, FilterMeta):
@@ -77,9 +76,9 @@ class BaseFilter(metaclass=FilterMeta):
     def __init__(self):
         super().__init__()
 
-        self._parent = None  # type: OptionalType[BaseFilter]
-        self._handler = None  # type: OptionalType[BaseInvalidValueHandler]
-        self._key = None  # type: OptionalType[str]
+        self._parent: typing.Optional[BaseFilter] = None
+        self._handler: typing.Optional[BaseInvalidValueHandler] = None
+        self._key: typing.Optional[str] = None
 
         #
         # Indicates whether the Filter detected any invalid values.
@@ -100,7 +99,7 @@ class BaseFilter(metaclass=FilterMeta):
         """
         Creates a shallow copy of the object.
         """
-        new_filter = type(the_filter)()  # type: BaseFilter
+        new_filter: BaseFilter = type(the_filter)()
 
         new_filter._parent = the_filter._parent
         new_filter._key = the_filter._key
@@ -116,8 +115,7 @@ class BaseFilter(metaclass=FilterMeta):
 
         if normalized:
             #
-            # Officially, we should do this:
-            # return ``FilterChain(self) | next_filter``
+            # Officially, we should return ``FilterChain(self) | next_filter``
             #
             # But that wastes some CPU cycles by creating an extra
             # FilterChain instance that gets thrown away almost
@@ -144,7 +142,7 @@ class BaseFilter(metaclass=FilterMeta):
         )
 
     @property
-    def parent(self) -> OptionalType['BaseFilter']:
+    def parent(self) -> typing.Optional['BaseFilter']:
         """
         Returns the parent Filter.
         """
@@ -192,7 +190,7 @@ class BaseFilter(metaclass=FilterMeta):
         return self._make_key(self._key_parts + [sub_key])
 
     @property
-    def _key_parts(self) -> List[str]:
+    def _key_parts(self) -> typing.List[str]:
         """
         Assembles each key part in the filter hierarchy.
         """
@@ -271,7 +269,7 @@ class BaseFilter(metaclass=FilterMeta):
             'Not implemented in {cls}.'.format(cls=type(self).__name__),
         )
 
-    def _apply_none(self):
+    def _apply_none(self) -> None:
         """
         Applies filter-specific logic when the value is ``None``.
         """
@@ -279,10 +277,10 @@ class BaseFilter(metaclass=FilterMeta):
 
     def _filter(
             self,
-            value: Any,
+            value: typing.Any,
             filter_chain: FilterCompatible,
-            sub_key: OptionalType[str] = None,
-    ) -> Any:
+            sub_key: typing.Optional[str] = None,
+    ) -> typing.Any:
         """
         Applies another filter to a value in the same context as the
         current filter.
@@ -313,14 +311,14 @@ class BaseFilter(metaclass=FilterMeta):
 
     def _invalid_value(
             self,
-            value: Any,
-            reason: Union[str, Exception],
-            replacement: OptionalType[Any] = None,
+            value: typing.Any,
+            reason: typing.Union[str, Exception],
+            replacement: typing.Optional[typing.Any] = None,
             exc_info: bool = False,
-            context: OptionalType[MutableMapping] = None,
-            sub_key: OptionalType[str] = None,
-            template_vars: OptionalType[Mapping] = None,
-    ) -> Any:
+            context: typing.Optional[typing.MutableMapping] = None,
+            sub_key: typing.Optional[str] = None,
+            template_vars: typing.Optional[typing.Mapping] = None,
+    ) -> typing.Any:
         """
         Handles an invalid value.
 
@@ -407,7 +405,7 @@ class BaseFilter(metaclass=FilterMeta):
     def _format_message(
             self,
             key: str,
-            template_vars: Mapping[str, str],
+            template_vars: typing.Mapping[str, str],
     ) -> str:
         """
         Formats a message for the invalid value handler.
@@ -418,9 +416,9 @@ class BaseFilter(metaclass=FilterMeta):
     def resolve_filter(
             cls,
             the_filter: FilterCompatible,
-            parent: OptionalType['BaseFilter'] = None,
-            key: OptionalType[str] = None,
-    ) -> OptionalType['FilterChain']:
+            parent: typing.Optional['BaseFilter'] = None,
+            key: typing.Optional[str] = None,
+    ) -> typing.Optional['FilterChain']:
         """
         Converts a filter-compatible value into a consistent type.
         """
@@ -451,7 +449,7 @@ class BaseFilter(metaclass=FilterMeta):
             return resolved
 
     @staticmethod
-    def _make_key(key_parts: Iterable[str]) -> str:
+    def _make_key(key_parts: typing.Iterable[str]) -> str:
         """
         Assembles a dotted key value from its component parts.
         """
@@ -467,7 +465,7 @@ class FilterChain(BaseFilter):
     def __init__(self, start_filter: FilterCompatible = None) -> None:
         super().__init__()
 
-        self._filters = []  # type: List[BaseFilter]
+        self._filters: list[BaseFilter] = []
 
         self._add(start_filter)
 
@@ -487,7 +485,7 @@ class FilterChain(BaseFilter):
         resolved = self.resolve_filter(next_filter)
 
         if resolved:
-            new_chain = copy(self)  # type: FilterChain
+            new_chain: FilterChain = copy(self)
             new_chain._add(next_filter)
             return new_chain
         else:
@@ -540,8 +538,8 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
             self,
             message: str,
             exc_info: bool,
-            context: MutableMapping,
-    ) -> Any:
+            context: typing.MutableMapping,
+    ) -> typing.Any:
         """
         Handles an invalid value.
 
@@ -558,7 +556,7 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
             'Not implemented in {cls}.'.format(cls=type(self).__name__),
         )
 
-    def handle_exception(self, message: str, exc: Exception) -> Any:
+    def handle_exception(self, message: str, exc: Exception) -> typing.Any:
         """
         Handles an uncaught exception.
         """
@@ -596,7 +594,7 @@ class ExceptionHandler(BaseInvalidValueHandler):
             self,
             message: str,
             exc_info: bool,
-            context: MutableMapping,
+            context: typing.MutableMapping,
     ) -> None:
         error = FilterError(message)
         error.context = context
@@ -608,7 +606,7 @@ class ExceptionHandler(BaseInvalidValueHandler):
 # the base module.
 class Type(BaseFilter):
     """
-    Checks the type of a value.
+    Checks the type of the incoming value.
     """
     CODE_WRONG_TYPE = 'wrong_type'
 
@@ -619,9 +617,9 @@ class Type(BaseFilter):
 
     def __init__(
             self,
-            allowed_types: Union[type, Tuple[type, ...]],
+            allowed_types: typing.Union[type, typing.Tuple[type, ...]],
             allow_subclass: bool = True,
-            aliases: OptionalType[Mapping[type, str]] = None,
+            aliases: typing.Optional[typing.Mapping[type, str]] = None,
     ) -> None:
         """
         :param allowed_types:
@@ -673,7 +671,7 @@ class Type(BaseFilter):
 
                 template_vars={
                     'incoming': self.get_type_name(type(value)),
-                    'allowed':  self.get_allowed_type_names(),
+                    'allowed': self.get_allowed_type_names(),
                 },
             )
 

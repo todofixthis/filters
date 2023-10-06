@@ -1,5 +1,5 @@
 import typing
-from importlib.metadata import EntryPoint, entry_points
+from importlib.metadata import entry_points
 from inspect import getmembers as get_members, isabstract as is_abstract, \
     isclass as is_class, ismodule as is_module
 from logging import getLogger
@@ -63,7 +63,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         if self._cache is None:
             self._cache = {}
 
-            for target in entry_points(group=self.group):  # type: EntryPoint
+            for target in entry_points(group=self.group):
                 filter_ = target.load()
 
                 ift_result = is_filter_type(filter_)

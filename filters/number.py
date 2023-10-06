@@ -121,7 +121,7 @@ class Int(BaseFilter):
     }
 
     def _apply(self, value):
-        decimal = self._filter(value, Decimal)  # type: DecimalType
+        decimal: DecimalType = self._filter(value, Decimal)
 
         if self._has_errors:
             return None

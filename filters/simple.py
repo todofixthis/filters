@@ -128,7 +128,7 @@ class Array(Type):
         super().__init__(typing.Sequence, True, aliases)
 
     def _apply(self, value):
-        value = super()._apply(value)  # type: typing.Sequence
+        value: typing.Sequence = super()._apply(value)
 
         if self._has_errors:
             return None
@@ -368,7 +368,7 @@ class Date(Datetime):
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
 
-        filtered = super()._apply(value)  # type: datetime
+        filtered: datetime = super()._apply(value)
 
         # Normally we return `None` if we get any errors, but in this
         # case, we'll let the superclass method decide.
