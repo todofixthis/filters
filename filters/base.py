@@ -63,7 +63,10 @@ class FilterMeta(ABCMeta):
         return FilterChain(self) | next_filter
 
 
-class BaseFilter(metaclass=FilterMeta):
+T = typing.TypeVar('T')
+
+
+class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
     """
     Base functionality for all Filters, macros, etc.
     """
@@ -246,7 +249,7 @@ class BaseFilter(metaclass=FilterMeta):
         self.handler = handler
         return self
 
-    def apply(self, value):
+    def apply(self, value: typing.Any) -> typing.Union[T, None]:
         """
         Applies the filter to a value.
         """
@@ -258,7 +261,7 @@ class BaseFilter(metaclass=FilterMeta):
             return self._invalid_value(value, e, exc_info=True)
 
     @abstract_method
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> T:
         """
         Applies filter-specific logic to a value.
 
@@ -271,7 +274,7 @@ class BaseFilter(metaclass=FilterMeta):
 
     def _apply_none(self) -> None:
         """
-        Applies filter-specific logic when the value is ``None``.
+        Applies filter-specific logic when the incoming value is ``None``.
         """
         return None
 

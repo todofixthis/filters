@@ -55,8 +55,8 @@ def selective_copy_mapping(
     except TypeError:
         pass
 
-    # As a fallback, ``MutableMapping`` gives us an explicit
-    # interface to build the result using the same type as ``value``.
+    # As a fallback, ``MutableMapping`` gives us an explicit interface to build
+    # the result using the same type as ``value``.
     if isinstance(source, typing.MutableMapping):
         result = type(source)()
 
@@ -102,8 +102,8 @@ def selective_copy_sequence(
     except TypeError:
         pass
 
-    # As a fallback, ``MutableSequence`` gives us an explicit
-    # interface to build the result using the same type as ``value``.
+    # As a fallback, ``MutableSequence`` gives us an explicit interface to build
+    # the result using the same type as ``value``.
     if isinstance(source, typing.MutableSequence):
         result = type(source)()
 
@@ -147,7 +147,7 @@ class Array(Type):
         return value
 
 
-class ByteArray(BaseFilter):
+class ByteArray(BaseFilter[bytearray]):
     """
     Converts an incoming value into a bytearray.
     """
@@ -196,8 +196,7 @@ class ByteArray(BaseFilter):
         filtered = self._filter(value, FilterRepeater(
             # Only allow ints and booleans.
             Type(int) |
-            # Convert booleans to int (Min and Max require an
-            # exact type match).
+            # Convert booleans to int (Min and Max require an exact type match).
             Int |
             # Min value for each byte is 2^0-1.
             Min(0) |
@@ -211,20 +210,23 @@ class ByteArray(BaseFilter):
         return bytearray(filtered)
 
 
-class Call(BaseFilter):
+T = typing.TypeVar('T')
+
+
+class Call(BaseFilter[T]):
     """
     Runs the value through a callable.
 
-    Usually, creating a custom filter type works better, as you have
-    more control over how invalid values are handled, you can specify
-    custom error codes, it's easier to write tests for, etc.
+    Usually, creating a custom filter type works better, as you have more
+    control over how invalid values are handled, you can specify custom error
+    codes, it's easier to write tests for, etc.
 
-    But, in a pinch, this is a handy way to quickly integrate a custom
-    function into a filter chain.
+    But, in a pinch, this is a handy way to quickly integrate a custom function
+    into a filter chain.
     """
 
     def __init__(self,
-            callable_: typing.Callable[..., typing.Any],
+            callable_: typing.Callable[..., T],
             *extra_args,
             **extra_kwargs
     ) -> None:
@@ -255,7 +257,7 @@ class Call(BaseFilter):
             )
 
 
-class Datetime(BaseFilter):
+class Datetime(BaseFilter[datetime]):
     """
     Interprets the value as a UTC datetime.
     """
@@ -322,9 +324,9 @@ class Datetime(BaseFilter):
             try:
                 #
                 # It's a shame we can't pass ``tzinfos`` to
-                # :py:meth:`dateutil_parse.parse`; ``tzinfos`` only has
-                # effect if we also specify ``ignoretz = True``, which
-                # we definitely don't want to do here!
+                # :py:meth:`dateutil_parse.parse`; ``tzinfos`` only has effect
+                # if we also specify ``ignoretz = True``, which we definitely
+                # don't want to do here!
                 #
                 # https://dateutil.readthedocs.org/en/latest/parser.html#dateutil.parser.parse
                 #
@@ -349,14 +351,15 @@ class Datetime(BaseFilter):
         )
 
 
-class Date(Datetime):
+class Date(Datetime, BaseFilter[date]):
     """
     Interprets the value as a UTC date.
 
-    Note that the value is first converted to a datetime with UTC
-    timezone, which may cause the resulting date to appear to be
-    off by +/- 1 day (does not apply if the value is already a date
-    object).
+    Note that the value is first converted to a datetime with UTC timezone,
+    which may cause the resulting date to appear to be off by +/- 1 day (does
+    not apply if the value is already a date object).
+
+    Check out the unit tests for more information.
     """
     CODE_INVALID = 'not_date'
 
@@ -370,8 +373,8 @@ class Date(Datetime):
 
         filtered: datetime = super()._apply(value)
 
-        # Normally we return `None` if we get any errors, but in this
-        # case, we'll let the superclass method decide.
+        # Normally we return ``None`` if we get any errors, but in this case,
+        # we'll let the superclass method decide.
         return filtered if self._has_errors else filtered.date()
 
 
@@ -379,10 +382,9 @@ class Empty(BaseFilter):
     """
     Expects the value to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this Filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length.  Note that this
+    Filter considers values that do not have length to be not empty (in
+    particular, False and 0 are not considered empty here).
     """
     CODE_NOT_EMPTY = 'not_empty'
 
@@ -597,11 +599,10 @@ class MinLength(BaseFilter):
         if len(value) < self.min_length:
             #
             # Note that we do not pad the value:
-            #   - It is not clear to which end(s) we should add the
-            #     padding.
+            #   - It is not clear to which end(s) we should add the padding.
             #   - It is not clear what the padding value(s) should be.
-            #   - We should keep this filter's behavior consistent with
-            #     that of MaxLength.
+            #   - We should keep this filter's behavior consistent with that of
+            #     MaxLength.
             #
             return self._invalid_value(
                 value=value,
@@ -618,8 +619,8 @@ class MinLength(BaseFilter):
 
 class NoOp(BaseFilter):
     """
-    Filter that does nothing, used when you need a placeholder Filter
-    in a FilterChain.
+    Filter that does nothing, used when you need a placeholder Filter in a
+    FilterChain.
     """
 
     def _apply(self, value):
@@ -630,14 +631,13 @@ class NotEmpty(BaseFilter):
     """
     Expects the value not to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length.  Note that this
+    filter considers values that do not have length to be not empty (in
+    particular, False and 0 are not considered empty here).
 
-    By default, this filter treats ``None`` as valid, just like every
-    other filter.  However, you can configure the filter to reject
-    ``None`` in its initializer method.
+    By default, this filter treats ``None`` as valid, just like every other
+    filter.  However, you can configure the filter to reject ``None`` in its
+    initializer method.
     """
     CODE_EMPTY = 'empty'
 
@@ -729,7 +729,7 @@ class Omit(BaseFilter):
         )
 
 
-class Optional(BaseFilter):
+class Optional(BaseFilter[T]):
     """
     Changes empty and null values into a default value.
 
@@ -743,7 +743,7 @@ class Optional(BaseFilter):
     """
 
     def __init__(self,
-            default: typing.Any = None,
+            default: typing.Union[typing.Callable[..., T], T] = None,
             call_default: typing.Optional[bool] = None,
     ):
         """
@@ -773,21 +773,17 @@ class Optional(BaseFilter):
 
         self.call_default = call_default
 
-        # Compat for Python 3.9: ``staticmethod.__wrapped__`` was added in
-        # Python 3.10, so we have to store the original value separately.
-        self.actual_default = default
-        self.callable_default = (
-            # https://stackoverflow.com/a/41921291
-            staticmethod(default).__get__(object)
+        self.default = (
+            staticmethod(default).__wrapped__
             if self.call_default is True or
                (self.call_default is None and callable(default))
-            else None
+            else default
         )
 
     def __str__(self):
         return '{type}(default={default!r})'.format(
             type=type(self).__name__,
-            default=self.actual_default,
+            default=self.default,
         )
 
     def _apply(self, value):
@@ -812,11 +808,10 @@ class Optional(BaseFilter):
         value.
         """
         return (
-            self.callable_default()
+            self.default()
             if self.call_default is True or
-               (self.call_default is None and
-                self.callable_default is not None)
-            else self.actual_default
+               (self.call_default is None and callable(self.default))
+            else self.default
         )
 
 
