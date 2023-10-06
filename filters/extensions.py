@@ -1,10 +1,10 @@
 import typing
+from importlib.metadata import EntryPoint, entry_points
 from inspect import getmembers as get_members, isabstract as is_abstract, \
     isclass as is_class, ismodule as is_module
 from logging import getLogger
 
 from class_registry import EntryPointClassRegistry
-from pkg_resources import EntryPoint, iter_entry_points
 
 from filters.base import BaseFilter
 
@@ -49,6 +49,11 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         super().__init__(group)
 
     def __getattr__(self, item: str) -> typing.Type[BaseFilter]:
+        """
+        Provides attr-like interface for accessing extension filters (the
+        default interface for class registries is to access items rather than
+        attributes).
+        """
         return self[item]
 
     def __repr__(self):
@@ -58,8 +63,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         if self._cache is None:
             self._cache = {}
 
-            for target in iter_entry_points(
-                    self.group):  # type: EntryPoint
+            for target in entry_points(group=self.group):  # type: EntryPoint
                 filter_ = target.load()
 
                 ift_result = is_filter_type(filter_)

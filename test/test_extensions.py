@@ -1,23 +1,18 @@
-from os.path import dirname
 from unittest import TestCase
-
-from pkg_resources import working_set
 
 from filters.extensions import FilterExtensionRegistry
 from filters.macros import FilterMacroType
 from test import TestFilterAlpha, TestFilterBravo
+from test.helper import DummyDistributionFinder
 
 
 def setUpModule():
-    #
-    # Install a fake distribution that we can use to inject entry
-    # points at runtime.
-    #
-    # The side effects from this are pretty severe, but they (very
-    # probably) only impact this test, and they are undone as soon as
-    # the process terminates.
-    #
-    working_set.add_entry(dirname(__file__))
+    # Inject a distribution that defines some entry points.
+    DummyDistributionFinder.install()
+
+
+def tearDownModule():
+    DummyDistributionFinder.uninstall()
 
 
 class FilterExtensionRegistryTestCase(TestCase):
