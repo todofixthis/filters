@@ -1,7 +1,8 @@
-from abc import ABCMeta
+import typing
+from abc import ABC
 from functools import WRAPPER_ASSIGNMENTS, partial
 
-from filters.base import BaseFilter, FilterMeta
+from filters.base import BaseFilter, FilterCompatible, FilterMeta
 
 __all__ = [
     "FilterMacroType",
@@ -9,7 +10,7 @@ __all__ = [
 ]
 
 
-class FilterMacroType(BaseFilter, metaclass=ABCMeta):
+class FilterMacroType(BaseFilter, ABC):
     """
     Base type for filter macros.  Doesn't do anything on its own, but
     it is useful for identifying filter macros when paired with an
@@ -33,7 +34,35 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
     pass
 
 
-def filter_macro(func, *args, **kwargs):
+F = typing.TypeVar("F", bound=FilterCompatible)
+P = typing.ParamSpec("P")
+R = typing.TypeVar("R", bound=FilterMacroType)
+
+
+@typing.overload
+def filter_macro(
+    func: typing.Callable[P, R],
+    /,
+) -> typing.Type[FilterMacroType] | typing.Callable[P, R]:
+    """Bare decorator variant"""
+    ...
+
+
+@typing.overload
+def filter_macro(
+    func: typing.Callable[P, F],
+    *args: typing.Unpack[P.args],
+    **kwargs: typing.Unpack[P.kwargs],
+) -> typing.Type[FilterMacroType] | F:
+    """Decorator factory variant"""
+    ...
+
+
+def filter_macro(
+    func: typing.Callable[P, R],
+    *args: typing.Unpack[P.args],
+    **kwargs: typing.Unpack[P.kwargs],
+) -> typing.Type[FilterMacroType] | typing.Callable[P, R]:
     """
     Promotes a function that returns a filter into its own filter type.
 

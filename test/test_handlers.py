@@ -6,7 +6,8 @@ from traceback import format_exc, format_exception
 from unittest import TestCase
 
 import filters as f
-from filters.base import ExceptionHandler
+from filters.base import ExceptionHandler, FilterError
+from filters.handlers import FilterMessage, FilterRunner, LogHandler, MemoryHandler
 
 
 class FilterRunnerTestCase(TestCase):
@@ -15,21 +16,21 @@ class FilterRunnerTestCase(TestCase):
         Calling a FilterRunner's ``apply()`` method reruns its filter chain
         against the specified input.
         """
-        runner = f.FilterRunner(f.Int)
+        runner = FilterRunner(f.Int)
         self.assertTrue(runner.is_valid())
         self.assertDictEqual(runner.error_codes, {})
         self.assertIsNone(runner.cleaned_data)
 
-        runner.apply('42')
+        runner.apply("42")
         self.assertTrue(runner.is_valid())
         self.assertDictEqual(runner.error_codes, {})
         self.assertEqual(runner.cleaned_data, 42)
 
-        runner.apply('Not an int')
+        runner.apply("Not an int")
         self.assertFalse(runner.is_valid())
         self.assertDictEqual(
             runner.error_codes,
-            {'': [f.Decimal.CODE_INVALID]},
+            {"": [f.Decimal.CODE_INVALID]},
         )
 
         # One more; make sure that the error messages from the invalid value
@@ -50,17 +51,17 @@ class ExceptionHandlerTestCase(TestCase):
         """
         Sends an invalid value to the handler.
         """
-        message = 'Needs more cowbell.'
+        message = "Needs more cowbell."
         context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
+            "key": "test",
+            "value": "(Don't Fear) The Reaper",
         }
 
         # When ExceptionHandler encounters an invalid value, it raises
         # an exception.
         # The exception always has the same type (FilterError) so that
         # the caller can capture it.
-        with self.assertRaises(f.FilterError) as exc:
+        with self.assertRaises(FilterError) as exc:
             self.handler.handle_invalid_value(message, False, context)
 
         self.assertEqual(str(exc.exception), message)
@@ -70,10 +71,10 @@ class ExceptionHandlerTestCase(TestCase):
         """
         Sends an exception to the handler.
         """
-        message = 'An exception occurred!'
+        message = "An exception occurred!"
         context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
+            "key": "test",
+            "value": "(Don't Fear) The Reaper",
         }
 
         #
@@ -96,11 +97,11 @@ class ExceptionHandlerTestCase(TestCase):
             # work with.
             # Note that the ValueError's message will get replaced (but
             # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
+            exc = ValueError("Needs more cowbell.")
             exc.context = context
             raise exc
         except ValueError as e:
-            with self.assertRaises(f.FilterError) as ar_context:
+            with self.assertRaises(FilterError) as ar_context:
                 self.handler.handle_exception(message, e)
 
             self.assertEqual(str(ar_context.exception), message)
@@ -163,7 +164,7 @@ class MemoryLogHandler(logging.Handler):
         # Remove `exc_info` to reclaim memory.
         if record.exc_info:
             if not record.exc_text:
-                record.exc_text = ''.join(format_exception(*record.exc_info))
+                record.exc_text = "".join(format_exception(*record.exc_info))
 
             record.exc_info = None
 
@@ -181,23 +182,23 @@ class LogHandlerTestCase(TestCase):
         logger.addHandler(self.logs)
         logger.setLevel(logging.DEBUG)
 
-        self.handler = f.LogHandler(logger, WARNING)
+        self.handler = LogHandler(logger, WARNING)
 
     def test_invalid_value(self):
         """
         Sends an invalid value to the handler.
         """
-        message = 'Needs more cowbell.'
+        message = "Needs more cowbell."
         context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
+            "key": "test",
+            "value": "(Don't Fear) The Reaper",
         }
 
         self.handler.handle_invalid_value(message, False, context)
 
         self.assertEqual(len(self.logs.records), 1)
         self.assertEqual(self.logs[0].msg, message)
-        self.assertEqual(getattr(self.logs[0], 'context'), context)
+        self.assertEqual(getattr(self.logs[0], "context"), context)
 
         # The log message level is set in the handler's initializer.
         self.assertEqual(self.logs[0].levelname, getLevelName(WARNING))
@@ -209,10 +210,10 @@ class LogHandlerTestCase(TestCase):
         """
         Sends an exception to the handler.
         """
-        message = 'An exception occurred!'
+        message = "An exception occurred!"
         context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
+            "key": "test",
+            "value": "(Don't Fear) The Reaper",
         }
 
         try:
@@ -220,7 +221,7 @@ class LogHandlerTestCase(TestCase):
             # work with.
             # Note that the ValueError's message will get replaced (but
             # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
+            exc = ValueError("Needs more cowbell.")
             exc.context = context
             raise exc
         except ValueError as e:
@@ -232,7 +233,7 @@ class LogHandlerTestCase(TestCase):
 
             self.assertEqual(len(self.logs.records), 1)
             self.assertEqual(self.logs[0].msg, message)
-            self.assertEqual(getattr(self.logs[0], 'context'), context)
+            self.assertEqual(getattr(self.logs[0], "context"), context)
 
             # The log message level is set in the handler's
             # initializer.
@@ -248,19 +249,19 @@ class MemoryHandlerTestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.handler = f.MemoryHandler()
+        self.handler = MemoryHandler()
 
     def test_invalid_value(self):
         """
         Sends an invalid value to the handler.
         """
-        code = 'foo'
-        key = 'test'
-        message = 'Needs more cowbell.'
+        code = "foo"
+        key = "test"
+        message = "Needs more cowbell."
         context = {
-            'code': code,
-            'key': key,
-            'value': "(Don't Fear) The Reaper",
+            "code": code,
+            "key": key,
+            "value": "(Don't Fear) The Reaper",
         }
 
         self.handler.handle_invalid_value(message, False, context)
@@ -268,36 +269,36 @@ class MemoryHandlerTestCase(TestCase):
         # Add a couple of additional messages, just to make sure the
         # handler stores them correctly.
         self.handler.handle_invalid_value(
-            message='Test message 1',
+            message="Test message 1",
             exc_info=False,
-            context={'key': key},
+            context={"key": key},
         )
-        self.handler.handle_invalid_value('Test message 2', False, {})
+        self.handler.handle_invalid_value("Test message 2", False, {})
 
         # As filter messages are captured, they are sorted according to
         # their contexts' ``key`` values.
         # If a message doesn't have a ``key`` value, an empty string is
         # used.
-        self.assertListEqual(sorted(self.handler.messages.keys()), ['', key])
+        self.assertListEqual(sorted(self.handler.messages.keys()), ["", key])
 
         filter_message_0 = self.handler.messages[key][0]
-        self.assertIsInstance(filter_message_0, f.FilterMessage)
+        self.assertIsInstance(filter_message_0, FilterMessage)
         self.assertEqual(filter_message_0.code, code)
         self.assertEqual(filter_message_0.message, message)
         self.assertEqual(filter_message_0.context, context)
         self.assertIsNone(filter_message_0.exc_info)
 
         filter_message_1 = self.handler.messages[key][1]
-        self.assertIsInstance(filter_message_1, f.FilterMessage)
-        self.assertEqual(filter_message_1.code, 'Test message 1')
-        self.assertEqual(filter_message_1.message, 'Test message 1')
-        self.assertEqual(filter_message_1.context, {'key': key})
+        self.assertIsInstance(filter_message_1, FilterMessage)
+        self.assertEqual(filter_message_1.code, "Test message 1")
+        self.assertEqual(filter_message_1.message, "Test message 1")
+        self.assertEqual(filter_message_1.context, {"key": key})
         self.assertIsNone(filter_message_1.exc_info)
 
-        filter_message_blank = self.handler.messages[''][0]
-        self.assertIsInstance(filter_message_blank, f.FilterMessage)
-        self.assertEqual(filter_message_blank.code, 'Test message 2')
-        self.assertEqual(filter_message_blank.message, 'Test message 2')
+        filter_message_blank = self.handler.messages[""][0]
+        self.assertIsInstance(filter_message_blank, FilterMessage)
+        self.assertEqual(filter_message_blank.code, "Test message 2")
+        self.assertEqual(filter_message_blank.message, "Test message 2")
         self.assertEqual(filter_message_blank.context, {})
         self.assertIsNone(filter_message_blank.exc_info)
 
@@ -308,13 +309,13 @@ class MemoryHandlerTestCase(TestCase):
         """
         Sends an exception to the handler.
         """
-        code = 'error'
-        key = 'test'
-        message = 'An exception occurred!'
+        code = "error"
+        key = "test"
+        message = "An exception occurred!"
         context = {
-            'code': code,
-            'key': key,
-            'value': "(Don't Fear) The Reaper",
+            "code": code,
+            "key": key,
+            "value": "(Don't Fear) The Reaper",
         }
 
         try:
@@ -322,7 +323,7 @@ class MemoryHandlerTestCase(TestCase):
             # work with.
             # Note that the ValueError's message will get replaced (but
             # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
+            exc = ValueError("Needs more cowbell.")
             exc.context = context
             raise exc
         except ValueError as e:
@@ -333,7 +334,7 @@ class MemoryHandlerTestCase(TestCase):
             self.assertListEqual(list(self.handler.messages.keys()), [key])
 
             filter_message_0 = self.handler.messages[key][0]
-            self.assertIsInstance(filter_message_0, f.FilterMessage)
+            self.assertIsInstance(filter_message_0, FilterMessage)
             self.assertEqual(filter_message_0.code, code)
             self.assertEqual(filter_message_0.message, message)
             self.assertEqual(filter_message_0.context, context)
@@ -367,9 +368,9 @@ class MemoryHandlerTestCase(TestCase):
         try:
             # Raise an exception so that the handler has a traceback to
             # work with.
-            raise ValueError('I gotta have more cowbell, baby!')
+            raise ValueError("I gotta have more cowbell, baby!")
         except ValueError as e:
-            self.handler.handle_exception('An exception occurred!', e)
+            self.handler.handle_exception("An exception occurred!", e)
 
             self.assertTrue(self.handler.has_exceptions)
             self.assertListEqual(self.handler.exc_info, [sys.exc_info()])
