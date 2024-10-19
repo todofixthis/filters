@@ -54,7 +54,7 @@ class FilterRepeater(BaseFilter):
         """
         super().__init__()
 
-        self._filter_chain = self.resolve_filter(filter_chain, parent=self)
+        self._filter_chain = self.resolve(filter_chain, parent=self)
 
         self.restrict_keys = None if restrict_keys is None else set(restrict_keys)
 
@@ -235,7 +235,7 @@ class FilterMapper(BaseFilter):
                 # (depending on `allow_missing_keys`) without
                 # applying any Filters to the value.
                 #
-                self._filters[key] = self.resolve_filter(
+                self._filters[key] = self.resolve(
                     filter_chain,
                     parent=self,
                     key=key,

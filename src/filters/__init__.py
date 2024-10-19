@@ -2,7 +2,7 @@
 # Note that the order is important here, due to dependencies.
 # Additional filters are loaded into a separate namespace, so that IDEs
 # don't go insane.
-from .base import Type
+from .base import NoOp, Type
 from .complex import (
     FilterMapper,
     FilterRepeater,
@@ -28,7 +28,6 @@ from .simple import (
     Length,
     MaxLength,
     MinLength,
-    NoOp,
     NotEmpty,
     Omit,
     Optional,

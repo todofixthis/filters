@@ -19,7 +19,6 @@ __all__ = [
     "Length",
     "MaxLength",
     "MinLength",
-    "NoOp",
     "NotEmpty",
     "Omit",
     "Optional",
@@ -609,16 +608,6 @@ class MinLength(BaseFilter[T]):
                 },
             )
 
-        return value
-
-
-class NoOp(BaseFilter[T]):
-    """
-    Filter that does nothing, used when you need a placeholder Filter in a
-    FilterChain.
-    """
-
-    def _apply(self, value):
         return value
 
 

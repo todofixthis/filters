@@ -183,7 +183,7 @@ class FilterRunner(object):
         """
         super().__init__()
 
-        self.filter_chain = BaseFilter.resolve_filter(starting_filter)
+        self.filter_chain = BaseFilter.resolve(starting_filter)
         self.data = incoming_data
         self.capture_exc_info = capture_exc_info
 

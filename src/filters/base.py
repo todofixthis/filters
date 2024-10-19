@@ -10,19 +10,18 @@ __all__ = [
     "FilterChain",
     "FilterCompatible",
     "FilterError",
+    "NoOp",
     "Type",
 ]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
-FilterCompatible = (
-    typing.Union[
-        "BaseFilter[T]",
-        typing.Callable[[], "BaseFilter[T]"],
-    ]
-    | None
-)
+FilterCompatible = typing.Union[
+    "BaseFilter[T]",
+    "typing.Callable[..., BaseFilter[T]]",
+    None,
+]
 """
 Used in PEP-484 type hints to indicate a value that can be normalized
 into an instance of a :py:class:`filters.base.BaseFilter` subclass.
@@ -95,7 +94,7 @@ class BaseFilter(typing.Generic[T]):
         """
         Chains another filter with this one.
         """
-        normalized = self.resolve_filter(next_filter)
+        normalized = self.resolve(next_filter)
 
         if normalized:
             #
@@ -274,7 +273,7 @@ class BaseFilter(typing.Generic[T]):
             Appended to the ``key`` value in the error message context
             (used by complex filters).
         """
-        filter_chain = self.resolve_filter(
+        filter_chain = self.resolve(
             filter_chain,
             parent=self,
             key=sub_key,
@@ -398,12 +397,14 @@ class BaseFilter(typing.Generic[T]):
         return self.templates[key].format(**template_vars)
 
     @classmethod
-    def resolve_filter(
+    def resolve(
         cls,
-        the_filter: FilterCompatible,
+        the_filter: typing.Union[
+            "BaseFilter[U]", typing.Callable[[], "BaseFilter[U]"], None
+        ],
         parent: "BaseFilter[typing.Any] | None" = None,
         key: str | None = None,
-    ) -> "FilterChain[U] | None":
+    ) -> "BaseFilter[U]":
         """
         Converts a filter-compatible value into a consistent type.
         """
@@ -412,17 +413,13 @@ class BaseFilter(typing.Generic[T]):
                 resolved = the_filter
 
             elif callable(the_filter):
-                resolved = cls.resolve_filter(the_filter())
+                resolved = cls.resolve(the_filter())
 
             # Uhh... hm.
             else:
                 raise TypeError(
-                    "{type} {value!r} is not "
-                    "compatible with {target}.".format(
-                        type=type(the_filter).__name__,
-                        value=the_filter,
-                        target=cls.__name__,
-                    ),
+                    f"{type(the_filter).__name__} {the_filter!r} "
+                    f"is not compatible with {cls.__name__}."
                 )
 
             if parent:
@@ -433,7 +430,7 @@ class BaseFilter(typing.Generic[T]):
 
             return resolved
 
-        return None
+        return NoOp[U]()
 
     @staticmethod
     def _make_key(key_parts: typing.Iterable[str]) -> str:
@@ -472,7 +469,7 @@ class FilterChain(BaseFilter[T]):
         This method creates a new FilterChain object without modifying
         the current one.
         """
-        resolved = self.resolve_filter(next_filter)
+        resolved = self.resolve(next_filter)
 
         if resolved:
             new_chain: FilterChain[U] = copy(self)
@@ -495,7 +492,7 @@ class FilterChain(BaseFilter[T]):
         """
         Adds a Filter to the collection directly.
         """
-        resolved = self.resolve_filter(next_filter, parent=self)
+        resolved = self.resolve(next_filter, parent=self)
         if resolved:
             self._filters.append(resolved)
 
@@ -589,6 +586,16 @@ class ExceptionHandler(BaseInvalidValueHandler):
         error = FilterError(message)
         error.context = context
         raise error
+
+
+class NoOp(BaseFilter[T]):
+    """
+    Filter that does nothing, used when you need a placeholder Filter in a
+    FilterChain.
+    """
+
+    def _apply(self, value):
+        return value
 
 
 # This filter is used extensively by other filters.
