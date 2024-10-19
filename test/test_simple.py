@@ -7,6 +7,7 @@ from dateutil.tz import tzoffset
 from pytz import utc
 
 import filters as f
+from filters.base import FilterError
 from filters.test import BaseFilterTestCase
 
 
@@ -403,7 +404,7 @@ class CallTestCase(BaseFilterTestCase):
 
         def even_only(value):
             if value % 2:
-                raise f.FilterError("value is not even!")
+                raise FilterError("value is not even!")
             return value
 
         self.assertFilterErrors(self._filter(5, even_only), ["value is not even!"])
@@ -417,7 +418,7 @@ class CallTestCase(BaseFilterTestCase):
             if value % 2:
                 # If you find yourself doing this, you would probably be better
                 # served by creating a custom filter instead.
-                error = f.FilterError("value is not even!")
+                error = FilterError("value is not even!")
                 error.context = {"code": "not_even"}
                 raise error
             return value
@@ -1268,7 +1269,7 @@ class OmitTestCase(BaseFilterTestCase):
         """
         The ``keys`` param must not be empty.
         """
-        self.assertRaises(f.FilterError, lambda: self.filter_type([]))
+        self.assertRaises(FilterError, lambda: self.filter_type([]))
 
 
 class OptionalTestCase(BaseFilterTestCase):
@@ -1635,7 +1636,7 @@ class PickTestCase(BaseFilterTestCase):
         """
         The ``keys`` param must not be empty.
         """
-        self.assertRaises(f.FilterError, lambda: self.filter_type([]))
+        self.assertRaises(FilterError, lambda: self.filter_type([]))
 
 
 class RequiredTestCase(BaseFilterTestCase):

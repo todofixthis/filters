@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 import filters as f
+from filters.base import FilterChain, FilterError
 from filters.test import BaseFilterTestCase
 
 
@@ -20,9 +21,9 @@ class FilterChainTestCase(BaseFilterTestCase):
         unsurprisingly, the chain only contains the one filter.
         """
         filter_chain = f.Int() | None
-        self.assertIsInstance(filter_chain, f.FilterChain)
+        self.assertIsInstance(filter_chain, FilterChain)
 
-        with self.assertRaises(f.FilterError):
+        with self.assertRaises(FilterError):
             filter_chain.apply("not an int")
 
     # noinspection SpellCheckingInspection
@@ -842,7 +843,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 "attachment": f.FilterMapper(
                     {
                         "type": f.Required
-                        | f.Choice(choices={"image/jpeg", "image/png"}),
+                                | f.Choice(choices={"image/jpeg", "image/png"}),
                         "data": f.Required | f.Base64Decode,
                     },
                     allow_extra_keys=False,
@@ -861,8 +862,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 "attachment": {
                     "type": "image/jpeg",
                     "data": b"R0lGODlhDwAPAKECAAAAzMzM/////wAAACwAAAAAD"
-                    b"wAPAAACIISPeQHsrZ5ModrLlN48CXF8m2iQ3YmmKq"
-                    b"VlRtW4MLwWACH+EVRIRSBDQUtFIElTIEEgTElFOw==",
+                            b"wAPAAACIISPeQHsrZ5ModrLlN48CXF8m2iQ3YmmKq"
+                            b"VlRtW4MLwWACH+EVRIRSBDQUtFIElTIEEgTElFOw==",
                 },
             },
             {
@@ -871,11 +872,11 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 "attachment": {
                     "type": "image/jpeg",
                     "data": b"GIF89a\x0f\x00\x0f\x00\xa1\x02\x00\x00\x00"
-                    b"\xcc\xcc\xcc\xff\xff\xff\xff\x00\x00\x00,\x00"
-                    b"\x00\x00\x00\x0f\x00\x0f\x00\x00\x02 \x84\x8f"
-                    b"y\x01\xec\xad\x9eL\xa1\xda\xcb\x94\xde<\tq|"
-                    b"\x9bh\x90\xdd\x89\xa6*\xa5eF\xd5\xb80\xbc\x16"
-                    b"\x00!\xfe\x11THE CAKE IS A LIE;",
+                            b"\xcc\xcc\xcc\xff\xff\xff\xff\x00\x00\x00,\x00"
+                            b"\x00\x00\x00\x0f\x00\x0f\x00\x00\x02 \x84\x8f"
+                            b"y\x01\xec\xad\x9eL\xa1\xda\xcb\x94\xde<\tq|"
+                            b"\x9bh\x90\xdd\x89\xa6*\xa5eF\xd5\xb80\xbc\x16"
+                            b"\x00!\xfe\x11THE CAKE IS A LIE;",
                 },
             },
         )

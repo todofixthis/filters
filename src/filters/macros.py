@@ -1,4 +1,5 @@
-from abc import ABCMeta
+import typing
+from abc import ABC
 from functools import WRAPPER_ASSIGNMENTS, partial
 
 from filters.base import BaseFilter, FilterMeta
@@ -9,7 +10,7 @@ __all__ = [
 ]
 
 
-class FilterMacroType(BaseFilter, metaclass=ABCMeta):
+class FilterMacroType(BaseFilter, ABC):
     """
     Base type for filter macros.  Doesn't do anything on its own, but
     it is useful for identifying filter macros when paired with an
@@ -33,7 +34,7 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
     pass
 
 
-def filter_macro(func, *args, **kwargs):
+def filter_macro(func, *args, **kwargs) -> typing.Type[FilterMacroType]:
     """
     Promotes a function that returns a filter into its own filter type.
 

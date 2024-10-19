@@ -277,8 +277,7 @@ class MaxTestCase(BaseFilterTestCase):
 
     def test_string_comparison_oddness(self):
         """
-        If the filter is being used on strings, the comparison is case
-        sensitive.
+        If the filter is being used on strings, the comparison is case-sensitive.
 
         Note:  due to the way ASCII works, this may yield unexpected
         results (lowercase > uppercase).  Also, watch out for
@@ -350,8 +349,7 @@ class MinTestCase(BaseFilterTestCase):
 
     def test_string_comparison_oddness(self):
         """
-        If the filter is being used on strings, the comparison is case
-        sensitive.
+        If the filter is being used on strings, the comparison is case-sensitive.
 
         Note:  due to the way ASCII works, this may yield unexpected
         results (lowercase > uppercase).  Also, watch out for

@@ -6,7 +6,8 @@ from traceback import format_exc, format_exception
 from unittest import TestCase
 
 import filters as f
-from filters.base import ExceptionHandler
+from filters.base import ExceptionHandler, FilterError
+from filters.handlers import FilterMessage, FilterRunner, LogHandler, MemoryHandler
 
 
 class FilterRunnerTestCase(TestCase):
@@ -15,7 +16,7 @@ class FilterRunnerTestCase(TestCase):
         Calling a FilterRunner's ``apply()`` method reruns its filter chain
         against the specified input.
         """
-        runner = f.FilterRunner(f.Int)
+        runner = FilterRunner(f.Int)
         self.assertTrue(runner.is_valid())
         self.assertDictEqual(runner.error_codes, {})
         self.assertIsNone(runner.cleaned_data)
@@ -60,7 +61,7 @@ class ExceptionHandlerTestCase(TestCase):
         # an exception.
         # The exception always has the same type (FilterError) so that
         # the caller can capture it.
-        with self.assertRaises(f.FilterError) as exc:
+        with self.assertRaises(FilterError) as exc:
             self.handler.handle_invalid_value(message, False, context)
 
         self.assertEqual(str(exc.exception), message)
@@ -100,7 +101,7 @@ class ExceptionHandlerTestCase(TestCase):
             exc.context = context
             raise exc
         except ValueError as e:
-            with self.assertRaises(f.FilterError) as ar_context:
+            with self.assertRaises(FilterError) as ar_context:
                 self.handler.handle_exception(message, e)
 
             self.assertEqual(str(ar_context.exception), message)
@@ -181,7 +182,7 @@ class LogHandlerTestCase(TestCase):
         logger.addHandler(self.logs)
         logger.setLevel(logging.DEBUG)
 
-        self.handler = f.LogHandler(logger, WARNING)
+        self.handler = LogHandler(logger, WARNING)
 
     def test_invalid_value(self):
         """
@@ -248,7 +249,7 @@ class MemoryHandlerTestCase(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.handler = f.MemoryHandler()
+        self.handler = MemoryHandler()
 
     def test_invalid_value(self):
         """
@@ -281,21 +282,21 @@ class MemoryHandlerTestCase(TestCase):
         self.assertListEqual(sorted(self.handler.messages.keys()), ["", key])
 
         filter_message_0 = self.handler.messages[key][0]
-        self.assertIsInstance(filter_message_0, f.FilterMessage)
+        self.assertIsInstance(filter_message_0, FilterMessage)
         self.assertEqual(filter_message_0.code, code)
         self.assertEqual(filter_message_0.message, message)
         self.assertEqual(filter_message_0.context, context)
         self.assertIsNone(filter_message_0.exc_info)
 
         filter_message_1 = self.handler.messages[key][1]
-        self.assertIsInstance(filter_message_1, f.FilterMessage)
+        self.assertIsInstance(filter_message_1, FilterMessage)
         self.assertEqual(filter_message_1.code, "Test message 1")
         self.assertEqual(filter_message_1.message, "Test message 1")
         self.assertEqual(filter_message_1.context, {"key": key})
         self.assertIsNone(filter_message_1.exc_info)
 
         filter_message_blank = self.handler.messages[""][0]
-        self.assertIsInstance(filter_message_blank, f.FilterMessage)
+        self.assertIsInstance(filter_message_blank, FilterMessage)
         self.assertEqual(filter_message_blank.code, "Test message 2")
         self.assertEqual(filter_message_blank.message, "Test message 2")
         self.assertEqual(filter_message_blank.context, {})
@@ -333,7 +334,7 @@ class MemoryHandlerTestCase(TestCase):
             self.assertListEqual(list(self.handler.messages.keys()), [key])
 
             filter_message_0 = self.handler.messages[key][0]
-            self.assertIsInstance(filter_message_0, f.FilterMessage)
+            self.assertIsInstance(filter_message_0, FilterMessage)
             self.assertEqual(filter_message_0.code, code)
             self.assertEqual(filter_message_0.message, message)
             self.assertEqual(filter_message_0.context, context)

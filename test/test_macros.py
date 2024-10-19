@@ -4,6 +4,7 @@ from unittest import TestCase
 from pytz import utc
 
 import filters as f
+from filters.base import FilterChain, FilterError
 from filters.macros import FilterMacroType, filter_macro
 
 
@@ -31,14 +32,14 @@ class FilterMacroTestCase(TestCase):
         the_filter = MyFilter()
 
         self.assertNotIsInstance(the_filter, FilterMacroType)
-        self.assertIsInstance(the_filter, f.FilterChain)
+        self.assertIsInstance(the_filter, FilterChain)
 
         self.assertEqual(
             the_filter.apply("  Hello, world!  "),
             "Hello, world!",
         )
 
-        with self.assertRaises(f.FilterError):
+        with self.assertRaises(FilterError):
             the_filter.apply("Hi there!")
 
     def test_chain(self):
@@ -62,7 +63,7 @@ class FilterMacroTestCase(TestCase):
             ["Hello,", "world!"],
         )
 
-        with self.assertRaises(f.FilterError):
+        with self.assertRaises(FilterError):
             filter_chain.apply("Hi there!")
 
     def test_chain_macros(self):
@@ -85,7 +86,7 @@ class FilterMacroTestCase(TestCase):
             ["Hello,", "world!"],
         )
 
-        with self.assertRaises(f.FilterError):
+        with self.assertRaises(FilterError):
             filter_chain.apply("whazzup!")
 
     def test_decorator_optional_parameters(self):
@@ -105,7 +106,7 @@ class FilterMacroTestCase(TestCase):
             "Hello, world!",
         )
 
-        with self.assertRaises(f.FilterError):
+        with self.assertRaises(FilterError):
             filter_chain.apply("Hi there!")
 
     def test_partial(self):
