@@ -19,7 +19,7 @@ class DecimalTestCase(BaseFilterTestCase):
         """
         The incoming value can be interpreted as a Decimal.
         """
-        value = '3.1415926'
+        value = "3.1415926"
 
         self.assertFilterPasses(value, Decimal(value))
 
@@ -32,8 +32,8 @@ class DecimalTestCase(BaseFilterTestCase):
         instead, it gets rounded to the expected precision.
         """
         self.assertFilterPasses(
-            self._filter('3.1415926', max_precision=3),
-            Decimal('3.142'),
+            self._filter("3.1415926", max_precision=3),
+            Decimal("3.142"),
         )
 
     def test_max_precision_quantized(self):
@@ -41,15 +41,15 @@ class DecimalTestCase(BaseFilterTestCase):
         ``max_precision`` can also be specified as a Decimal object.
         """
         self.assertFilterPasses(
-            self._filter('3.1415926', max_precision=Decimal('0.001')),
-            Decimal('3.142'),
+            self._filter("3.1415926", max_precision=Decimal("0.001")),
+            Decimal("3.142"),
         )
 
     def test_pass_zero(self):
         """
         0 is also considered a valid Decimal value.
         """
-        value = '0'
+        value = "0"
         self.assertFilterPasses(value, Decimal(value))
 
     def test_pass_scientific_notation(self):
@@ -58,7 +58,7 @@ class DecimalTestCase(BaseFilterTestCase):
         may be the only way to represent a really large or small
         value.
         """
-        value = '2.8E-12'
+        value = "2.8E-12"
         self.assertFilterPasses(value, Decimal(value))
 
     def test_pass_boolean(self):
@@ -74,7 +74,7 @@ class DecimalTestCase(BaseFilterTestCase):
         The incoming value cannot be converted to a Decimal.
         """
         self.assertFilterErrors(
-            'this is not a decimal',
+            "this is not a decimal",
             [f.Decimal.CODE_INVALID],
         )
 
@@ -83,9 +83,9 @@ class DecimalTestCase(BaseFilterTestCase):
         Non-finite values like 'NaN' and 'Inf' are considered invalid,
         even though they are technically parseable.
         """
-        self.assertFilterErrors('NaN', [f.Decimal.CODE_NON_FINITE])
-        self.assertFilterErrors('+Inf', [f.Decimal.CODE_NON_FINITE])
-        self.assertFilterErrors('-Inf', [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("NaN", [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("+Inf", [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("-Inf", [f.Decimal.CODE_NON_FINITE])
         # There are a few other possible non-finite values out there,
         # but you get the idea.
 
@@ -102,8 +102,7 @@ class DecimalTestCase(BaseFilterTestCase):
         If you're going to use a tuple, you've got to make sure you get
         it right!
         """
-        self.assertFilterErrors(('1', '2', '3'), [
-            f.Decimal.CODE_INVALID])
+        self.assertFilterErrors(("1", "2", "3"), [f.Decimal.CODE_INVALID])
 
     def test_fail_tuple_disallowed(self):
         """
@@ -119,7 +118,7 @@ class DecimalTestCase(BaseFilterTestCase):
         To ensure that the filter behaves the same in Python 2 and
         Python 3, bytes are not allowed.
         """
-        self.assertFilterErrors(b'-12', [f.Type.CODE_WRONG_TYPE])
+        self.assertFilterErrors(b"-12", [f.Type.CODE_WRONG_TYPE])
 
     def test_fail_unsupported_type(self):
         """
@@ -146,19 +145,19 @@ class IntTestCase(BaseFilterTestCase):
         """
         The incoming value can be interpreted as an int.
         """
-        self.assertFilterPasses('42', 42)
+        self.assertFilterPasses("42", 42)
 
     def test_pass_zero(self):
         """
         The incoming value is zero.
         """
-        self.assertFilterPasses('0', 0)
+        self.assertFilterPasses("0", 0)
 
     def test_pass_negative(self):
         """
         The incoming value is a negative int.
         """
-        self.assertFilterPasses('-314', -314)
+        self.assertFilterPasses("-314", -314)
 
     def test_pass_boolean(self):
         """
@@ -172,7 +171,7 @@ class IntTestCase(BaseFilterTestCase):
         an integer.
         """
         self.assertFilterErrors(
-            'this is not an int',
+            "this is not an int",
             [f.Decimal.CODE_INVALID],
         )
 
@@ -181,7 +180,7 @@ class IntTestCase(BaseFilterTestCase):
         To ensure that the filter behaves the same in Python 2 and
         Python 3, bytes are not allowed.
         """
-        self.assertFilterErrors(b'-12', [f.Type.CODE_WRONG_TYPE])
+        self.assertFilterErrors(b"-12", [f.Type.CODE_WRONG_TYPE])
 
     def test_fail_float_value(self):
         """
@@ -189,7 +188,7 @@ class IntTestCase(BaseFilterTestCase):
         decimal point.
         """
         self.assertFilterErrors(
-            '42.01',
+            "42.01",
             [f.Int.CODE_DECIMAL],
         )
 
@@ -198,21 +197,21 @@ class IntTestCase(BaseFilterTestCase):
         The incoming value contains only insignificant digits after the
         decimal point.
         """
-        self.assertFilterPasses('42.0000000000000', 42)
+        self.assertFilterPasses("42.0000000000000", 42)
 
     def test_pass_scientific_notation(self):
         """
         The incoming value is expressed in scientific notation.
         """
-        self.assertFilterPasses('2.6E4', 26000)
+        self.assertFilterPasses("2.6E4", 26000)
 
     def test_fail_non_finite_value(self):
         """
         The incoming value is a non-finite value.
         """
-        self.assertFilterErrors('NaN', [f.Decimal.CODE_NON_FINITE])
-        self.assertFilterErrors('+Inf', [f.Decimal.CODE_NON_FINITE])
-        self.assertFilterErrors('-Inf', [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("NaN", [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("+Inf", [f.Decimal.CODE_NON_FINITE])
+        self.assertFilterErrors("-Inf", [f.Decimal.CODE_NON_FINITE])
         # There are a few other possible non-finite values out there,
         # but you get the idea.
 
@@ -278,8 +277,7 @@ class MaxTestCase(BaseFilterTestCase):
 
     def test_string_comparison_oddness(self):
         """
-        If the filter is being used on strings, the comparison is case
-        sensitive.
+        If the filter is being used on strings, the comparison is case-sensitive.
 
         Note:  due to the way ASCII works, this may yield unexpected
         results (lowercase > uppercase).  Also, watch out for
@@ -291,7 +289,7 @@ class MaxTestCase(BaseFilterTestCase):
         # ord('F') => 70
         # ord('f') => 102
         self.assertFilterErrors(
-            self._filter('foo', max_value='Foo'),
+            self._filter("foo", max_value="Foo"),
             [f.Max.CODE_TOO_BIG],
         )
 
@@ -351,8 +349,7 @@ class MinTestCase(BaseFilterTestCase):
 
     def test_string_comparison_oddness(self):
         """
-        If the filter is being used on strings, the comparison is case
-        sensitive.
+        If the filter is being used on strings, the comparison is case-sensitive.
 
         Note:  due to the way ASCII works, this may yield unexpected
         results (lowercase > uppercase).  Also, watch out for
@@ -364,7 +361,7 @@ class MinTestCase(BaseFilterTestCase):
         # ord('f') => 102
         # ord('F') => 70
         self.assertFilterErrors(
-            self._filter('Foo', min_value='foo'),
+            self._filter("Foo", min_value="foo"),
             [f.Min.CODE_TOO_SMALL],
         )
 
@@ -387,10 +384,9 @@ class RoundTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             # You should always specify `to_nearest` as a string, to
             # avoid floating point issues.
-            self._filter(42, to_nearest='5'),
-
+            self._filter(42, to_nearest="5"),
             # The result is always a Decimal object.
-            Decimal('40.0'),
+            Decimal("40.0"),
         )
 
     def test_pass_round_integer_to_nearest_float(self):
@@ -398,9 +394,8 @@ class RoundTestCase(BaseFilterTestCase):
         Rounds an integer to the nearest float value.
         """
         self.assertFilterPasses(
-            self._filter(42, to_nearest='5.5'),
-
-            Decimal('44.0'),
+            self._filter(42, to_nearest="5.5"),
+            Decimal("44.0"),
         )
 
     def test_pass_round_float_to_nearest_integer(self):
@@ -408,8 +403,8 @@ class RoundTestCase(BaseFilterTestCase):
         Rounds a float to the nearest integer value.
         """
         self.assertFilterPasses(
-            self._filter(3.5, to_nearest='1'),
-            Decimal('4.0'),
+            self._filter(3.5, to_nearest="1"),
+            Decimal("4.0"),
         )
 
     def test_pass_round_float_to_nearest_float(self):
@@ -420,8 +415,8 @@ class RoundTestCase(BaseFilterTestCase):
         # result in some nasty floating point artifacts.
         # http://stackoverflow.com/a/4340355
         self.assertFilterPasses(
-            self._filter(1.368161685161, to_nearest='0.05'),
-            Decimal('1.35'),
+            self._filter(1.368161685161, to_nearest="0.05"),
+            Decimal("1.35"),
         )
 
     def test_pass_round_string_float(self):
@@ -431,8 +426,8 @@ class RoundTestCase(BaseFilterTestCase):
         """
         # http://stackoverflow.com/q/22599883
         self.assertFilterPasses(
-            self._filter('2.775', to_nearest='0.1'),
-            Decimal('2.8'),
+            self._filter("2.775", to_nearest="0.1"),
+            Decimal("2.8"),
         )
 
     def test_pass_round_to_big_value(self):
@@ -440,8 +435,8 @@ class RoundTestCase(BaseFilterTestCase):
         Rounds something to a value greater than 1.
         """
         self.assertFilterPasses(
-            self._filter('386.428', to_nearest='20'),
-            Decimal('380'),
+            self._filter("386.428", to_nearest="20"),
+            Decimal("380"),
         )
 
     def test_pass_round_negative_value(self):
@@ -449,8 +444,8 @@ class RoundTestCase(BaseFilterTestCase):
         Rounds a negative value.
         """
         self.assertFilterPasses(
-            self._filter('-2.775', to_nearest='0.1'),
-            Decimal('-2.8'),
+            self._filter("-2.775", to_nearest="0.1"),
+            Decimal("-2.8"),
         )
 
     def test_pass_modify_rounding(self):
@@ -460,8 +455,8 @@ class RoundTestCase(BaseFilterTestCase):
         customized.
         """
         self.assertFilterPasses(
-            self._filter('0.00000000001', rounding=ROUND_CEILING),
-            Decimal('1'),
+            self._filter("0.00000000001", rounding=ROUND_CEILING),
+            Decimal("1"),
         )
 
     def test_pass_custom_result_type(self):
@@ -469,7 +464,7 @@ class RoundTestCase(BaseFilterTestCase):
         You can customize the return type of the filter.
         """
         self.assertFilterPasses(
-            self._filter('2.775', result_type=int),
+            self._filter("2.775", result_type=int),
             3,
         )
 
@@ -477,4 +472,4 @@ class RoundTestCase(BaseFilterTestCase):
         """
         The incoming value is not numeric.
         """
-        self.assertFilterErrors('three', [f.Decimal.CODE_INVALID])
+        self.assertFilterErrors("three", [f.Decimal.CODE_INVALID])

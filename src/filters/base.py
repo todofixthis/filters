@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 FilterCompatible = typing.Optional[
-    typing.Union["BaseFilter", "FilterMeta", typing.Callable[[], "BaseFilter"]]
+    typing.Union["BaseFilter", "FilterMeta", typing.Callable[..., "BaseFilter"]]
 ]
 """
 Used in PEP-484 type hints to indicate a value that can be normalized

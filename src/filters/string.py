@@ -312,7 +312,7 @@ class MaxBytes(BaseFilter[bytes]):
 
     templates = {
         CODE_TOO_LONG: "Value is too long (must be < {max_bytes} "
-        "bytes when encoded using {encoding}).",
+                       "bytes when encoded using {encoding}).",
     }
 
     def __init__(
@@ -505,7 +505,7 @@ class MaxBytes(BaseFilter[bytes]):
                 # Progressively chop bytes off the end of the string until we
                 # have something that can be successfully decoded using the
                 # specified encoding.
-                truncated = bytes_value[0 : target_bytes - trim]
+                truncated = bytes_value[0: target_bytes - trim]
 
                 try:
                     truncated.decode(self.encoding)
@@ -603,7 +603,7 @@ class MaxChars(BaseFilter[str]):
                 # Edge case where ``self.max_chars`` isn't big enough to fit
                 # even ``self.suffix`` by itself.
                 if target_chars < 0:
-                    return self.suffix[0 : self.max_chars]
+                    return self.suffix[0: self.max_chars]
 
                 return (self.prefix + value)[0:target_chars] + self.suffix
 
