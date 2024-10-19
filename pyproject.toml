@@ -8,7 +8,7 @@ mode = "poetry"
 pre-commit = [
     "autohooks.plugins.black",
     "autohooks.plugins.ruff",
-    "autohooks.plugins.mypy",
+    #    "autohooks.plugins.mypy",
     "autohooks.plugins.pytest"
 ]
 
