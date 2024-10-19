@@ -14,13 +14,15 @@ __all__ = [
 ]
 
 T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
-FilterCompatible = typing.Optional[
+FilterCompatible = (
     typing.Union[
         "BaseFilter[T]",
         typing.Callable[[], "BaseFilter[T]"],
     ]
-]
+    | None
+)
 """
 Used in PEP-484 type hints to indicate a value that can be normalized
 into an instance of a :py:class:`filters.base.BaseFilter` subclass.
@@ -38,12 +40,12 @@ class BaseFilter(typing.Generic[T]):
         CODE_EXCEPTION: "An error occurred while processing this value.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-        self._parent: typing.Optional[BaseFilter] = None
-        self._handler: typing.Optional[BaseInvalidValueHandler] = None
-        self._key: typing.Optional[str] = None
+        self._parent: BaseFilter[T] | None = None
+        self._handler: BaseInvalidValueHandler | None = None
+        self._key: str | None = None
 
         #
         # Indicates whether the Filter detected any invalid values.
@@ -63,7 +65,7 @@ class BaseFilter(typing.Generic[T]):
         Pre-compute some values to improve performance in derived classes.
         """
         if not hasattr(cls, "templates"):
-            cls.templates: dict[str, str] = {}
+            cls.templates = {}
 
         # Copy error templates from base class to derived class, but in the
         # event of a conflict, preserve the derived class' template.
@@ -77,11 +79,11 @@ class BaseFilter(typing.Generic[T]):
             cls.templates = templates
 
     @classmethod
-    def __copy__(cls, the_filter: "BaseFilter") -> "BaseFilter":
+    def __copy__(cls, the_filter: "BaseFilter[T]") -> "BaseFilter[T]":
         """
         Creates a shallow copy of the object.
         """
-        new_filter: BaseFilter = type(the_filter)()
+        new_filter: BaseFilter[T] = type(the_filter)()
 
         new_filter._parent = the_filter._parent
         new_filter._key = the_filter._key
@@ -89,7 +91,7 @@ class BaseFilter(typing.Generic[T]):
 
         return new_filter
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
+    def __or__(self, next_filter: FilterCompatible) -> "FilterChain[T]":
         """
         Chains another filter with this one.
         """
@@ -109,7 +111,7 @@ class BaseFilter(typing.Generic[T]):
         else:
             return self if isinstance(self, FilterChain) else FilterChain(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Returns a string representation of the Filter.
 
@@ -124,7 +126,7 @@ class BaseFilter(typing.Generic[T]):
         )
 
     @property
-    def parent(self) -> typing.Optional["BaseFilter"]:
+    def parent(self) -> "BaseFilter[typing.Any] | None":
         """
         Returns the parent Filter.
         """
@@ -138,7 +140,7 @@ class BaseFilter(typing.Generic[T]):
         return self._parent
 
     @parent.setter
-    def parent(self, parent: "BaseFilter") -> None:
+    def parent(self, parent: "BaseFilter[typing.Any]") -> None:
         """
         Sets the parent Filter.
         """
@@ -172,21 +174,22 @@ class BaseFilter(typing.Generic[T]):
         return self._make_key(self._key_parts + [sub_key])
 
     @property
-    def _key_parts(self) -> typing.List[str]:
+    def _key_parts(self) -> list[str]:
         """
         Assembles each key part in the filter hierarchy.
         """
-        key_parts = []
+        key_parts: list[str] = []
 
         # Iterate up the parent chain and collect key parts.
         # Alternatively, we could just get ``self.parent._key_parts``,
         # but that is way less efficient.
-        parent = self
+        parent: BaseFilter[typing.Any] | None = self
         while parent:
             # As we move up the chain, push key parts onto the front of
             # the path (otherwise the key parts would be in reverse
             # order).
-            key_parts.insert(0, parent._key)
+            if parent._key is not None:
+                key_parts.insert(0, parent._key)
             parent = parent.parent
 
         return key_parts
@@ -261,7 +264,7 @@ class BaseFilter(typing.Generic[T]):
         self,
         value: typing.Any,
         filter_chain: FilterCompatible,
-        sub_key: typing.Optional[str] = None,
+        sub_key: str | None = None,
     ) -> typing.Any:
         """
         Applies another filter to a value in the same context as the
@@ -295,11 +298,11 @@ class BaseFilter(typing.Generic[T]):
         self,
         value: typing.Any,
         reason: typing.Union[str, Exception],
-        replacement: typing.Optional[typing.Any] = None,
+        replacement: typing.Any = None,
         exc_info: bool = False,
-        context: typing.Optional[typing.MutableMapping] = None,
-        sub_key: typing.Optional[str] = None,
-        template_vars: typing.Optional[typing.Mapping] = None,
+        context: typing.MutableMapping[str, typing.Any] | None = None,
+        sub_key: str | None = None,
+        template_vars: typing.Mapping[str, str] | None = None,
     ) -> typing.Any:
         """
         Handles an invalid value.
@@ -398,9 +401,9 @@ class BaseFilter(typing.Generic[T]):
     def resolve_filter(
         cls,
         the_filter: FilterCompatible,
-        parent: typing.Optional["BaseFilter"] = None,
-        key: typing.Optional[str] = None,
-    ) -> typing.Optional["FilterChain"]:
+        parent: "BaseFilter[typing.Any] | None" = None,
+        key: str | None = None,
+    ) -> "FilterChain[U] | None":
         """
         Converts a filter-compatible value into a consistent type.
         """
@@ -440,7 +443,7 @@ class BaseFilter(typing.Generic[T]):
         return ".".join(filter(None, key_parts))
 
 
-class FilterChain(BaseFilter):
+class FilterChain(BaseFilter[T]):
     """
     Allows you to chain multiple filters together so that they are
     treated as a single filter.
@@ -459,7 +462,10 @@ class FilterChain(BaseFilter):
             filters=" | ".join(map(str, self._filters)),
         )
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
+    @typing.overload
+    def __or__(self, next_filter: None) -> "FilterChain[T]": ...
+
+    def __or__(self, next_filter: FilterCompatible) -> "FilterChain[U]":
         """
         Chains a filter with this one.
 
@@ -469,7 +475,7 @@ class FilterChain(BaseFilter):
         resolved = self.resolve_filter(next_filter)
 
         if resolved:
-            new_chain: FilterChain = copy(self)
+            new_chain: FilterChain[U] = copy(self)
             new_chain._add(next_filter)
             return new_chain
         else:
