@@ -1,22 +1,22 @@
+import typing
 from abc import ABCMeta, abstractmethod as abstract_method
 from copy import copy
-from typing import Any, Callable, Iterable, List, Mapping, \
-    MutableMapping, Optional as OptionalType, Tuple, Union
 from weakref import ProxyTypes, proxy
 
 __all__ = [
-    'BaseFilter',
-    'BaseInvalidValueHandler',
-    'ExceptionHandler',
-    'FilterChain',
-    'FilterCompatible',
-    'FilterError',
-    'FilterMeta',
-    'Type',
+    "BaseFilter",
+    "BaseInvalidValueHandler",
+    "ExceptionHandler",
+    "FilterChain",
+    "FilterCompatible",
+    "FilterError",
+    "FilterMeta",
+    "Type",
 ]
 
-FilterCompatible = \
-    OptionalType[Union['BaseFilter', 'FilterMeta', Callable[[], 'BaseFilter']]]
+FilterCompatible = typing.Optional[
+    typing.Union["BaseFilter", "FilterMeta", typing.Callable[[], "BaseFilter"]]
+]
 """
 Used in PEP-484 type hints to indicate a value that can be normalized
 into an instance of a :py:class:`filters.base.BaseFilter` subclass.
@@ -30,15 +30,13 @@ class FilterMeta(ABCMeta):
 
     # noinspection PyShadowingBuiltins
     def __init__(cls, what, bases=None, dict=None, **kwargs):
-        # noinspection PyArgumentList
         super().__init__(what, bases, dict, **kwargs)
 
-        if not hasattr(cls, 'templates'):
+        if not hasattr(cls, "templates"):
             cls.templates = {}
 
-        # Copy error templates from base class to derived class, but
-        # in the event of a conflict, preserve the derived class'
-        # template.
+        # Copy error templates from base class to derived class, but in the
+        # event of a conflict, preserve the derived class' template.
         templates = {}
         for base in bases:
             if isinstance(base, FilterMeta):
@@ -48,7 +46,7 @@ class FilterMeta(ABCMeta):
             templates.update(cls.templates)
             cls.templates = templates
 
-    def __or__(self, next_filter: FilterCompatible) -> 'FilterChain':
+    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
         """
         Convenience alias for adding a Filter with default
         configuration to a FilterChain.
@@ -64,22 +62,26 @@ class FilterMeta(ABCMeta):
         return FilterChain(self) | next_filter
 
 
-class BaseFilter(metaclass=FilterMeta):
+T = typing.TypeVar("T")
+
+
+class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
     """
     Base functionality for all Filters, macros, etc.
     """
-    CODE_EXCEPTION = 'exception'
+
+    CODE_EXCEPTION = "exception"
 
     templates = {
-        CODE_EXCEPTION: 'An error occurred while processing this value.',
+        CODE_EXCEPTION: "An error occurred while processing this value.",
     }
 
     def __init__(self):
         super().__init__()
 
-        self._parent = None  # type: OptionalType[BaseFilter]
-        self._handler = None  # type: OptionalType[BaseInvalidValueHandler]
-        self._key = None  # type: OptionalType[str]
+        self._parent: typing.Optional[BaseFilter] = None
+        self._handler: typing.Optional[BaseInvalidValueHandler] = None
+        self._key: typing.Optional[str] = None
 
         #
         # Indicates whether the Filter detected any invalid values.
@@ -94,13 +96,12 @@ class BaseFilter(metaclass=FilterMeta):
         #
         self._has_errors = False
 
-    # noinspection PyProtectedMember
     @classmethod
-    def __copy__(cls, the_filter: 'BaseFilter') -> 'BaseFilter':
+    def __copy__(cls, the_filter: "BaseFilter") -> "BaseFilter":
         """
         Creates a shallow copy of the object.
         """
-        new_filter = type(the_filter)()  # type: BaseFilter
+        new_filter: BaseFilter = type(the_filter)()
 
         new_filter._parent = the_filter._parent
         new_filter._key = the_filter._key
@@ -108,7 +109,7 @@ class BaseFilter(metaclass=FilterMeta):
 
         return new_filter
 
-    def __or__(self, next_filter: FilterCompatible) -> 'FilterChain':
+    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
         """
         Chains another filter with this one.
         """
@@ -116,8 +117,7 @@ class BaseFilter(metaclass=FilterMeta):
 
         if normalized:
             #
-            # Officially, we should do this:
-            # return ``FilterChain(self) | next_filter``
+            # Officially, we should return ``FilterChain(self) | next_filter``
             #
             # But that wastes some CPU cycles by creating an extra
             # FilterChain instance that gets thrown away almost
@@ -139,12 +139,12 @@ class BaseFilter(metaclass=FilterMeta):
         the Filter's configuration for e.g., troubleshooting
         purposes.
         """
-        return '{type}()'.format(
+        return "{type}()".format(
             type=type(self).__name__,
         )
 
     @property
-    def parent(self) -> OptionalType['BaseFilter']:
+    def parent(self) -> typing.Optional["BaseFilter"]:
         """
         Returns the parent Filter.
         """
@@ -158,7 +158,7 @@ class BaseFilter(metaclass=FilterMeta):
         return self._parent
 
     @parent.setter
-    def parent(self, parent: 'BaseFilter') -> None:
+    def parent(self, parent: "BaseFilter") -> None:
         """
         Sets the parent Filter.
         """
@@ -192,7 +192,7 @@ class BaseFilter(metaclass=FilterMeta):
         return self._make_key(self._key_parts + [sub_key])
 
     @property
-    def _key_parts(self) -> List[str]:
+    def _key_parts(self) -> typing.List[str]:
         """
         Assembles each key part in the filter hierarchy.
         """
@@ -212,7 +212,7 @@ class BaseFilter(metaclass=FilterMeta):
         return key_parts
 
     @property
-    def handler(self) -> 'BaseInvalidValueHandler':
+    def handler(self) -> "BaseInvalidValueHandler":
         """
         Returns the invalid value handler for the filter.
         """
@@ -234,13 +234,13 @@ class BaseFilter(metaclass=FilterMeta):
         return self._handler
 
     @handler.setter
-    def handler(self, handler: 'BaseInvalidValueHandler') -> None:
+    def handler(self, handler: "BaseInvalidValueHandler") -> None:
         """
         Sets the invalid value handler for the filter.
         """
         self._handler = handler
 
-    def set_handler(self, handler: 'BaseInvalidValueHandler') -> 'BaseFilter':
+    def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter":
         """
         Cascading method for setting the filter's invalid value
         handler.
@@ -248,7 +248,7 @@ class BaseFilter(metaclass=FilterMeta):
         self.handler = handler
         return self
 
-    def apply(self, value):
+    def apply(self, value: typing.Any) -> typing.Union[T, None]:
         """
         Applies the filter to a value.
         """
@@ -260,7 +260,7 @@ class BaseFilter(metaclass=FilterMeta):
             return self._invalid_value(value, e, exc_info=True)
 
     @abstract_method
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> T:
         """
         Applies filter-specific logic to a value.
 
@@ -268,21 +268,21 @@ class BaseFilter(metaclass=FilterMeta):
         this method is invoked.
         """
         raise NotImplementedError(
-            'Not implemented in {cls}.'.format(cls=type(self).__name__),
+            "Not implemented in {cls}.".format(cls=type(self).__name__),
         )
 
-    def _apply_none(self):
+    def _apply_none(self) -> None:
         """
-        Applies filter-specific logic when the value is ``None``.
+        Applies filter-specific logic when the incoming value is ``None``.
         """
         return None
 
     def _filter(
-            self,
-            value: Any,
-            filter_chain: FilterCompatible,
-            sub_key: OptionalType[str] = None,
-    ) -> Any:
+        self,
+        value: typing.Any,
+        filter_chain: FilterCompatible,
+        sub_key: typing.Optional[str] = None,
+    ) -> typing.Any:
         """
         Applies another filter to a value in the same context as the
         current filter.
@@ -312,15 +312,15 @@ class BaseFilter(metaclass=FilterMeta):
             return value
 
     def _invalid_value(
-            self,
-            value: Any,
-            reason: Union[str, Exception],
-            replacement: OptionalType[Any] = None,
-            exc_info: bool = False,
-            context: OptionalType[MutableMapping] = None,
-            sub_key: OptionalType[str] = None,
-            template_vars: OptionalType[Mapping] = None,
-    ) -> Any:
+        self,
+        value: typing.Any,
+        reason: typing.Union[str, Exception],
+        replacement: typing.Optional[typing.Any] = None,
+        exc_info: bool = False,
+        context: typing.Optional[typing.MutableMapping] = None,
+        sub_key: typing.Optional[str] = None,
+        template_vars: typing.Optional[typing.Mapping] = None,
+    ) -> typing.Any:
         """
         Handles an invalid value.
 
@@ -347,7 +347,7 @@ class BaseFilter(metaclass=FilterMeta):
             return handler.handle_invalid_value(
                 message=str(reason),
                 exc_info=True,
-                context=getattr(reason, 'context', {}),
+                context=getattr(reason, "context", {}),
             )
 
         self._has_errors = True
@@ -355,10 +355,10 @@ class BaseFilter(metaclass=FilterMeta):
         if not context:
             context = {}
 
-        context['value'] = value
-        context['filter'] = str(self)
-        context['key'] = self.sub_key(sub_key)
-        context['replacement'] = replacement
+        context["value"] = value
+        context["filter"] = str(self)
+        context["key"] = self.sub_key(sub_key)
+        context["replacement"] = replacement
 
         if not template_vars:
             template_vars = {}
@@ -369,12 +369,12 @@ class BaseFilter(metaclass=FilterMeta):
             # Store the error code in the context so that the caller
             # can identify the error type without having to parse the
             # rendered error message template.
-            context['code'] = self.CODE_EXCEPTION
+            context["code"] = self.CODE_EXCEPTION
 
             # Store exception details in the context so that they are
             # accessible to devs but hidden from end users.
             # Note that the traceback gets processed separately,
-            context['exc'] = '[{mod}.{cls}] {msg}'.format(
+            context["exc"] = "[{mod}.{cls}] {msg}".format(
                 mod=type(reason).__module__,
                 cls=type(reason).__name__,
                 msg=str(reason),
@@ -382,19 +382,19 @@ class BaseFilter(metaclass=FilterMeta):
 
             # Add the context to the exception object so that loggers
             # can use it.
-            if not hasattr(reason, 'context'):
+            if not hasattr(reason, "context"):
                 reason.context = {}
             reason.context.update(context)
 
             handler.handle_exception(
-                message=self._format_message(context['code'], template_vars),
+                message=self._format_message(context["code"], template_vars),
                 exc=reason,
             )
         else:
             # Store the error code in the context so that the caller
             # can identify the error type without having to parse the
             # rendered error message template.
-            context['code'] = reason
+            context["code"] = reason
 
             handler.handle_invalid_value(
                 message=self._format_message(reason, template_vars),
@@ -405,9 +405,9 @@ class BaseFilter(metaclass=FilterMeta):
         return replacement
 
     def _format_message(
-            self,
-            key: str,
-            template_vars: Mapping[str, str],
+        self,
+        key: str,
+        template_vars: typing.Mapping[str, str],
     ) -> str:
         """
         Formats a message for the invalid value handler.
@@ -416,11 +416,11 @@ class BaseFilter(metaclass=FilterMeta):
 
     @classmethod
     def resolve_filter(
-            cls,
-            the_filter: FilterCompatible,
-            parent: OptionalType['BaseFilter'] = None,
-            key: OptionalType[str] = None,
-    ) -> OptionalType['FilterChain']:
+        cls,
+        the_filter: FilterCompatible,
+        parent: typing.Optional["BaseFilter"] = None,
+        key: typing.Optional[str] = None,
+    ) -> typing.Optional["FilterChain"]:
         """
         Converts a filter-compatible value into a consistent type.
         """
@@ -434,8 +434,8 @@ class BaseFilter(metaclass=FilterMeta):
             # Uhh... hm.
             else:
                 raise TypeError(
-                    '{type} {value!r} is not '
-                    'compatible with {target}.'.format(
+                    "{type} {value!r} is not "
+                    "compatible with {target}.".format(
                         type=type(the_filter).__name__,
                         value=the_filter,
                         target=cls.__name__,
@@ -451,11 +451,11 @@ class BaseFilter(metaclass=FilterMeta):
             return resolved
 
     @staticmethod
-    def _make_key(key_parts: Iterable[str]) -> str:
+    def _make_key(key_parts: typing.Iterable[str]) -> str:
         """
         Assembles a dotted key value from its component parts.
         """
-        return '.'.join(filter(None, key_parts))
+        return ".".join(filter(None, key_parts))
 
 
 class FilterChain(BaseFilter):
@@ -467,17 +467,17 @@ class FilterChain(BaseFilter):
     def __init__(self, start_filter: FilterCompatible = None) -> None:
         super().__init__()
 
-        self._filters = []  # type: List[BaseFilter]
+        self._filters: list[BaseFilter] = []
 
         self._add(start_filter)
 
     def __str__(self):
-        return '{type}({filters})'.format(
+        return "{type}({filters})".format(
             type=type(self).__name__,
-            filters=' | '.join(map(str, self._filters)),
+            filters=" | ".join(map(str, self._filters)),
         )
 
-    def __or__(self, next_filter: FilterCompatible) -> 'FilterChain':
+    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
         """
         Chains a filter with this one.
 
@@ -487,14 +487,14 @@ class FilterChain(BaseFilter):
         resolved = self.resolve_filter(next_filter)
 
         if resolved:
-            new_chain = copy(self)  # type: FilterChain
+            new_chain: FilterChain = copy(self)
             new_chain._add(next_filter)
             return new_chain
         else:
             return self
 
     @classmethod
-    def __copy__(cls, the_filter: 'FilterChain') -> 'FilterChain':
+    def __copy__(cls, the_filter: "FilterChain") -> "FilterChain":
         """
         Creates a shallow copy of the object.
         """
@@ -503,7 +503,7 @@ class FilterChain(BaseFilter):
         # noinspection PyTypeChecker
         return new_filter
 
-    def _add(self, next_filter: FilterCompatible) -> 'FilterChain':
+    def _add(self, next_filter: FilterCompatible) -> "FilterChain":
         """
         Adds a Filter to the collection directly.
         """
@@ -537,11 +537,11 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
 
     @abstract_method
     def handle_invalid_value(
-            self,
-            message: str,
-            exc_info: bool,
-            context: MutableMapping,
-    ) -> Any:
+        self,
+        message: str,
+        exc_info: bool,
+        context: typing.MutableMapping,
+    ) -> typing.Any:
         """
         Handles an invalid value.
 
@@ -555,17 +555,17 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
             Additional context values for the error.
         """
         raise NotImplementedError(
-            'Not implemented in {cls}.'.format(cls=type(self).__name__),
+            "Not implemented in {cls}.".format(cls=type(self).__name__),
         )
 
-    def handle_exception(self, message: str, exc: Exception) -> Any:
+    def handle_exception(self, message: str, exc: Exception) -> typing.Any:
         """
         Handles an uncaught exception.
         """
         return self.handle_invalid_value(
             message=message,
             exc_info=True,
-            context=getattr(exc, 'context', {}),
+            context=getattr(exc, "context", {}),
         )
 
 
@@ -593,10 +593,10 @@ class ExceptionHandler(BaseInvalidValueHandler):
     """
 
     def handle_invalid_value(
-            self,
-            message: str,
-            exc_info: bool,
-            context: MutableMapping,
+        self,
+        message: str,
+        exc_info: bool,
+        context: typing.MutableMapping,
     ) -> None:
         error = FilterError(message)
         error.context = context
@@ -608,20 +608,20 @@ class ExceptionHandler(BaseInvalidValueHandler):
 # the base module.
 class Type(BaseFilter):
     """
-    Checks the type of a value.
+    Checks the type of the incoming value.
     """
-    CODE_WRONG_TYPE = 'wrong_type'
+
+    CODE_WRONG_TYPE = "wrong_type"
 
     templates = {
-        CODE_WRONG_TYPE:
-            '{incoming} is not valid (allowed types: {allowed}).',
+        CODE_WRONG_TYPE: "{incoming} is not valid (allowed types: {allowed}).",
     }
 
     def __init__(
-            self,
-            allowed_types: Union[type, Tuple[type, ...]],
-            allow_subclass: bool = True,
-            aliases: OptionalType[Mapping[type, str]] = None,
+        self,
+        allowed_types: typing.Union[type, typing.Tuple[type, ...]],
+        allow_subclass: bool = True,
+        aliases: typing.Optional[typing.Mapping[type, str]] = None,
     ) -> None:
         """
         :param allowed_types:
@@ -641,22 +641,17 @@ class Type(BaseFilter):
 
         # A pinch of syntactic sugar.
         self.allowed_types = (
-            allowed_types
-            if isinstance(allowed_types, tuple)
-            else (allowed_types,)
+            allowed_types if isinstance(allowed_types, tuple) else (allowed_types,)
         )
         self.allow_subclass = allow_subclass
 
         self.aliases = aliases or {}
 
     def __str__(self):
-        return (
-            '{type}({allowed_types}, '
-            'allow_subclass={allow_subclass!r})'.format(
-                type=type(self).__name__,
-                allowed_types=self.get_allowed_type_names(aliased=False),
-                allow_subclass=self.allow_subclass,
-            )
+        return "{type}({allowed_types}, " "allow_subclass={allow_subclass!r})".format(
+            type=type(self).__name__,
+            allowed_types=self.get_allowed_type_names(aliased=False),
+            allow_subclass=self.allow_subclass,
         )
 
     def _apply(self, value):
@@ -670,10 +665,9 @@ class Type(BaseFilter):
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_WRONG_TYPE,
-
                 template_vars={
-                    'incoming': self.get_type_name(type(value)),
-                    'allowed':  self.get_allowed_type_names(),
+                    "incoming": self.get_type_name(type(value)),
+                    "allowed": self.get_allowed_type_names(),
                 },
             )
 
@@ -685,10 +679,9 @@ class Type(BaseFilter):
         """
         # Note that we cast as a set in the middle, to ferret out
         # duplicates.
-        return ', '.join(sorted({
-            self.get_type_name(t, aliased)
-            for t in self.allowed_types
-        }))
+        return ", ".join(
+            sorted({self.get_type_name(t, aliased) for t in self.allowed_types})
+        )
 
     def get_type_name(self, type_: type, aliased: bool = True) -> str:
         """
@@ -698,8 +691,8 @@ class Type(BaseFilter):
         # find the proper name.
         # https://bugs.python.org/issue34422
         possible_names = [
-            getattr(type_, '_name', None),
-            getattr(type_, '__name__', None),
+            getattr(type_, "_name", None),
+            getattr(type_, "__name__", None),
             str(type_),
         ]
 

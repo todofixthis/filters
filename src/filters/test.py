@@ -9,7 +9,7 @@ from filters.base import BaseFilter
 from filters.handlers import FilterRunner
 
 __all__ = [
-    'BaseFilterTestCase',
+    "BaseFilterTestCase",
 ]
 
 
@@ -21,10 +21,7 @@ def sorted_dict(value: typing.Mapping) -> typing.Any:
     if isinstance(value, typing.Mapping):
         # Note: ``dict`` preserves key insertion order since Python 3.6.
         # https://docs.python.org/3/library/stdtypes.html#dict
-        return dict(
-            (key, sorted_dict(value[key]))
-                for key in sorted(value.keys())
-        )
+        return dict((key, sorted_dict(value[key])) for key in sorted(value.keys()))
 
     elif isinstance(value, typing.Sequence) and not isinstance(value, str):
         return list(map(sorted_dict, value))
@@ -42,6 +39,7 @@ class BaseFilterTestCase(TestCase):
     your test case, and then use ``assertFilterPasses`` and
     ``assertFilterErrors`` to check use cases.
     """
+
     filter_type: typing.Callable[[...], BaseFilter] = None
 
     class unmodified(object):
@@ -49,6 +47,7 @@ class BaseFilterTestCase(TestCase):
         Used by ``assertFilterPasses`` so that you can omit the
         ``expected_value`` parameter.
         """
+
         pass
 
     class skip_value_check(object):
@@ -60,11 +59,13 @@ class BaseFilterTestCase(TestCase):
         Note:  If you use ``skip_value_check``, you should add extra assertions
         to your test to make sure the filtered value conforms to expectations.
         """
+
         pass
 
-    def assertFilterPasses(self,
-            runner: typing.Any,
-            expected_value: typing.Any = unmodified,
+    def assertFilterPasses(
+        self,
+        runner: typing.Any,
+        expected_value: typing.Any = unmodified,
     ) -> FilterRunner:
         """
         Asserts that the FilterRunner returns the specified value, without
@@ -83,13 +84,14 @@ class BaseFilterTestCase(TestCase):
         """
         return self.assertFilterErrors(runner, {}, expected_value)
 
-    def assertFilterErrors(self,
-            runner: typing.Any,
-            expected_codes: typing.Union[
-                typing.Mapping[str, typing.Sequence[str]],
-                typing.Sequence[str],
-            ],
-            expected_value: typing.Any = None,
+    def assertFilterErrors(
+        self,
+        runner: typing.Any,
+        expected_codes: typing.Union[
+            typing.Mapping[str, typing.Sequence[str]],
+            typing.Sequence[str],
+        ],
+        expected_value: typing.Any = None,
     ) -> FilterRunner:
         """
         Asserts that the FilterRunner generates the specified error codes.
@@ -112,11 +114,10 @@ class BaseFilterTestCase(TestCase):
         if runner.has_exceptions:
             # noinspection PyTypeChecker
             self.fail(
-                'Unhandled exceptions occurred while filtering the '
-                'request payload:\n\n{tracebacks}\n\n'
-                'Filter Messages:\n\n{messages}'.format(
+                "Unhandled exceptions occurred while filtering the "
+                "request payload:\n\n{tracebacks}\n\n"
+                "Filter Messages:\n\n{messages}".format(
                     messages=pformat(dict(runner.filter_messages)),
-
                     tracebacks=pformat(
                         list(starmap(format_exception, runner.exc_info))
                     ),
@@ -124,28 +125,25 @@ class BaseFilterTestCase(TestCase):
             )
 
         if isinstance(expected_codes, list):
-            expected_codes = {'': expected_codes}
+            expected_codes = {"": expected_codes}
 
         if runner.error_codes != expected_codes:
             self.fail(
-                'Filter generated unexpected error codes (expected '
-                '{expected}):\n\n{messages}'.format(
+                "Filter generated unexpected error codes (expected "
+                "{expected}):\n\n{messages}".format(
                     expected=json.dumps(sorted_dict(expected_codes)),
                     messages=pformat(dict(runner.filter_messages)),
                 ),
             )
 
-        check_value = (
-                (self.skip_value_check is not True)
-                and (expected_value is not self.skip_value_check)
+        check_value = (self.skip_value_check is not True) and (
+            expected_value is not self.skip_value_check
         )
 
         if check_value:
             self._check_filter_value(
                 runner.cleaned_data,
-                runner.data
-                if expected_value is self.unmodified
-                else expected_value
+                runner.data if expected_value is self.unmodified else expected_value,
             )
 
         # Return the ``FilterRunner`` instance, so that we can do some
@@ -176,14 +174,16 @@ class BaseFilterTestCase(TestCase):
             Keyword params to pass to the Filter's initializer.
         """
         if not callable(self.filter_type):
-            self.fail('{cls}.filter_type is not callable.'.format(
-                cls=type(self).__name__,
-            ))
+            self.fail(
+                "{cls}.filter_type is not callable.".format(
+                    cls=type(self).__name__,
+                )
+            )
 
         if not args:
             self.fail(
-                'First argument to {cls}._filter '
-                'must be the filtered value.'.format(
+                "First argument to {cls}._filter "
+                "must be the filtered value.".format(
                     cls=type(self).__name__,
                 ),
             )

@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from filters.extensions import FilterExtensionRegistry
 from filters.macros import FilterMacroType
-from test import TestFilterAlpha, TestFilterBravo
+from test import FilterAlpha, FilterBravo
 from test.helper import DummyDistributionFinder
 
 
@@ -26,18 +26,18 @@ class FilterExtensionRegistryTestCase(TestCase):
         """
         # For this test, we will use a different entry point key, to
         # minimize the potential for side effects.
-        registry = FilterExtensionRegistry('filters.extensions_test')
+        registry = FilterExtensionRegistry("filters.extensions_test")
 
         # Note that the filters are registered using the entry point
         # names, which conventionally matches the class name (but it
         # doesn't strictly have to).
         alpha = registry.Alfred
-        self.assertIs(alpha, TestFilterAlpha)
+        self.assertIs(alpha, FilterAlpha)
 
         # You can also instantiate filters using parameters.
-        bravo = registry.Bruce(name='Batman')
-        self.assertIsInstance(bravo, TestFilterBravo)
-        self.assertEqual(bravo.name, 'Batman')
+        bravo = registry.Bruce(name="Batman")
+        self.assertIsInstance(bravo, FilterBravo)
+        self.assertEqual(bravo.name, "Batman")
 
         # I couldn't find any Batman characters whose name begins with
         # C... and "Commissioner Gordon" doesn't count!

@@ -1,19 +1,23 @@
 import typing
-from importlib.metadata import EntryPoint, entry_points
-from inspect import getmembers as get_members, isabstract as is_abstract, \
-    isclass as is_class, ismodule as is_module
+from importlib.metadata import entry_points
+from inspect import (
+    getmembers as get_members,
+    isabstract as is_abstract,
+    isclass as is_class,
+    ismodule as is_module,
+)
 from logging import getLogger
 
-from class_registry import EntryPointClassRegistry
+from class_registry.entry_points import EntryPointClassRegistry
 
 from filters.base import BaseFilter
 
 __all__ = [
-    'FilterExtensionRegistry',
-    'GROUP_NAME',
+    "FilterExtensionRegistry",
+    "GROUP_NAME",
 ]
 
-GROUP_NAME = 'filters.extensions'
+GROUP_NAME = "filters.extensions"
 """
 The key to use when declaring entry points in your library's
 ``setup.py`` file.
@@ -63,15 +67,15 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         if self._cache is None:
             self._cache = {}
 
-            for target in entry_points(group=self.group):  # type: EntryPoint
+            for target in entry_points(group=self.group):
                 filter_ = target.load()
 
                 ift_result = is_filter_type(filter_)
 
                 if ift_result is True:
                     logger.debug(
-                        'Registering extension filter '
-                        '{cls.__module__}.{cls.__name__} as {name}.'.format(
+                        "Registering extension filter "
+                        "{cls.__module__}.{cls.__name__} as {name}.".format(
                             cls=filter_,
                             name=target.name,
                         ),
@@ -98,19 +102,19 @@ def is_filter_type(target: typing.Any) -> typing.Union[bool, str]:
         Otherwise, returns a string indicating why it is not valid.
     """
     if not is_class(target):
-        return 'not a class'
+        return "not a class"
 
     if not issubclass(target, BaseFilter):
-        return 'does not extend BaseFilter'
+        return "does not extend BaseFilter"
 
     if is_abstract(target):
-        return 'abstract class'
+        return "abstract class"
 
     return True
 
 
 def iter_filters_in(
-        target: typing.Any,
+    target: typing.Any,
 ) -> typing.Generator[typing.Tuple[str, typing.Type[BaseFilter]], None, None]:
     """
     Iterates over all filters in the specified module/class.
@@ -119,8 +123,8 @@ def iter_filters_in(
 
     if ift_result is True:
         logger.debug(
-            'Registering extension filter '
-            '{cls.__module__}.{cls.__name__}.'.format(
+            "Registering extension filter "
+            "{cls.__module__}.{cls.__name__}.".format(
                 cls=target,
             ),
         )
@@ -132,8 +136,8 @@ def iter_filters_in(
 
             if member_ift_result is True:
                 logger.debug(
-                    'Registering extension filter '
-                    '{cls.__module__}.{cls.__name__}.'.format(
+                    "Registering extension filter "
+                    "{cls.__module__}.{cls.__name__}.".format(
                         cls=member,
                     ),
                 )
@@ -141,7 +145,7 @@ def iter_filters_in(
                 yield member.__name__, member
             else:
                 logger.debug(
-                    'Ignoring {module}.{name} ({reason})'.format(
+                    "Ignoring {module}.{name} ({reason})".format(
                         module=target.__name__,
                         name=member_name,
                         reason=member_ift_result,
@@ -149,14 +153,14 @@ def iter_filters_in(
                 )
     elif is_class(target):
         logger.debug(
-            'Ignoring {cls.__module__}.{cls.__name__} ({reason}).'.format(
+            "Ignoring {cls.__module__}.{cls.__name__} ({reason}).".format(
                 cls=target,
                 reason=ift_result,
             ),
         )
     else:
         logger.debug(
-            'Ignoring {target!r} ({reason}).'.format(
+            "Ignoring {target!r} ({reason}).".format(
                 reason=ift_result,
                 target=target,
             ),

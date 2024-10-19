@@ -1,4 +1,4 @@
 [filters.extensions_test]
-Alfred=test:TestFilterAlpha
-Bruce=test:TestFilterBravo
-Catwoman=test:TestFilterCharlie
+Alfred=test:FilterAlpha
+Bruce=test:FilterBravo
+Catwoman=test:FilterCharlie

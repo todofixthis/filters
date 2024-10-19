@@ -9,28 +9,28 @@ from filters.base import BaseFilter, Type
 from filters.number import Int, Max, Min
 
 __all__ = [
-    'Array',
-    'ByteArray',
-    'Call',
-    'Date',
-    'Datetime',
-    'Empty',
-    'Item',
-    'Length',
-    'MaxLength',
-    'MinLength',
-    'NoOp',
-    'NotEmpty',
-    'Omit',
-    'Optional',
-    'Pick',
-    'Required',
+    "Array",
+    "ByteArray",
+    "Call",
+    "Date",
+    "Datetime",
+    "Empty",
+    "Item",
+    "Length",
+    "MaxLength",
+    "MinLength",
+    "NoOp",
+    "NotEmpty",
+    "Omit",
+    "Optional",
+    "Pick",
+    "Required",
 ]
 
 
 def selective_copy_mapping(
-        source: typing.Mapping,
-        keys: typing.Iterable[typing.Hashable],
+    source: typing.Mapping,
+    keys: typing.Iterable[typing.Hashable],
 ) -> typing.Mapping:
     """
     Creates a copy of a mapping, with the same type (if practical).
@@ -55,12 +55,12 @@ def selective_copy_mapping(
     except TypeError:
         pass
 
-    # As a fallback, ``MutableMapping`` gives us an explicit
-    # interface to build the result using the same type as ``value``.
+    # As a fallback, ``MutableMapping`` gives us an explicit interface to build
+    # the result using the same type as ``value``.
     if isinstance(source, typing.MutableMapping):
         result = type(source)()
 
-        for (k, v) in values.items():
+        for k, v in values.items():
             result[k] = v
 
         return result
@@ -70,8 +70,8 @@ def selective_copy_mapping(
 
 
 def selective_copy_sequence(
-        source: typing.Sequence,
-        indices: typing.Iterable[int],
+    source: typing.Sequence,
+    indices: typing.Iterable[int],
 ) -> typing.Sequence:
     """
     Creates a copy of a sequence, with the same type (if practical).
@@ -102,8 +102,8 @@ def selective_copy_sequence(
     except TypeError:
         pass
 
-    # As a fallback, ``MutableSequence`` gives us an explicit
-    # interface to build the result using the same type as ``value``.
+    # As a fallback, ``MutableSequence`` gives us an explicit interface to build
+    # the result using the same type as ``value``.
     if isinstance(source, typing.MutableSequence):
         result = type(source)()
 
@@ -122,13 +122,13 @@ class Array(Type):
     """
 
     def __init__(
-            self,
-            aliases: typing.Optional[typing.Mapping[type, str]] = None,
+        self,
+        aliases: typing.Optional[typing.Mapping[type, str]] = None,
     ) -> None:
         super().__init__(typing.Sequence, True, aliases)
 
     def _apply(self, value):
-        value = super()._apply(value)  # type: typing.Sequence
+        value: typing.Sequence = super()._apply(value)
 
         if self._has_errors:
             return None
@@ -137,28 +137,27 @@ class Array(Type):
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_WRONG_TYPE,
-
                 template_vars={
-                    'incoming': self.get_type_name(type(value)),
-                    'allowed': self.get_allowed_type_names(),
+                    "incoming": self.get_type_name(type(value)),
+                    "allowed": self.get_allowed_type_names(),
                 },
             )
 
         return value
 
 
-class ByteArray(BaseFilter):
+class ByteArray(BaseFilter[bytearray]):
     """
     Converts an incoming value into a bytearray.
     """
-    CODE_BAD_ENCODING = 'bad_encoding'
+
+    CODE_BAD_ENCODING = "bad_encoding"
 
     templates = {
-        CODE_BAD_ENCODING:
-            'Unable to encode this value using {encoding}.',
+        CODE_BAD_ENCODING: "Unable to encode this value using {encoding}.",
     }
 
-    def __init__(self, encoding: str = 'utf-8') -> None:
+    def __init__(self, encoding: str = "utf-8") -> None:
         """
         :param encoding:
             The encoding to use when decoding strings into bytes.
@@ -186,24 +185,29 @@ class ByteArray(BaseFilter):
                 return self._invalid_value(
                     value=value,
                     reason=self.CODE_BAD_ENCODING,
-
                     template_vars={
-                        'encoding': self.encoding,
+                        "encoding": self.encoding,
                     },
                 )
 
         from filters.complex import FilterRepeater
-        filtered = self._filter(value, FilterRepeater(
-            # Only allow ints and booleans.
-            Type(int) |
-            # Convert booleans to int (Min and Max require an
-            # exact type match).
-            Int |
-            # Min value for each byte is 2^0-1.
-            Min(0) |
-            # Max value for each byte is 2^8-1.
-            Max(255)
-        ))
+
+        filtered = self._filter(
+            value,
+            FilterRepeater(
+                # Only allow ints and booleans.
+                Type(int)
+                |
+                # Convert booleans to int (Min and Max require an exact type match).
+                Int
+                |
+                # Min value for each byte is 2^0-1.
+                Min(0)
+                |
+                # Max value for each byte is 2^8-1.
+                Max(255)
+            ),
+        )
 
         if self._has_errors:
             return None
@@ -211,22 +215,23 @@ class ByteArray(BaseFilter):
         return bytearray(filtered)
 
 
-class Call(BaseFilter):
+T = typing.TypeVar("T")
+
+
+class Call(BaseFilter[T]):
     """
     Runs the value through a callable.
 
-    Usually, creating a custom filter type works better, as you have
-    more control over how invalid values are handled, you can specify
-    custom error codes, it's easier to write tests for, etc.
+    Usually, creating a custom filter type works better, as you have more
+    control over how invalid values are handled, you can specify custom error
+    codes, it's easier to write tests for, etc.
 
-    But, in a pinch, this is a handy way to quickly integrate a custom
-    function into a filter chain.
+    But, in a pinch, this is a handy way to quickly integrate a custom function
+    into a filter chain.
     """
 
-    def __init__(self,
-            callable_: typing.Callable[..., typing.Any],
-            *extra_args,
-            **extra_kwargs
+    def __init__(
+        self, callable_: typing.Callable[..., T], *extra_args, **extra_kwargs
     ) -> None:
         """
         :param callable_:
@@ -255,21 +260,21 @@ class Call(BaseFilter):
             )
 
 
-class Datetime(BaseFilter):
+class Datetime(BaseFilter[datetime]):
     """
     Interprets the value as a UTC datetime.
     """
-    CODE_INVALID = 'not_datetime'
+
+    CODE_INVALID = "not_datetime"
 
     templates = {
-        CODE_INVALID:
-            'This value does not appear to be a datetime.',
+        CODE_INVALID: "This value does not appear to be a datetime.",
     }
 
     def __init__(
-            self,
-            timezone: typing.Optional[typing.Union[tzinfo, int, float]] = None,
-            naive: bool = False,
+        self,
+        timezone: typing.Optional[typing.Union[tzinfo, int, float]] = None,
+        naive: bool = False,
     ) -> None:
         """
         :param timezone:
@@ -298,7 +303,7 @@ class Datetime(BaseFilter):
             else:
                 # Assume that we got an int/float instead.
                 timezone = tzoffset(
-                    name='UTC{offset:+}'.format(offset=timezone),
+                    name="UTC{offset:+}".format(offset=timezone),
                     offset=float(timezone) * 3600.0,
                 )
 
@@ -306,7 +311,7 @@ class Datetime(BaseFilter):
         self.naive = naive
 
     def __str__(self):
-        return '{type}(timezone={timezone!r}, naive={naive!r})'.format(
+        return "{type}(timezone={timezone!r}, naive={naive!r})".format(
             type=type(self).__name__,
             timezone=self.timezone,
             naive=self.naive,
@@ -322,9 +327,9 @@ class Datetime(BaseFilter):
             try:
                 #
                 # It's a shame we can't pass ``tzinfos`` to
-                # :py:meth:`dateutil_parse.parse`; ``tzinfos`` only has
-                # effect if we also specify ``ignoretz = True``, which
-                # we definitely don't want to do here!
+                # :py:meth:`dateutil_parse.parse`; ``tzinfos`` only has effect
+                # if we also specify ``ignoretz = True``, which we definitely
+                # don't want to do here!
                 #
                 # https://dateutil.readthedocs.org/en/latest/parser.html#dateutil.parser.parse
                 #
@@ -342,52 +347,50 @@ class Datetime(BaseFilter):
         # Always covert to UTC.
         aware_result = parsed.astimezone(utc)
 
-        return (
-            aware_result.replace(tzinfo=None)
-            if self.naive
-            else aware_result
-        )
+        return aware_result.replace(tzinfo=None) if self.naive else aware_result
 
 
-class Date(Datetime):
+class Date(Datetime, BaseFilter[date]):
     """
     Interprets the value as a UTC date.
 
-    Note that the value is first converted to a datetime with UTC
-    timezone, which may cause the resulting date to appear to be
-    off by +/- 1 day (does not apply if the value is already a date
-    object).
+    Note that the value is first converted to a datetime with UTC timezone,
+    which may cause the resulting date to appear to be off by +/- 1 day (does
+    not apply if the value is already a date object).
+
+    Check out the unit tests for more information.
     """
-    CODE_INVALID = 'not_date'
+
+    CODE_INVALID = "not_date"
 
     templates = {
-        CODE_INVALID: 'This value does not appear to be a date.',
+        CODE_INVALID: "This value does not appear to be a date.",
     }
 
     def _apply(self, value):
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
 
-        filtered = super()._apply(value)  # type: datetime
+        filtered: datetime = super()._apply(value)
 
-        # Normally we return `None` if we get any errors, but in this
-        # case, we'll let the superclass method decide.
+        # Normally we return ``None`` if we get any errors, but in this case,
+        # we'll let the superclass method decide.
         return filtered if self._has_errors else filtered.date()
 
 
-class Empty(BaseFilter):
+class Empty(BaseFilter[T]):
     """
     Expects the value to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this Filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length.  Note that this
+    Filter considers values that do not have length to be not empty (in
+    particular, False and 0 are not considered empty here).
     """
-    CODE_NOT_EMPTY = 'not_empty'
+
+    CODE_NOT_EMPTY = "not_empty"
 
     templates = {
-        CODE_NOT_EMPTY: 'Empty value expected.',
+        CODE_NOT_EMPTY: "Empty value expected.",
     }
 
     def _apply(self, value):
@@ -396,21 +399,18 @@ class Empty(BaseFilter):
         except TypeError:
             length = 1
 
-        return (
-            self._invalid_value(value, self.CODE_NOT_EMPTY)
-            if length
-            else value
-        )
+        return self._invalid_value(value, self.CODE_NOT_EMPTY) if length else value
 
 
-class Item(BaseFilter):
+class Item(BaseFilter[T]):
     """
     Returns a single item from an incoming mapping or sequence.
     """
-    CODE_MISSING_KEY = 'missing'
+
+    CODE_MISSING_KEY = "missing"
 
     templates = {
-        CODE_MISSING_KEY: '{key} is required.',
+        CODE_MISSING_KEY: "{key} is required.",
     }
 
     def __init__(self, key: typing.Optional[typing.Hashable] = None):
@@ -421,9 +421,9 @@ class Item(BaseFilter):
         self.target = key
 
     def __str__(self):
-        return '{type}({key})'.format(
+        return "{type}({key})".format(
             type=type(self).__name__,
-            key='' if self.target is None else repr(self.target),
+            key="" if self.target is None else repr(self.target),
         )
 
     def _apply(self, value):
@@ -472,18 +472,17 @@ class Item(BaseFilter):
             )
 
 
-class Length(BaseFilter):
+class Length(BaseFilter[T]):
     """
     Ensures incoming values have exactly the right length.
     """
-    CODE_TOO_LONG = 'too_long'
-    CODE_TOO_SHORT = 'too_short'
+
+    CODE_TOO_LONG = "too_long"
+    CODE_TOO_SHORT = "too_short"
 
     templates = {
-        CODE_TOO_LONG:
-            'Value is too long (length must be exactly {expected}).',
-        CODE_TOO_SHORT:
-            'Value is too short (length must be exactly {expected}).',
+        CODE_TOO_LONG: "Value is too long (length must be exactly {expected}).",
+        CODE_TOO_SHORT: "Value is too short (length must be exactly {expected}).",
     }
 
     def __init__(self, length: int) -> None:
@@ -492,7 +491,7 @@ class Length(BaseFilter):
         self.length = length
 
     def __str__(self):
-        return '{type}(length={length!r})'.format(
+        return "{type}(length={length!r})".format(
             type=type(self).__name__,
             length=self.length,
         )
@@ -507,32 +506,31 @@ class Length(BaseFilter):
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_LONG,
-
                 template_vars={
-                    'expected': self.length,
+                    "expected": self.length,
                 },
             )
         elif len(value) < self.length:
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_SHORT,
-
                 template_vars={
-                    'expected': self.length,
+                    "expected": self.length,
                 },
             )
 
         return value
 
 
-class MaxLength(BaseFilter):
+class MaxLength(BaseFilter[T]):
     """
     Enforces a maximum length on the value.
     """
-    CODE_TOO_LONG = 'too_long'
+
+    CODE_TOO_LONG = "too_long"
 
     templates = {
-        CODE_TOO_LONG: 'Value is too long (length must be < {max}).',
+        CODE_TOO_LONG: "Value is too long (length must be < {max}).",
     }
 
     def __init__(self, max_length: int, truncate: bool = False) -> None:
@@ -549,7 +547,7 @@ class MaxLength(BaseFilter):
         self.truncate = truncate
 
     def __str__(self):
-        return '{type}({max_length!r})'.format(
+        return "{type}({max_length!r})".format(
             type=type(self).__name__,
             max_length=self.max_length,
         )
@@ -557,29 +555,29 @@ class MaxLength(BaseFilter):
     def _apply(self, value):
         if len(value) > self.max_length:
             if self.truncate:
-                return value[0:self.max_length]
+                return value[0 : self.max_length]
 
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_LONG,
-
                 template_vars={
-                    'length': len(value),
-                    'max': self.max_length,
+                    "length": len(value),
+                    "max": self.max_length,
                 },
             )
 
         return value
 
 
-class MinLength(BaseFilter):
+class MinLength(BaseFilter[T]):
     """
     Enforces a minimum length on the value.
     """
-    CODE_TOO_SHORT = 'too_short'
+
+    CODE_TOO_SHORT = "too_short"
 
     templates = {
-        CODE_TOO_SHORT: 'Value is too short (length must be > {min}).',
+        CODE_TOO_SHORT: "Value is too short (length must be > {min}).",
     }
 
     def __init__(self, min_length: int) -> None:
@@ -588,7 +586,7 @@ class MinLength(BaseFilter):
         self.min_length = min_length
 
     def __str__(self):
-        return '{type}({min_length!r})'.format(
+        return "{type}({min_length!r})".format(
             type=type(self).__name__,
             min_length=self.min_length,
         )
@@ -597,52 +595,50 @@ class MinLength(BaseFilter):
         if len(value) < self.min_length:
             #
             # Note that we do not pad the value:
-            #   - It is not clear to which end(s) we should add the
-            #     padding.
+            #   - It is not clear to which end(s) we should add the padding.
             #   - It is not clear what the padding value(s) should be.
-            #   - We should keep this filter's behavior consistent with
-            #     that of MaxLength.
+            #   - We should keep this filter's behavior consistent with that of
+            #     MaxLength.
             #
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_TOO_SHORT,
-
                 template_vars={
-                    'length': len(value),
-                    'min': self.min_length,
+                    "length": len(value),
+                    "min": self.min_length,
                 },
             )
 
         return value
 
 
-class NoOp(BaseFilter):
+class NoOp(BaseFilter[T]):
     """
-    Filter that does nothing, used when you need a placeholder Filter
-    in a FilterChain.
+    Filter that does nothing, used when you need a placeholder Filter in a
+    FilterChain.
     """
 
     def _apply(self, value):
         return value
 
 
-class NotEmpty(BaseFilter):
+class NotEmpty(BaseFilter[T]):
     """
     Expects the value not to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length.  Note that this
+    filter considers values that do not have length to be not empty (in
+    particular, False and 0 are not considered empty here).
 
-    By default, this filter treats ``None`` as valid, just like every
-    other filter.  However, you can configure the filter to reject
-    ``None`` in its initializer method.
+    By default, this filter treats ``None`` as valid, just like every other
+    filter.  However, you can configure the filter to reject ``None`` in its
+    initializer method.
     """
-    CODE_EMPTY = 'empty'
+
+    CODE_EMPTY = "empty"
 
     templates = {
-        CODE_EMPTY: 'Non-empty value expected.',
+        CODE_EMPTY: "Non-empty value expected.",
     }
 
     def __init__(self, allow_none: bool = True) -> None:
@@ -655,7 +651,7 @@ class NotEmpty(BaseFilter):
         self.allow_none = allow_none
 
     def __str__(self):
-        return '{type}(allow_none={allow_none!r})'.format(
+        return "{type}(allow_none={allow_none!r})".format(
             type=type(self).__name__,
             allow_none=self.allow_none,
         )
@@ -675,7 +671,7 @@ class NotEmpty(BaseFilter):
         return None
 
 
-class Omit(BaseFilter):
+class Omit(BaseFilter[T]):
     """
     Returns a copy of an incoming mapping or sequence, with the specified keys
     omitted.  Any other items will be passed through.
@@ -693,7 +689,7 @@ class Omit(BaseFilter):
         self.keys = set(keys)
 
     def __str__(self):
-        return '{type}({keys})'.format(
+        return "{type}({keys})".format(
             type=type(self).__name__,
             keys=sorted(self.keys),
         )
@@ -729,7 +725,7 @@ class Omit(BaseFilter):
         )
 
 
-class Optional(BaseFilter):
+class Optional(BaseFilter[T]):
     """
     Changes empty and null values into a default value.
 
@@ -742,9 +738,10 @@ class Optional(BaseFilter):
        empty in this context).
     """
 
-    def __init__(self,
-            default: typing.Any = None,
-            call_default: typing.Optional[bool] = None,
+    def __init__(
+        self,
+        default: typing.Union[typing.Callable[..., T], T] = None,
+        call_default: typing.Optional[bool] = None,
     ):
         """
         :param default:
@@ -773,21 +770,17 @@ class Optional(BaseFilter):
 
         self.call_default = call_default
 
-        # Compat for Python 3.9: ``staticmethod.__wrapped__`` was added in
-        # Python 3.10, so we have to store the original value separately.
-        self.actual_default = default
-        self.callable_default = (
-            # https://stackoverflow.com/a/41921291
-            staticmethod(default).__get__(object)
-            if self.call_default is True or
-               (self.call_default is None and callable(default))
-            else None
+        self.default = (
+            staticmethod(default).__wrapped__
+            if self.call_default is True
+            or (self.call_default is None and callable(default))
+            else default
         )
 
     def __str__(self):
-        return '{type}(default={default!r})'.format(
+        return "{type}(default={default!r})".format(
             type=type(self).__name__,
-            default=self.actual_default,
+            default=self.default,
         )
 
     def _apply(self, value):
@@ -812,28 +805,29 @@ class Optional(BaseFilter):
         value.
         """
         return (
-            self.callable_default()
-            if self.call_default is True or
-               (self.call_default is None and
-                self.callable_default is not None)
-            else self.actual_default
+            self.default()
+            if self.call_default is True
+            or (self.call_default is None and callable(self.default))
+            else self.default
         )
 
 
-class Pick(BaseFilter):
+class Pick(BaseFilter[T]):
     """
     Returns a copy of an incoming mapping or sequence, with only the specified
     keys included.
     """
-    CODE_MISSING_KEY = 'missing'
+
+    CODE_MISSING_KEY = "missing"
 
     templates = {
-        CODE_MISSING_KEY: '{key} is required.',
+        CODE_MISSING_KEY: "{key} is required.",
     }
 
-    def __init__(self,
-            keys: typing.Iterable,
-            allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
+    def __init__(
+        self,
+        keys: typing.Iterable,
+        allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
     ):
         """
         :param: keys
@@ -859,7 +853,7 @@ class Pick(BaseFilter):
         )
 
     def __str__(self):
-        return '{type}({keys})'.format(
+        return "{type}({keys})".format(
             type=type(self).__name__,
             keys=self.keys,
         )
@@ -933,8 +927,9 @@ class Required(NotEmpty):
     This filter is the only exception to the "``None`` passes by
     default" rule.
     """
+
     templates = {
-        NotEmpty.CODE_EMPTY: 'This value is required.',
+        NotEmpty.CODE_EMPTY: "This value is required.",
     }
 
     def __init__(self):

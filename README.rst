@@ -83,15 +83,13 @@ Requirements
 ------------
 Filters is known to be compatible with the following Python versions:
 
+- 3.13
 - 3.12
 - 3.11
-- 3.10
 
 .. note::
    I'm only one person, so to keep from getting overwhelmed, I'm only committing
-   to supporting the 3 most recent versions of Python.  Filters may work in
-   versions not listed here — there just won't be any test coverage to prove it
-   😇
+   to supporting the 3 most recent versions of Python.
 
 Installation
 ------------
@@ -124,90 +122,100 @@ The following extensions are available:
 
       pip install phx-filters[django,iso]
 
-Running Unit Tests
-------------------
-Install the package with the ``test-runner`` extra to set up the necessary
-dependencies, and then you can run the tests with the ``tox`` command::
+Maintainers
+-----------
+To install the distribution for local development, some additional setup is required:
 
-   pip install -e .[test-runner]
-   tox -p
+#. `Install poetry <https://python-poetry.org/docs/#installation>`_ (only needs to be
+   done once).
 
-To run tests in the current virtualenv::
+#. Run the following command to install additional dependencies::
 
-   python -m unittest
+      poetry install --with=dev
+
+#. Activate pre-commit hook::
+
+      poetry run autohooks activate --mode=poetry
+
+Running Unit Tests and Type Checker
+-----------------------------------
+Run the tests for all supported versions of Python using
+`tox <https://tox.readthedocs.io/>`_::
+
+   poetry run tox -p
+
+.. note::
+
+   The first time this runs, it will take awhile, as mypy needs to build up its cache.
+   Subsequent runs should be much faster.
+
+If you just want to run unit tests in the current virtualenv (using
+`pytest <https://docs.pytest.org>`_)::
+
+   poetry run pytest
+
+If you just want to run type checking in the current virtualenv (using
+`mypy <https://mypy.readthedocs.io>`_)::
+
+   poetry run mypy src test
 
 Documentation
 -------------
-Documentation is available on `ReadTheDocs`_.
-
-If you are installing from source (see above), you can also build the
-documentation locally:
-
-#. Install extra dependencies (you only have to do this once)::
-
-      pip install '.[docs-builder]'
+To build the documentation locally:
 
 #. Switch to the ``docs`` directory::
 
-      cd docs
+    cd docs
 
 #. Build the documentation::
 
-      make html
-
+    make html
 
 Releases
 --------
-Steps to build releases are based on `Packaging Python Projects Tutorial`_
+Steps to build releases are based on
+`Packaging Python Projects Tutorial <https://packaging.python.org/en/latest/tutorials/packaging-projects/>`_.
 
 .. important::
 
-   Make sure to build releases off of the ``main`` branch, and check that all
-   changes from ``develop`` have been merged before creating the release!
+   Make sure to build releases off of the ``main`` branch, and check that all changes
+   from ``develop`` have been merged before creating the release!
 
 1. Build the Project
 ~~~~~~~~~~~~~~~~~~~~
-#. Install extra dependencies (you only have to do this once)::
-
-    pip install -e '.[build-system]'
-
 #. Delete artefacts from previous builds, if applicable::
 
     rm dist/*
 
 #. Run the build::
 
-    python -m build
+    poetry build
 
-#. The build artefacts will be located in the ``dist`` directory at the top
-   level of the project.
+#. The build artefacts will be located in the ``dist`` directory at the top level of the
+   project.
 
 2. Upload to PyPI
 ~~~~~~~~~~~~~~~~~
-#. `Create a PyPI API token`_ (you only have to do this once).
+#. `Create a PyPI API token <https://pypi.org/manage/account/token/>`_ (you only have to
+   do this once).
 #. Increment the version number in ``pyproject.toml``.
-#. Check that the build artefacts are valid, and fix any errors that it finds::
-
-    python -m twine check dist/*
-
 #. Upload build artefacts to PyPI::
 
-    python -m twine upload dist/*
-
+    poetry publish
 
 3. Create GitHub Release
 ~~~~~~~~~~~~~~~~~~~~~~~~
 #. Create a tag and push to GitHub::
 
-    git tag <version>
-    git push
+      git tag <version>
+      git push <version>
 
    ``<version>`` must match the updated version number in ``pyproject.toml``.
 
 #. Go to the `Releases page for the repo`_.
 #. Click ``Draft a new release``.
 #. Select the tag that you created in step 1.
-#. Specify the title of the release (e.g., ``Filters v1.2.3``).
+#. Specify the title of the release (e.g., ``{{ cookiecutter.project_name }} v1.2.3``).
 #. Write a description for the release.  Make sure to include:
    - Credit for code contributed by community members.
    - Significant functionality that was added/changed/removed.
@@ -217,11 +225,7 @@ Steps to build releases are based on `Packaging Python Projects Tutorial`_
 #. Attach the build artefacts to the release.
 #. Click ``Publish release``.
 
-.. _Create a PyPI API token: https://pypi.org/manage/account/token/
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
 .. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
-.. _Packaging Python Projects Tutorial: https://packaging.python.org/en/latest/tutorials/packaging-projects/
-.. _ReadTheDocs: https://filters.readthedocs.io/
 .. _Releases page for the repo: https://github.com/todofixthis/filters/releases
-.. _tox: https://tox.readthedocs.io/
 .. _Unicode normalization: https://en.wikipedia.org/wiki/Unicode_equivalence

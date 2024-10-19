@@ -4,8 +4,8 @@ from functools import WRAPPER_ASSIGNMENTS, partial
 from filters.base import BaseFilter, FilterMeta
 
 __all__ = [
-    'FilterMacroType',
-    'filter_macro',
+    "FilterMacroType",
+    "filter_macro",
 ]
 
 
@@ -29,6 +29,7 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
        # It is *not* an *instance* of ``FilterMacroType``!
        assert not isinstance(MyMacro, FilterMacroType)
     """
+
     pass
 
 
@@ -64,8 +65,7 @@ def filter_macro(func, *args, **kwargs):
 
             # Note that we ignore the ``name`` argument, passing in
             # ``func.__name__`` instead.
-            return super() \
-                .__new__(mcs, func.__name__, bases, attrs)
+            return super().__new__(mcs, func.__name__, bases, attrs)
 
         def __call__(cls, *runtime_args, **runtime_kwargs):
             return filter_partial(*runtime_args, **runtime_kwargs)

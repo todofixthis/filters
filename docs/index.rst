@@ -9,6 +9,7 @@ Contents
    simple_filters
    complex_filters
    extension_filters
+   api
 
 Filters
 =======
@@ -90,15 +91,13 @@ Requirements
 ------------
 Filters is known to be compatible with the following Python versions:
 
+* 3.13
 * 3.12
 * 3.11
-* 3.10
 
 .. note::
    I'm only one person, so to keep from getting overwhelmed, I'm only committing
-   to supporting the 3 most recent versions of Python.  Filters may work in
-   versions not listed here — there just won't be any test coverage to prove it
-   😇
+   to supporting the 3 most recent versions of Python.
 
 Installation
 ------------

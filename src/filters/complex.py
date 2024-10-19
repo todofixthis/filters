@@ -5,10 +5,10 @@ from filters.simple import Length
 from filters.string import Choice, Unicode
 
 __all__ = [
-    'FilterMapper',
-    'FilterRepeater',
-    'FilterSwitch',
-    'NamedTuple',
+    "FilterMapper",
+    "FilterRepeater",
+    "FilterSwitch",
+    "NamedTuple",
 ]
 
 
@@ -22,7 +22,8 @@ class FilterRepeater(BaseFilter):
     Note:  The resulting value will be coerced to a list or dict
     (depending on the input value).
     """
-    CODE_EXTRA_KEY = 'unexpected'
+
+    CODE_EXTRA_KEY = "unexpected"
 
     templates = {
         CODE_EXTRA_KEY: 'Unexpected key "{key}".',
@@ -32,9 +33,9 @@ class FilterRepeater(BaseFilter):
     sequence_result_type = list
 
     def __init__(
-            self,
-            filter_chain: FilterCompatible,
-            restrict_keys: typing.Optional[typing.Iterable] = None,
+        self,
+        filter_chain: FilterCompatible,
+        restrict_keys: typing.Optional[typing.Iterable] = None,
     ) -> None:
         """
         :param filter_chain:
@@ -55,20 +56,16 @@ class FilterRepeater(BaseFilter):
 
         self._filter_chain = self.resolve_filter(filter_chain, parent=self)
 
-        self.restrict_keys = (
-            None
-            if restrict_keys is None
-            else set(restrict_keys)
-        )
+        self.restrict_keys = None if restrict_keys is None else set(restrict_keys)
 
     def __str__(self):
-        return '{type}({filter_chain})'.format(
+        return "{type}({filter_chain})".format(
             type=type(self).__name__,
             filter_chain=self._filter_chain,
         )
 
     @classmethod
-    def __copy__(cls, the_filter: 'FilterRepeater') -> 'FilterRepeater':
+    def __copy__(cls, the_filter: "FilterRepeater") -> "FilterRepeater":
         """
         Creates a shallow copy of the object.
         """
@@ -81,10 +78,10 @@ class FilterRepeater(BaseFilter):
         return new_filter
 
     def _apply(self, value):
-        value = self._filter(
+        value: typing.Iterable = self._filter(
             value,
             Type(typing.Iterable),
-        )  # type: typing.Iterable
+        )
 
         if self._has_errors:
             return None
@@ -97,8 +94,7 @@ class FilterRepeater(BaseFilter):
 
         return result_type(self.iter(value))
 
-    def iter(self, value: typing.Iterable) -> typing.Generator[
-        typing.Any, None, None]:
+    def iter(self, value: typing.Iterable) -> typing.Generator[typing.Any, None, None]:
         """
         Iterator version of :py:meth:`apply`.
         """
@@ -107,10 +103,7 @@ class FilterRepeater(BaseFilter):
                 for k, v in value.items():
                     u_key = self.unicodify_key(k)
 
-                    if (
-                            (self.restrict_keys is None)
-                            or (k in self.restrict_keys)
-                    ):
+                    if (self.restrict_keys is None) or (k in self.restrict_keys):
                         yield k, self._apply_item(u_key, v, self._filter_chain)
                     else:
                         # For consistency with FilterMapper, invalid
@@ -126,10 +119,7 @@ class FilterRepeater(BaseFilter):
                 for i, v in enumerate(value):
                     u_key = self.unicodify_key(i)
 
-                    if (
-                            (self.restrict_keys is None)
-                            or (i in self.restrict_keys)
-                    ):
+                    if (self.restrict_keys is None) or (i in self.restrict_keys):
                         yield self._apply_item(u_key, v, self._filter_chain)
                     else:
                         # Unlike in mappings, it is not possible to
@@ -144,10 +134,10 @@ class FilterRepeater(BaseFilter):
                         )
 
     def _apply_item(
-            self,
-            key: str,
-            value: typing.Any,
-            filter_chain: FilterCompatible,
+        self,
+        key: str,
+        value: typing.Any,
+        filter_chain: FilterCompatible,
     ) -> typing.Any:
         """
         Applies filters to a single value in the iterable.
@@ -164,7 +154,7 @@ class FilterRepeater(BaseFilter):
         represented in e.g., error message contexts.
         """
         if key is None:
-            return 'None'
+            return "None"
 
         try:
             return Unicode().apply(key)
@@ -183,20 +173,20 @@ class FilterMapper(BaseFilter):
 
     Note: The order of extra keys is undefined, but they will always be last.
     """
-    CODE_EXTRA_KEY = 'unexpected'
-    CODE_MISSING_KEY = 'missing'
+
+    CODE_EXTRA_KEY = "unexpected"
+    CODE_MISSING_KEY = "missing"
 
     templates = {
         CODE_EXTRA_KEY: 'Unexpected key "{actual_key}".',
-        CODE_MISSING_KEY: '{key} is required.',
+        CODE_MISSING_KEY: "{key} is required.",
     }
 
     def __init__(
-            self,
-            filter_map: typing.Mapping[str, FilterCompatible],
-            allow_missing_keys: typing.Union[
-                bool, typing.Iterable[str]] = True,
-            allow_extra_keys: typing.Union[bool, typing.Iterable[str]] = True,
+        self,
+        filter_map: typing.Mapping[str, FilterCompatible],
+        allow_missing_keys: typing.Union[bool, typing.Iterable[str]] = True,
+        allow_extra_keys: typing.Union[bool, typing.Iterable[str]] = True,
     ) -> None:
         """
         :param filter_map:
@@ -207,19 +197,18 @@ class FilterMapper(BaseFilter):
             Determines how values with missing keys (according to
             ``filter_map``) get handled:
 
-            - True: The missing values are set to ``None`` and then filtered as
-              normal.
-            - False: Missing keys are treated as invalid values.
-            - <Iterable>: Only the specified keys are allowed to be omitted.
+            - True: Set missing values to ``None`` and then filter as normal.
+            - False: Treat missing keys as invalid values.
+            - <Iterable>: Only allow the specified keys to be omitted.
 
         :param allow_extra_keys:
             Determines how values with extra keys (according to
             ``filter_map``) get handled:
 
-            - True: The extra values are passed through to the filtered value.
-            - False: Extra values are treated as invalid values and omitted
-              from the filtered value.
-            - <Iterable>: Only the specified extra keys are allowed.
+            - True: Pass extra values through to the filtered value.
+            - False: Treat extra values as invalid values and omit them from the
+              filtered value.
+            - <Iterable>: Only allow the specified extra keys.
         """
         super().__init__()
 
@@ -253,11 +242,11 @@ class FilterMapper(BaseFilter):
                 )
 
     def __str__(self):
-        return '{type}({filters})'.format(
+        return "{type}({filters})".format(
             type=type(self).__name__,
-            filters=', '.join(
-                '{key}={filter}'.format(key=key, filter=filter_chain)
-                    for key, filter_chain in self._filters.items()
+            filters=", ".join(
+                "{key}={filter}".format(key=key, filter=filter_chain)
+                for key, filter_chain in self._filters.items()
             ),
         )
 
@@ -269,8 +258,9 @@ class FilterMapper(BaseFilter):
 
         return dict(self.iter(value))
 
-    def iter(self, value: typing.Mapping) -> typing.Generator[
-        typing.Tuple[str, typing.Any], None, None]:
+    def iter(
+        self, value: typing.Mapping
+    ) -> typing.Generator[typing.Tuple[str, typing.Any], None, None]:
         """
         Iterator version of :py:meth:`apply`.
         """
@@ -296,10 +286,7 @@ class FilterMapper(BaseFilter):
             # Note that we iterate in sorted order, in case the result type
             # preserves ordering.
             # https://github.com/eflglobal/filters/issues/13
-            for key in sorted(
-                    set(value.keys())
-                    - set(self._filters.keys())
-            ):
+            for key in sorted(set(value.keys()) - set(self._filters.keys())):
                 if self._extra_key_allowed(key):
                     yield key, value[key]
                 else:
@@ -312,18 +299,17 @@ class FilterMapper(BaseFilter):
                         value=value[key],
                         reason=self.CODE_EXTRA_KEY,
                         sub_key=unicode_key,
-
                         # https://github.com/eflglobal/filters/issues/15
                         template_vars={
-                            'actual_key': unicode_key,
+                            "actual_key": unicode_key,
                         },
                     )
 
     def _apply_item(
-            self,
-            key: str,
-            value: typing.Any,
-            filter_chain: FilterCompatible,
+        self,
+        key: str,
+        value: typing.Any,
+        filter_chain: FilterCompatible,
     ) -> typing.Any:
         """
         Applies filters to a single item in the mapping.
@@ -365,7 +351,7 @@ class FilterMapper(BaseFilter):
         e.g., error message contexts.
         """
         if key is None:
-            return 'None'
+            return "None"
 
         try:
             return Unicode().apply(key)
@@ -379,10 +365,10 @@ class FilterSwitch(BaseFilter):
     """
 
     def __init__(
-            self,
-            getter: typing.Callable[[typing.Any], typing.Hashable],
-            cases: typing.Mapping[typing.Hashable, FilterCompatible],
-            default: typing.Optional[FilterCompatible] = None,
+        self,
+        getter: typing.Callable[[typing.Any], typing.Hashable],
+        cases: typing.Mapping[typing.Hashable, FilterCompatible],
+        default: typing.Optional[FilterCompatible] = None,
     ) -> None:
         """
         :param getter:
@@ -425,10 +411,9 @@ class NamedTuple(BaseFilter):
     """
 
     def __init__(
-            self,
-            type_: typing.Type[typing.NamedTuple],
-            filter_map: typing.Optional[
-                typing.Mapping[str, FilterCompatible]] = None,
+        self,
+        type_: typing.Type[typing.NamedTuple],
+        filter_map: typing.Optional[typing.Mapping[str, FilterCompatible]] = None,
     ) -> None:
         """
         :param type_:
@@ -474,11 +459,14 @@ class NamedTuple(BaseFilter):
             if isinstance(value, typing.Mapping):
                 # Check that the incoming value has exactly the right keys.
                 # noinspection PyProtectedMember
-                value = self._filter(value, FilterMapper(
-                    dict.fromkeys(self.type._fields),
-                    allow_extra_keys=False,
-                    allow_missing_keys=False,
-                ))
+                value = self._filter(
+                    value,
+                    FilterMapper(
+                        dict.fromkeys(self.type._fields),
+                        allow_extra_keys=False,
+                        allow_missing_keys=False,
+                    ),
+                )
 
                 if self._has_errors:
                     return None

@@ -1,15 +1,30 @@
-# :see: https://peps.python.org/pep-0621/
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+# :see: https://greenbone.github.io/autohooks/installation.html
+[tool.autohooks]
+mode = "poetry"
+pre-commit = [
+    "autohooks.plugins.black",
+    "autohooks.plugins.ruff",
+    "autohooks.plugins.mypy",
+    "autohooks.plugins.pytest"
+]
+
+[tool.mypy]
+strict = true
+
+[tool.poetry]
 name = "phx-filters"
 version = "3.4.0"
 description = "Validation and data pipelines made easy!"
+authors = ["Phoenix Zerin <phx@phx.nz>"]
+license = "MIT"
 readme = "README.rst"
-requires-python = ">= 3.10"
-license = { file = "LICENCE.txt" }
-authors = [
-    { email = "Phoenix Zerin <phx@phx.nz>" }
-]
+
+documentation = "https://filters.readthedocs.io/"
+repository = "https://github.com/todofixthis/filters"
 
 keywords = [
     "data processing",
@@ -31,25 +46,51 @@ classifiers = [
     'Topic :: Text Processing :: Filters',
 ]
 
-dependencies = [
-    "phx-class-registry >= 4.1.0",
-    "python-dateutil",
-    "pytz",
-    "regex >= 2018.8.17",
+include = [
+    { path = "LICENCE.txt", format = "sdist" },
+    { path = "docs", format = "sdist" },
+    { path = "test", format = "sdist" }
 ]
+exclude = ["docs/_build"]
+packages = [{ include = "filters", from = "src" }]
 
-[project.optional-dependencies]
+[tool.poetry.dependencies]
+# I'm only one person, so to keep from getting overwhelmed, I'm only committing to
+# supporting the 3 most recent versions of Python.
+python = "^3.11"
+phx-class-registry = "^5"
+python-dateutil = "^2"
+pytz = "^2024"
+regex = "^2024"
+
+[tool.poetry.extras]
 # Extensions
-"django" = ["phx-filters-django"]
-"iso" = ["phx-filters-iso"]
+django = ["phx-filters-django"]
+iso = ["phx-filters-iso"]
 
-# Utilities for Project Maintainers
-"build-system" = ["build", "twine"]
-"docs-builder" = ["sphinx", "sphinx_rtd_theme"]
-"test-runner" = ["tox"]
+[tool.poetry.group.dev.dependencies]
+autohooks = "^23"
+autohooks-plugin-black = "^23"
+autohooks-plugin-mypy = "^23"
+autohooks-plugin-pytest = "^23"
+autohooks-plugin-ruff = "^23"
+black = "^24"
+mypy = "^1"
+pytest = "^8"
+sphinx = "^8"
+sphinx_rtd_theme = "^3"
+tox = "^4"
 
-[project.urls]
-Documentation = "https://filters.readthedocs.io/"
+# Used by GitHub Actions.
+[tool.poetry.group.ci.dependencies]
+mypy = "^1"
+pytest = "^8"
+sphinx = "^8"
+sphinx_rtd_theme = "^3"
+
+[tool.poetry.urls]
 Changelog = "https://github.com/todofixthis/filters/releases"
 Issues = "https://github.com/todofixthis/filters/issues"
-Repository = "https://github.com/todofixthis/filters"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

@@ -7,10 +7,10 @@ from types import TracebackType
 from filters.base import BaseFilter, BaseInvalidValueHandler, FilterCompatible
 
 __all__ = [
-    'FilterMessage',
-    'FilterRunner',
-    'LogHandler',
-    'MemoryHandler',
+    "FilterMessage",
+    "FilterRunner",
+    "LogHandler",
+    "MemoryHandler",
 ]
 
 
@@ -20,9 +20,9 @@ class LogHandler(BaseInvalidValueHandler):
     """
 
     def __init__(
-            self,
-            logger: typing.Union[Logger, LoggerAdapter],
-            level: int = ERROR,
+        self,
+        logger: typing.Union[Logger, LoggerAdapter],
+        level: int = ERROR,
     ) -> None:
         """
         :param logger:
@@ -37,16 +37,13 @@ class LogHandler(BaseInvalidValueHandler):
         self.level = level
 
     def handle_invalid_value(
-            self,
-            message: str,
-            exc_info: bool,
-            context: typing.MutableMapping,
+        self,
+        message: str,
+        exc_info: bool,
+        context: typing.MutableMapping,
     ) -> None:
         self.logger.log(
-            level=self.level,
-            msg=message,
-            exc_info=exc_info,
-            extra={'context': context}
+            level=self.level, msg=message, exc_info=exc_info, extra={"context": context}
         )
 
 
@@ -56,10 +53,10 @@ class FilterMessage(object):
     """
 
     def __init__(
-            self,
-            message: str,
-            context: typing.MutableMapping,
-            exc_info: typing.Optional[str] = None,
+        self,
+        message: str,
+        context: typing.MutableMapping,
+        exc_info: typing.Optional[str] = None,
     ) -> None:
         """
         :param exc_info: Exception traceback (if applicable).
@@ -68,11 +65,11 @@ class FilterMessage(object):
 
         self.message = message
         self.context = context
-        self.code = context.get('code') or message
+        self.code = context.get("code") or message
         self.exc_info = exc_info
 
     def __repr__(self):
-        return '{type}({message}, {context})'.format(
+        return "{type}({message}, {context})".format(
             type=type(self).__name__,
             message=repr(self.message),
             context=repr(self.context),
@@ -89,13 +86,13 @@ class FilterMessage(object):
             Whether to include context and exception traceback in the result.
         """
         res = {
-            'code': self.code,
-            'message': self.message,
+            "code": self.code,
+            "message": self.message,
         }
 
         if with_debug_info:
-            res['context'] = self.context
-            res['exc_info'] = self.exc_info
+            res["context"] = self.context
+            res["exc_info"] = self.exc_info
 
         return res
 
@@ -119,20 +116,18 @@ class MemoryHandler(BaseInvalidValueHandler):
         """
         super().__init__()
 
-        self.messages: typing.Dict[
-            typing.Text, typing.List[FilterMessage]] = {}
+        self.messages: typing.Dict[typing.Text, typing.List[FilterMessage]] = {}
         self.has_exceptions = False
         self.capture_exc_info = capture_exc_info
-        self.exc_info: typing.List[
-            typing.Tuple[type, Exception, TracebackType]] = []
+        self.exc_info: typing.List[typing.Tuple[type, Exception, TracebackType]] = []
 
     def handle_invalid_value(
-            self,
-            message: typing.Text,
-            exc_info: bool,
-            context: typing.MutableMapping,
+        self,
+        message: typing.Text,
+        exc_info: bool,
+        context: typing.MutableMapping,
     ) -> None:
-        key = context.get('key', '')
+        key = context.get("key", "")
         msg = FilterMessage(
             message=message,
             context=context,
@@ -144,9 +139,10 @@ class MemoryHandler(BaseInvalidValueHandler):
         except KeyError:
             self.messages[key] = [msg]
 
-    def handle_exception(self,
-            message: typing.Text,
-            exc: Exception,
+    def handle_exception(
+        self,
+        message: typing.Text,
+        exc: Exception,
     ) -> typing.Any:
         self.has_exceptions = True
 
@@ -167,10 +163,10 @@ class FilterRunner(object):
     """
 
     def __init__(
-            self,
-            starting_filter: FilterCompatible,
-            incoming_data: typing.Any = None,
-            capture_exc_info: bool = False,
+        self,
+        starting_filter: FilterCompatible,
+        incoming_data: typing.Any = None,
+        capture_exc_info: bool = False,
     ) -> None:
         """
         :param incoming_data: E.g., ``request.POST``.
@@ -247,8 +243,8 @@ class FilterRunner(object):
         return self.get_errors()
 
     def get_errors(
-            self,
-            with_context: bool = False,
+        self,
+        with_context: bool = False,
     ) -> typing.Dict[
         typing.Text,
         typing.List[typing.Dict[typing.Text, typing.Text]],
@@ -291,9 +287,7 @@ class FilterRunner(object):
         return self._handler.has_exceptions
 
     @property
-    def exc_info(self) -> typing.List[
-        typing.Tuple[type, Exception, TracebackType],
-    ]:
+    def exc_info(self) -> typing.List[typing.Tuple[type, Exception, TracebackType],]:
         """
         Returns tracebacks from any exceptions that were captured.
         """
