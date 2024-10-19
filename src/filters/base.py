@@ -14,11 +14,13 @@ __all__ = [
     "Type",
 ]
 
+T = typing.TypeVar("T")
+
 FilterCompatible = typing.Optional[
     typing.Union[
-        "BaseFilter",
+        "BaseFilter[T]",
         "FilterMeta",
-        typing.Callable[[], "BaseFilter"],
+        typing.Callable[[], "BaseFilter[T]"],
     ]
 ]
 """
@@ -33,7 +35,13 @@ class FilterMeta(ABCMeta):
     """
 
     # noinspection PyShadowingBuiltins
-    def __init__(cls, what, bases=None, dict=None, **kwargs):
+    def __init__(
+        cls,
+        what: str,
+        bases: tuple[type, ...],
+        dict: dict[str, typing.Any],
+        **kwargs: typing.Any,
+    ):
         super().__init__(what, bases, dict, **kwargs)
 
         if not hasattr(cls, "templates"):
@@ -64,9 +72,6 @@ class FilterMeta(ABCMeta):
           - http://stackoverflow.com/a/10773232
         """
         return FilterChain(self) | next_filter
-
-
-T = typing.TypeVar("T")
 
 
 class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
