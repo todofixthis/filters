@@ -82,9 +82,11 @@ class ArrayTestCase(BaseFilterTestCase):
             Technically, it's a Sequence. Technically.
             """
 
-            def __len__(self): return 0
+            def __len__(self):
+                return 0
 
-            def __getitem__(self, index): return None
+            def __getitem__(self, index):
+                return None
 
         self.assertFilterPasses(CustomSequence())
 
@@ -117,9 +119,11 @@ class ArrayTestCase(BaseFilterTestCase):
             Walks, talks and quacks like a Sequence, but isn't.
             """
 
-            def __len__(self): return 0
+            def __len__(self):
+                return 0
 
-            def __getitem__(self, index): return None
+            def __getitem__(self, index):
+                return None
 
         self.assertFilterErrors(CustomSequence(), [f.Array.CODE_WRONG_TYPE])
 
@@ -150,17 +154,32 @@ class ByteArrayTestCase(BaseFilterTestCase):
         The incoming value is a byte string.
         """
         self.assertFilterPasses(
-            b'|\xa8\xc1.8\xbd4\xd5s\x1e\xa6%+\xea!6',
-
+            b"|\xa8\xc1.8\xbd4\xd5s\x1e\xa6%+\xea!6",
             # Note that "numeric" characters like "8" and "6" are NOT
             # interpreted literally (e.g., "8" is ASCII code point 58, so it
             # gets converted to ``58`` in the resulting ``bytearray``, not
             # ``8``).  This matches the behaviour of Python's built-in
             # ``bytearray`` type.
-            bytearray([
-                124, 168, 193, 46, 56, 189, 52, 213,
-                115, 30, 166, 37, 43, 234, 33, 54,
-            ]),
+            bytearray(
+                [
+                    124,
+                    168,
+                    193,
+                    46,
+                    56,
+                    189,
+                    52,
+                    213,
+                    115,
+                    30,
+                    166,
+                    37,
+                    43,
+                    234,
+                    33,
+                    54,
+                ]
+            ),
         )
 
     def test_pass_string(self):
@@ -171,12 +190,36 @@ class ByteArrayTestCase(BaseFilterTestCase):
         it's unavoidable.
         """
         self.assertFilterPasses(
-            u'\xccK\xdf\xb1\x8bM\xc7\x01\xf0B\xac":\xeb>\x85',
-
-            bytearray([
-                195, 140, 75, 195, 159, 194, 177, 194, 139, 77, 195, 135,
-                1, 195, 176, 66, 194, 172, 34, 58, 195, 171, 62, 194, 133,
-            ]),
+            '\xccK\xdf\xb1\x8bM\xc7\x01\xf0B\xac":\xeb>\x85',
+            bytearray(
+                [
+                    195,
+                    140,
+                    75,
+                    195,
+                    159,
+                    194,
+                    177,
+                    194,
+                    139,
+                    77,
+                    195,
+                    135,
+                    1,
+                    195,
+                    176,
+                    66,
+                    194,
+                    172,
+                    34,
+                    58,
+                    195,
+                    171,
+                    62,
+                    194,
+                    133,
+                ]
+            ),
         )
 
     def test_pass_string_alternate_encoding(self):
@@ -185,14 +228,29 @@ class ByteArrayTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                u'\xccK\xdf\xb1\x8bM\xc7\x01\xf0B\xac":\xeb>\x85',
-                encoding='latin-1',
+                '\xccK\xdf\xb1\x8bM\xc7\x01\xf0B\xac":\xeb>\x85',
+                encoding="latin-1",
             ),
-
-            bytearray([
-                204, 75, 223, 177, 139, 77, 199, 1,
-                240, 66, 172, 34, 58, 235, 62, 133,
-            ]),
+            bytearray(
+                [
+                    204,
+                    75,
+                    223,
+                    177,
+                    139,
+                    77,
+                    199,
+                    1,
+                    240,
+                    66,
+                    172,
+                    34,
+                    58,
+                    235,
+                    62,
+                    133,
+                ]
+            ),
         )
 
     def test_pass_bytearray(self):
@@ -200,10 +258,26 @@ class ByteArrayTestCase(BaseFilterTestCase):
         The incoming value is already a bytearray.
         """
         self.assertFilterPasses(
-            bytearray([
-                84, 234, 48, 177, 119, 69, 36, 147,
-                214, 13, 54, 12, 56, 168, 107, 2,
-            ])
+            bytearray(
+                [
+                    84,
+                    234,
+                    48,
+                    177,
+                    119,
+                    69,
+                    36,
+                    147,
+                    214,
+                    13,
+                    54,
+                    12,
+                    56,
+                    168,
+                    107,
+                    2,
+                ]
+            )
         )
 
     def test_pass_iterable(self):
@@ -213,7 +287,7 @@ class ByteArrayTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233],
-            bytearray([0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233])
+            bytearray([0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]),
         )
 
     def test_fail_iterable_wrong_types(self):
@@ -225,8 +299,7 @@ class ByteArrayTestCase(BaseFilterTestCase):
             # It's arguable whether booleans should be valid, but they are
             # technically ints, and Python's bytearray allows them, so the
             # filter does, too.
-            [1, True, '1', b'1', 1.1, bytearray([1])],
-
+            [1, True, "1", b"1", 1.1, bytearray([1])],
             {
                 #
                 # String values inside an iterable are not considered valid.
@@ -241,18 +314,16 @@ class ByteArrayTestCase(BaseFilterTestCase):
                 # treat strings inside of iterables the same way it treats
                 # anything else that isn't an int.
                 #
-                '2': [f.Type.CODE_WRONG_TYPE],
-                '3': [f.Type.CODE_WRONG_TYPE],
-
+                "2": [f.Type.CODE_WRONG_TYPE],
+                "3": [f.Type.CODE_WRONG_TYPE],
                 # Floats are not allowed in bytearrays.  How would that even
                 # work?
-                '4': [f.Type.CODE_WRONG_TYPE],
-
+                "4": [f.Type.CODE_WRONG_TYPE],
                 # Anything else that isn't an int is invalid, even if it
                 # contains ints.
                 # After all, you can't squeeze multiple bytes into a single
                 # byte!
-                '5': [f.Type.CODE_WRONG_TYPE],
+                "5": [f.Type.CODE_WRONG_TYPE],
             },
         )
 
@@ -266,11 +337,10 @@ class ByteArrayTestCase(BaseFilterTestCase):
         """
         self.assertFilterErrors(
             [-1, 0, 1, 255, 256, 9001],
-
             {
-                '0': [f.Min.CODE_TOO_SMALL],
-                '4': [f.Max.CODE_TOO_BIG],
-                '5': [f.Max.CODE_TOO_BIG],
+                "0": [f.Min.CODE_TOO_SMALL],
+                "4": [f.Max.CODE_TOO_BIG],
+                "5": [f.Max.CODE_TOO_BIG],
             },
         )
 
@@ -279,7 +349,7 @@ class ByteArrayTestCase(BaseFilterTestCase):
         The incoming value is a unicode that cannot be encoded using the
         specified encoding.
         """
-        value = '\u043b\u0435\u0431\u044b\u0440'
+        value = "\u043b\u0435\u0431\u044b\u0440"
 
         # The default encoding (utf-8) can handle this just fine.
         self.assertFilterPasses(
@@ -290,7 +360,7 @@ class ByteArrayTestCase(BaseFilterTestCase):
         # However, if we switch to a single-byte encoding, we run into
         # serious problems.
         self.assertFilterErrors(
-            self._filter(value, encoding='latin-1'),
+            self._filter(value, encoding="latin-1"),
             [f.ByteArray.CODE_BAD_ENCODING],
         )
 
@@ -306,11 +376,9 @@ class CallTestCase(BaseFilterTestCase):
         """
 
         def always_fail(value):
-            raise ValueError('{value} is not valid!'.format(value=value))
+            raise ValueError("{value} is not valid!".format(value=value))
 
-        self.assertFilterPasses(
-            self._filter(None, always_fail)
-        )
+        self.assertFilterPasses(self._filter(None, always_fail))
 
     def test_pass_successful_execution(self):
         """
@@ -322,7 +390,6 @@ class CallTestCase(BaseFilterTestCase):
 
         self.assertFilterPasses(
             self._filter(6, is_odd),
-
             # Note that ANY value returned by the callable is considered valid;
             # if you want custom handling of some values, you're better off
             # creating a custom filter type (it's super easy!).
@@ -336,13 +403,10 @@ class CallTestCase(BaseFilterTestCase):
 
         def even_only(value):
             if value % 2:
-                raise f.FilterError('value is not even!')
+                raise f.FilterError("value is not even!")
             return value
 
-        self.assertFilterErrors(
-            self._filter(5, even_only),
-            ['value is not even!']
-        )
+        self.assertFilterErrors(self._filter(5, even_only), ["value is not even!"])
 
     def test_fail_filter_error_custom_code(self):
         """
@@ -353,14 +417,14 @@ class CallTestCase(BaseFilterTestCase):
             if value % 2:
                 # If you find yourself doing this, you would probably be better
                 # served by creating a custom filter instead.
-                error = f.FilterError('value is not even!')
-                error.context = {'code': 'not_even'}
+                error = f.FilterError("value is not even!")
+                error.context = {"code": "not_even"}
                 raise error
             return value
 
         self.assertFilterErrors(
             self._filter(5, even_only),
-            ['not_even'],
+            ["not_even"],
         )
 
     def test_error_exception(self):
@@ -370,7 +434,7 @@ class CallTestCase(BaseFilterTestCase):
 
         def even_only(value):
             if value % 2:
-                raise ValueError('{value} is not even!')
+                raise ValueError("{value} is not even!")
             return value
 
         filter_ = self._filter(5, even_only)
@@ -396,7 +460,7 @@ class DateTestCase(BaseFilterTestCase):
         The incoming value is a naive timestamp (no timezone info).
         """
         self.assertFilterPasses(
-            '2015-05-11 14:56:58',
+            "2015-05-11 14:56:58",
             date(2015, 5, 11),
         )
 
@@ -406,11 +470,10 @@ class DateTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             # Note that the value we are parsing is 5 hours behind UTC.
-            '2015-05-11T19:56:58-05:00',
-
+            "2015-05-11T19:56:58-05:00",
             # The resulting date appears to occur 1 day later because that's
             # the date according to UTC.
-            date(2015, 5, 12)
+            date(2015, 5, 12),
         )
 
     def test_pass_naive_timestamp_default_timezone(self):
@@ -420,13 +483,11 @@ class DateTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                '2015-05-12 03:20:03',
-
+                "2015-05-12 03:20:03",
                 # The filter is configured to parse naive timestamps as if they
                 # are UTC+8.
-                timezone=tzoffset('UTC+8', 8 * 3600)
+                timezone=tzoffset("UTC+8", 8 * 3600),
             ),
-
             # The resulting date appears to occur 1 day earlier because the
             # filter subtracted 8 hours to convert the value to UTC.
             date(2015, 5, 11),
@@ -441,10 +502,8 @@ class DateTestCase(BaseFilterTestCase):
             # The incoming timestamp is from UTC+4, but the filter is
             # configured to use UTC-11 by default.
             self._filter(
-                '2015-05-11T03:14:38+04:00',
-                timezone=tzoffset('UTC-11', -11 * 3600)
+                "2015-05-11T03:14:38+04:00", timezone=tzoffset("UTC-11", -11 * 3600)
             ),
-
             # Because the incoming timestamp has timezone info, the filter uses
             # that instead of the default value.  Note that this test will fail
             # if the filter uses the UTC-11 timezone (the result will be 1 day
@@ -461,7 +520,7 @@ class DateTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             # Note that we use an int value instead of constructing a tzoffset
             # for `timezone`.
-            self._filter('2015-05-11 21:14:38', timezone=-8),
+            self._filter("2015-05-11 21:14:38", timezone=-8),
             date(2015, 5, 12),
         )
 
@@ -480,10 +539,14 @@ class DateTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             datetime(
-                2015, 6, 27, 22, 6, 32,
-                tzinfo=tzoffset('UTC-5', -5 * 3600),
+                2015,
+                6,
+                27,
+                22,
+                6,
+                32,
+                tzinfo=tzoffset("UTC-5", -5 * 3600),
             ),
-
             # As you probably already guessed, the datetime gets converted to
             # UTC before it is converted to a date.
             date(2015, 6, 28),
@@ -496,7 +559,6 @@ class DateTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             # The filter will assume that this datetime is UTC-3 by default.
             self._filter(datetime(2015, 6, 27, 23, 7, 18), timezone=-3),
-
             # The datetime is converted from UTC-3 to UTC before it is
             # converted to a date.
             date(2015, 6, 28),
@@ -515,7 +577,7 @@ class DateTestCase(BaseFilterTestCase):
         Insert socially-awkward nerd joke here.
         """
         self.assertFilterErrors(
-            'this is not a date',  # it's a space station
+            "this is not a date",  # it's a space station
             [f.Date.CODE_INVALID],
         )
 
@@ -537,7 +599,7 @@ class DatetimeTestCase(BaseFilterTestCase):
         info).
         """
         self.assertFilterPasses(
-            '2015-05-11 14:56:58',
+            "2015-05-11 14:56:58",
             datetime(2015, 5, 11, 14, 56, 58, tzinfo=utc),
         )
 
@@ -547,9 +609,8 @@ class DatetimeTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             # Note that the value we are parsing is 5 hours behind UTC.
-            '2015-05-11T14:56:58-0500',
-
-            datetime(2015, 5, 11, 19, 56, 58, tzinfo=utc)
+            "2015-05-11T14:56:58-0500",
+            datetime(2015, 5, 11, 19, 56, 58, tzinfo=utc),
         )
 
     def test_pass_naive_timestamp_default_timezone(self):
@@ -561,10 +622,9 @@ class DatetimeTestCase(BaseFilterTestCase):
             # The incoming value is a naive timestamp, and the filter is
             # configured to use UTC+8 by default.
             self._filter(
-                '2015-05-12 09:20:03',
-                timezone=tzoffset('UTC+8', 8 * 3600),
+                "2015-05-12 09:20:03",
+                timezone=tzoffset("UTC+8", 8 * 3600),
             ),
-
             # The resulting datetime is still converted to UTC.
             datetime(2015, 5, 12, 1, 20, 3, tzinfo=utc),
         )
@@ -578,10 +638,8 @@ class DatetimeTestCase(BaseFilterTestCase):
             # The incoming value is UTC+4, but the filter is configured to use
             # UTC-1 by default.
             self._filter(
-                '2015-05-11T21:14:38+04:00',
-                timezone=tzoffset('UTC-1', -1 * 3600)
+                "2015-05-11T21:14:38+04:00", timezone=tzoffset("UTC-1", -1 * 3600)
             ),
-
             # The incoming values timezone info is used instead of the default.
             # Note that the resulting datetime is still converted to UTC.
             datetime(2015, 5, 11, 17, 14, 38, tzinfo=utc),
@@ -596,8 +654,7 @@ class DatetimeTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             # Note that we use an int value instead of constructing a tzoffset
             # for ``timezone``.
-            self._filter('2015-05-11 21:14:38', timezone=3),
-
+            self._filter("2015-05-11 21:14:38", timezone=3),
             datetime(2015, 5, 11, 18, 14, 38, tzinfo=utc),
         )
 
@@ -613,8 +670,7 @@ class DatetimeTestCase(BaseFilterTestCase):
         non-UTC timezone.
         """
         self.assertFilterPasses(
-            datetime(2015, 6, 27, 10, 6, 32,
-                tzinfo=tzoffset('UTC-5', -5 * 3600)),
+            datetime(2015, 6, 27, 10, 6, 32, tzinfo=tzoffset("UTC-5", -5 * 3600)),
             datetime(2015, 6, 27, 15, 6, 32, tzinfo=utc),
         )
 
@@ -627,7 +683,6 @@ class DatetimeTestCase(BaseFilterTestCase):
             # The filter is configured to assume UTC-3 if the incoming value
             # has no timezone info.
             self._filter(datetime(2015, 6, 27, 18, 7, 18), timezone=-3),
-
             datetime(2015, 6, 27, 21, 7, 18, tzinfo=utc),
         )
 
@@ -639,7 +694,6 @@ class DatetimeTestCase(BaseFilterTestCase):
             # The filter is configured to assume UTC+12 if the incoming value
             # has no timezone info.
             self._filter(date(2015, 6, 27), timezone=12),
-
             datetime(2015, 6, 26, 12, 0, 0, tzinfo=utc),
         )
 
@@ -654,14 +708,17 @@ class DatetimeTestCase(BaseFilterTestCase):
         self.assertFilterPasses(
             self._filter(
                 datetime(
-                    2015, 7, 1, 9, 22, 10,
-                    tzinfo=tzoffset('UTC-5', -5 * 3600),
+                    2015,
+                    7,
+                    1,
+                    9,
+                    22,
+                    10,
+                    tzinfo=tzoffset("UTC-5", -5 * 3600),
                 ),
-
                 # Note that we pass `naive=True` to the filter's initialiser.
                 naive=True,
             ),
-
             # The resulting datetime is converted to UTC before its timezone
             # info is stripped.
             datetime(2015, 7, 1, 14, 22, 10, tzinfo=None),
@@ -672,7 +729,7 @@ class DatetimeTestCase(BaseFilterTestCase):
         The incoming value cannot be parsed as a datetime.
         """
         self.assertFilterErrors(
-            'this is not a datetime',  # it's a pipe
+            "this is not a datetime",  # it's a pipe
             [f.Datetime.CODE_INVALID],
         )
 
@@ -694,7 +751,7 @@ class EmptyTestCase(BaseFilterTestCase):
         """
         The incoming value is an empty string.
         """
-        self.assertFilterPasses('')
+        self.assertFilterPasses("")
 
     def test_pass_empty_collection(self):
         """
@@ -710,7 +767,7 @@ class EmptyTestCase(BaseFilterTestCase):
         The incoming value is a non-empty string.
         """
         self.assertFilterErrors(
-            'Goodbye world!',
+            "Goodbye world!",
             [f.Empty.CODE_NOT_EMPTY],
         )
 
@@ -720,8 +777,8 @@ class EmptyTestCase(BaseFilterTestCase):
         """
         # The values inside the collection may be empty, but the collection
         # itself is not.
-        self.assertFilterErrors(['', '', ''], [f.Empty.CODE_NOT_EMPTY])
-        self.assertFilterErrors({'': ''}, [f.Empty.CODE_NOT_EMPTY])
+        self.assertFilterErrors(["", "", ""], [f.Empty.CODE_NOT_EMPTY])
+        self.assertFilterErrors({"": ""}, [f.Empty.CODE_NOT_EMPTY])
         self.assertFilterErrors(Lengthy(1), [f.Empty.CODE_NOT_EMPTY])
         # etc.
 
@@ -763,8 +820,8 @@ class ItemTestCase(BaseFilterTestCase):
         By default, returns the first item in a mapping.
         """
         self.assertFilterPasses(
-            {'foo': 'bar', 'baz': 'luhrmann'},
-            'bar',
+            {"foo": "bar", "baz": "luhrmann"},
+            "bar",
         )
 
     def test_fail_mapping_empty(self):
@@ -778,8 +835,8 @@ class ItemTestCase(BaseFilterTestCase):
         Specify the key to extract from a mapping.
         """
         self.assertFilterPasses(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, key='baz'),
-            'luhrmann',
+            self._filter({"foo": "bar", "baz": "luhrmann"}, key="baz"),
+            "luhrmann",
         )
 
     def test_fail_mapping_specific_key_missing(self):
@@ -787,15 +844,15 @@ class ItemTestCase(BaseFilterTestCase):
         The incoming mapping does not contain the specified key.
         """
         self.assertFilterErrors(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, key='foobie'),
-            {'foobie': [f.Item.CODE_MISSING_KEY]},
+            self._filter({"foo": "bar", "baz": "luhrmann"}, key="foobie"),
+            {"foobie": [f.Item.CODE_MISSING_KEY]},
         )
 
     def test_pass_sequence_default(self):
         """
         By default, returns the first item in a sequence.
         """
-        self.assertFilterPasses(['foo', 'bar', 'baz', 'luhrmann'], 'foo')
+        self.assertFilterPasses(["foo", "bar", "baz", "luhrmann"], "foo")
 
     def test_fail_sequence_empty(self):
         """
@@ -808,8 +865,8 @@ class ItemTestCase(BaseFilterTestCase):
         Specify the index to extract from a mapping.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz'], key=2),
-            'baz',
+            self._filter(["foo", "bar", "baz"], key=2),
+            "baz",
         )
 
     def test_fail_sequence_specific_index_missing(self):
@@ -817,8 +874,8 @@ class ItemTestCase(BaseFilterTestCase):
         The incoming sequence does not contain the specified index.
         """
         self.assertFilterErrors(
-            self._filter(['foo', 'bar', 'baz'], key=42),
-            {'42': [f.Item.CODE_MISSING_KEY]},
+            self._filter(["foo", "bar", "baz"], key=42),
+            {"42": [f.Item.CODE_MISSING_KEY]},
         )
 
     def test_fail_wrong_type(self):
@@ -846,7 +903,7 @@ class MaxLengthTestCase(BaseFilterTestCase):
         The incoming value is shorter than the max length.
         """
         self.assertFilterPasses(
-            self._filter('Hello', max_length=6),
+            self._filter("Hello", max_length=6),
         )
 
     def test_pass_max_length(self):
@@ -854,7 +911,7 @@ class MaxLengthTestCase(BaseFilterTestCase):
         The incoming value has the max allowed length.
         """
         self.assertFilterPasses(
-            self._filter('World', max_length=5),
+            self._filter("World", max_length=5),
         )
 
     def test_fail_long(self):
@@ -862,7 +919,7 @@ class MaxLengthTestCase(BaseFilterTestCase):
         The incoming value is longer than the max length.
         """
         self.assertFilterErrors(
-            self._filter('Goodbye', max_length=5),
+            self._filter("Goodbye", max_length=5),
             [f.MaxLength.CODE_TOO_LONG],
         )
 
@@ -872,11 +929,11 @@ class MaxLengthTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                ['foo', 'bar', 'baz', 'luhrmann'],
+                ["foo", "bar", "baz", "luhrmann"],
                 max_length=3,
                 truncate=True,
             ),
-            ['foo', 'bar', 'baz'],
+            ["foo", "bar", "baz"],
         )
 
     def test_multi_byte_characters(self):
@@ -885,8 +942,8 @@ class MaxLengthTestCase(BaseFilterTestCase):
         pass in a unicode or a byte string.
         """
         # "Hello world" in Chinese:
-        decoded_value = '\u4f60\u597d\u4e16\u754c'
-        encoded_value = decoded_value.encode('utf-8')
+        decoded_value = "\u4f60\u597d\u4e16\u754c"
+        encoded_value = decoded_value.encode("utf-8")
 
         # The string version of the string contains 4 code points.
         self.assertFilterPasses(
@@ -905,11 +962,11 @@ class MaxLengthTestCase(BaseFilterTestCase):
         the max length.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz', 'luhrmann'], max_length=4),
+            self._filter(["foo", "bar", "baz", "luhrmann"], max_length=4),
         )
 
         self.assertFilterPasses(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, max_length=3),
+            self._filter({"foo": "bar", "baz": "luhrmann"}, max_length=3),
         )
 
         self.assertFilterPasses(
@@ -924,12 +981,12 @@ class MaxLengthTestCase(BaseFilterTestCase):
         length.
         """
         self.assertFilterErrors(
-            self._filter(['foo', 'bar', 'baz', 'luhrmann'], max_length=3),
+            self._filter(["foo", "bar", "baz", "luhrmann"], max_length=3),
             [f.MaxLength.CODE_TOO_LONG],
         )
 
         self.assertFilterErrors(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, max_length=1),
+            self._filter({"foo": "bar", "baz": "luhrmann"}, max_length=1),
             [f.MaxLength.CODE_TOO_LONG],
         )
 
@@ -959,7 +1016,7 @@ class MinLengthTestCase(BaseFilterTestCase):
         The incoming value has length greater than the minimum value.
         """
         self.assertFilterPasses(
-            self._filter('Hello', min_length=2),
+            self._filter("Hello", min_length=2),
         )
 
     def test_pass_min_length(self):
@@ -967,7 +1024,7 @@ class MinLengthTestCase(BaseFilterTestCase):
         The incoming value has length equal to the minimum value.
         """
         self.assertFilterPasses(
-            self._filter('World', min_length=5),
+            self._filter("World", min_length=5),
         )
 
     def test_fail_short(self):
@@ -975,7 +1032,7 @@ class MinLengthTestCase(BaseFilterTestCase):
         The incoming value has length less than the minimum value.
         """
         self.assertFilterErrors(
-            self._filter('Goodbye', min_length=10),
+            self._filter("Goodbye", min_length=10),
             [f.MinLength.CODE_TOO_SHORT],
         )
 
@@ -985,8 +1042,8 @@ class MinLengthTestCase(BaseFilterTestCase):
         pass in a unicode or a byte string.
         """
         # "Hello world" in Chinese:
-        decoded_value = '\u4f60\u597d\u4e16\u754c'
-        encoded_value = decoded_value.encode('utf-8')
+        decoded_value = "\u4f60\u597d\u4e16\u754c"
+        encoded_value = decoded_value.encode("utf-8")
 
         # The string version of the string contains 4 code points.
         self.assertFilterErrors(
@@ -1005,11 +1062,11 @@ class MinLengthTestCase(BaseFilterTestCase):
         the minimum value.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz', 'luhrmann'], min_length=3),
+            self._filter(["foo", "bar", "baz", "luhrmann"], min_length=3),
         )
 
         self.assertFilterPasses(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, min_length=1),
+            self._filter({"foo": "bar", "baz": "luhrmann"}, min_length=1),
         )
 
         self.assertFilterPasses(
@@ -1024,12 +1081,12 @@ class MinLengthTestCase(BaseFilterTestCase):
         value.
         """
         self.assertFilterErrors(
-            self._filter(['foo', 'bar', 'baz', 'luhrmann'], min_length=5),
+            self._filter(["foo", "bar", "baz", "luhrmann"], min_length=5),
             [f.MinLength.CODE_TOO_SHORT],
         )
 
         self.assertFilterErrors(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, min_length=3),
+            self._filter({"foo": "bar", "baz": "luhrmann"}, min_length=3),
             [f.MinLength.CODE_TOO_SHORT],
         )
 
@@ -1048,7 +1105,7 @@ class NoOpTestCase(BaseFilterTestCase):
         """
         You can pass any value you want to a NoOp, and it will pass.
         """
-        self.assertFilterPasses('supercalafragalisticexpialadoshus')
+        self.assertFilterPasses("supercalafragalisticexpialadoshus")
 
 
 class NotEmptyTestCase(BaseFilterTestCase):
@@ -1077,7 +1134,7 @@ class NotEmptyTestCase(BaseFilterTestCase):
         """
         The incoming value is a non-empty string.
         """
-        self.assertFilterPasses('Hello, world!')
+        self.assertFilterPasses("Hello, world!")
 
     def test_pass_non_empty_collection(self):
         """
@@ -1085,8 +1142,8 @@ class NotEmptyTestCase(BaseFilterTestCase):
         """
         # The values in the collection may be empty, but the collection itself
         # is not.
-        self.assertFilterPasses(['', '', ''])
-        self.assertFilterPasses({'': ''})
+        self.assertFilterPasses(["", "", ""])
+        self.assertFilterPasses({"": ""})
         self.assertFilterPasses(Lengthy(1))
         # etc.
 
@@ -1100,7 +1157,7 @@ class NotEmptyTestCase(BaseFilterTestCase):
         """
         The incoming value is an empty string.
         """
-        self.assertFilterErrors('', [f.NotEmpty.CODE_EMPTY])
+        self.assertFilterErrors("", [f.NotEmpty.CODE_EMPTY])
 
     def test_fail_empty_collection(self):
         """
@@ -1134,7 +1191,7 @@ class OmitTestCase(BaseFilterTestCase):
 
         Use ``Required | Omit`` to reject ``None``.
         """
-        self.assertFilterPasses(self._filter(None, keys={'test'}))
+        self.assertFilterPasses(self._filter(None, keys={"test"}))
 
     def test_pass_mapping(self):
         """
@@ -1142,10 +1199,10 @@ class OmitTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
-                keys={'actor', 'age'},
+                {"name": "Indy", "job": "archaeologist", "actor": "Harrison"},
+                keys={"actor", "age"},
             ),
-            {'name': 'Indy', 'job': 'archaeologist'},
+            {"name": "Indy", "job": "archaeologist"},
         )
 
     def test_pass_mapping_no_items_omitted(self):
@@ -1155,8 +1212,8 @@ class OmitTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
-                keys=['profession', 'surname']
+                {"name": "Indy", "job": "archaeologist", "actor": "Harrison"},
+                keys=["profession", "surname"],
             )
         )
 
@@ -1168,7 +1225,7 @@ class OmitTestCase(BaseFilterTestCase):
         empty mappings.
         """
         self.assertFilterPasses(
-            self._filter({}, keys=['foo', 'bar', 'baz', 'luhrmann'])
+            self._filter({}, keys=["foo", "bar", "baz", "luhrmann"])
         )
 
     def test_pass_sequence(self):
@@ -1176,11 +1233,8 @@ class OmitTestCase(BaseFilterTestCase):
         Incoming value is a sequence.
         """
         self.assertFilterPasses(
-            self._filter(
-                ['Indy', 'Marion', 'Marcus'],
-                keys=[1, 3]
-            ),
-            ['Indy', 'Marcus'],
+            self._filter(["Indy", "Marion", "Marcus"], keys=[1, 3]),
+            ["Indy", "Marcus"],
         )
 
     def test_pass_sequence_no_items_omitted(self):
@@ -1189,10 +1243,7 @@ class OmitTestCase(BaseFilterTestCase):
         be omitted.
         """
         self.assertFilterPasses(
-            self._filter(
-                ['Indy', 'Marion', 'Marcus'],
-                keys=[3, 4, 5]
-            )
+            self._filter(["Indy", "Marion", "Marcus"], keys=[3, 4, 5])
         )
 
     def test_pass_sequence_empty(self):
@@ -1202,9 +1253,7 @@ class OmitTestCase(BaseFilterTestCase):
         Chain with :py:class:`MinLength` or :py:class:`NotEmpty` to reject
         empty sequences.
         """
-        self.assertFilterPasses(
-            self._filter([], keys=[3, 4, 5, 6])
-        )
+        self.assertFilterPasses(self._filter([], keys=[3, 4, 5, 6]))
 
     def test_fail_wrong_type(self):
         """
@@ -1238,8 +1287,8 @@ class OptionalTestCase(BaseFilterTestCase):
         something else.
         """
         self.assertFilterPasses(
-            self._filter(None, default='Hello, world!'),
-            'Hello, world!',
+            self._filter(None, default="Hello, world!"),
+            "Hello, world!",
         )
 
     def test_pass_replace_empty_string(self):
@@ -1247,8 +1296,8 @@ class OptionalTestCase(BaseFilterTestCase):
         The incoming value is an empty string.
         """
         self.assertFilterPasses(
-            self._filter('', default='42'),
-            '42',
+            self._filter("", default="42"),
+            "42",
         )
 
     def test_replace_empty_collection(self):
@@ -1265,9 +1314,7 @@ class OptionalTestCase(BaseFilterTestCase):
         """
         The incoming value is a non-empty string.
         """
-        self.assertFilterPasses(
-            self._filter('Goodbye, world!', default='fail')
-        )
+        self.assertFilterPasses(self._filter("Goodbye, world!", default="fail"))
 
     def test_pass_non_empty_collection(self):
         """
@@ -1275,8 +1322,8 @@ class OptionalTestCase(BaseFilterTestCase):
         """
         # The values inside the collection may be empty, but the collection
         # itself is not.
-        self.assertFilterPasses(['', '', ''])
-        self.assertFilterPasses({'': ''})
+        self.assertFilterPasses(["", "", ""])
+        self.assertFilterPasses({"": ""})
         self.assertFilterPasses(Lengthy(12))
         # etc.
 
@@ -1285,7 +1332,7 @@ class OptionalTestCase(BaseFilterTestCase):
         Any value that doesn't have a length is left alone.
         """
         self.assertFilterPasses(
-            self._filter(object(), default='fail'),
+            self._filter(object(), default="fail"),
         )
 
     def test_pass_zero_is_not_empty(self):
@@ -1293,7 +1340,7 @@ class OptionalTestCase(BaseFilterTestCase):
         PHP developers take note!
         """
         self.assertFilterPasses(
-            self._filter(0, default='fail'),
+            self._filter(0, default="fail"),
         )
 
     def test_pass_false_is_not_empty(self):
@@ -1302,7 +1349,7 @@ class OptionalTestCase(BaseFilterTestCase):
         represents SOME kind of value.
         """
         self.assertFilterPasses(
-            self._filter(False, default='fail'),
+            self._filter(False, default="fail"),
         )
 
     def test_pass_default_callable(self):
@@ -1371,7 +1418,7 @@ class PickTestCase(BaseFilterTestCase):
         Use ``Required | Pick`` to reject ``None``.
         """
         self.assertFilterPasses(
-            self._filter(None, keys={'test'}),
+            self._filter(None, keys={"test"}),
         )
 
     def test_pass_mapping(self):
@@ -1379,8 +1426,8 @@ class PickTestCase(BaseFilterTestCase):
         Using the filter to pick specific keys from a mapping.
         """
         self.assertFilterPasses(
-            self._filter({'foo': 'bar', 'baz': 'luhrmann'}, keys={'foo'}),
-            {'foo': 'bar'},
+            self._filter({"foo": "bar", "baz": "luhrmann"}, keys={"foo"}),
+            {"foo": "bar"},
         )
 
     def test_pass_mapping_exact_match(self):
@@ -1389,8 +1436,8 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                {'foo': 'bar', 'baz': 'luhrmann'},
-                keys={'foo', 'baz'},
+                {"foo": "bar", "baz": "luhrmann"},
+                keys={"foo", "baz"},
             )
         )
 
@@ -1401,15 +1448,15 @@ class PickTestCase(BaseFilterTestCase):
         """
         runner = self.assertFilterPasses(
             self._filter(
-                {'name': 'Indy', 'job': 'archaeologist', 'actor': 'Harrison'},
-                keys=('actor', 'name', 'job'),
+                {"name": "Indy", "job": "archaeologist", "actor": "Harrison"},
+                keys=("actor", "name", "job"),
             ),
-            {'actor': 'Harrison', 'name': 'Indy', 'job': 'archaeologist'},
+            {"actor": "Harrison", "name": "Indy", "job": "archaeologist"},
         )
 
         self.assertListEqual(
             list(runner.cleaned_data.keys()),
-            ['actor', 'name', 'job'],
+            ["actor", "name", "job"],
         )
 
     def test_pass_mapping_missing_values(self):
@@ -1418,10 +1465,10 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                {'foo': 'bar', 'baz': 'luhrmann'},
-                keys=['foo', 'foobie'],
+                {"foo": "bar", "baz": "luhrmann"},
+                keys=["foo", "foobie"],
             ),
-            {'foo': 'bar', 'foobie': None},
+            {"foo": "bar", "foobie": None},
         )
 
     def test_pass_mapping_empty(self):
@@ -1433,8 +1480,8 @@ class PickTestCase(BaseFilterTestCase):
         filter.
         """
         self.assertFilterPasses(
-            self._filter({}, keys=['foo', 'baz']),
-            {'foo': None, 'baz': None},
+            self._filter({}, keys=["foo", "baz"]),
+            {"foo": None, "baz": None},
         )
 
     def test_pass_mapping_match_type(self):
@@ -1443,11 +1490,8 @@ class PickTestCase(BaseFilterTestCase):
         value that it received.
         """
         runner = self.assertFilterPasses(
-            self._filter(
-                OrderedDict(foo='bar', baz='luhrmann'),
-                keys=('baz',)
-            ),
-            OrderedDict(baz='luhrmann')
+            self._filter(OrderedDict(foo="bar", baz="luhrmann"), keys=("baz",)),
+            OrderedDict(baz="luhrmann"),
         )
 
         self.assertIsInstance(runner.cleaned_data, OrderedDict)
@@ -1459,15 +1503,15 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterErrors(
             self._filter(
-                {'foo': 'bar', 'baz': 'luhrmann'},
-                keys=['foo', 'foobie', 'foobar'],
+                {"foo": "bar", "baz": "luhrmann"},
+                keys=["foo", "foobie", "foobar"],
                 allow_missing_keys=False,
             ),
             {
-                'foobie': [f.Pick.CODE_MISSING_KEY],
-                'foobar': [f.Pick.CODE_MISSING_KEY],
+                "foobie": [f.Pick.CODE_MISSING_KEY],
+                "foobar": [f.Pick.CODE_MISSING_KEY],
             },
-            {'foo': 'bar', 'foobie': None, 'foobar': None},
+            {"foo": "bar", "foobie": None, "foobar": None},
         )
 
     def test_pass_mapping_allow_missing_keys_iterable(self):
@@ -1477,11 +1521,11 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                {'foo': 'bar', 'baz': 'luhrmann'},
-                keys=['foo', 'foobie', 'foobar'],
-                allow_missing_keys={'foobie', 'foobar'},
+                {"foo": "bar", "baz": "luhrmann"},
+                keys=["foo", "foobie", "foobar"],
+                allow_missing_keys={"foobie", "foobar"},
             ),
-            {'foo': 'bar', 'foobie': None, 'foobar': None},
+            {"foo": "bar", "foobie": None, "foobar": None},
         )
 
     def test_pass_sequence(self):
@@ -1489,17 +1533,15 @@ class PickTestCase(BaseFilterTestCase):
         Using the filter to pick specific indices from a sequence.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz'], keys=[0, 2]),
-            ['foo', 'baz'],
+            self._filter(["foo", "bar", "baz"], keys=[0, 2]),
+            ["foo", "baz"],
         )
 
     def test_pass_sequence_exact_match(self):
         """
         The incoming sequence contains only the indices to be picked.
         """
-        self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz'], keys=[0, 1, 2])
-        )
+        self.assertFilterPasses(self._filter(["foo", "bar", "baz"], keys=[0, 1, 2]))
 
     def test_pass_sequence_ordered_keys(self):
         """
@@ -1508,10 +1550,10 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                ['Indiana', 'Marion', 'Marcus'],
+                ["Indiana", "Marion", "Marcus"],
                 keys=[1, 0, 2],
             ),
-            ['Marion', 'Indiana', 'Marcus'],
+            ["Marion", "Indiana", "Marcus"],
         )
 
     def test_pass_sequence_missing_values(self):
@@ -1519,8 +1561,8 @@ class PickTestCase(BaseFilterTestCase):
         Any indices not present in the incoming value are set to ``None``.
         """
         self.assertFilterPasses(
-            self._filter(['foo', 'bar', 'baz'], keys=[0, 2, 4]),
-            ['foo', 'baz', None],
+            self._filter(["foo", "bar", "baz"], keys=[0, 2, 4]),
+            ["foo", "baz", None],
         )
 
     def test_pass_sequence_empty(self):
@@ -1542,8 +1584,8 @@ class PickTestCase(BaseFilterTestCase):
         value that it received.
         """
         runner = self.assertFilterPasses(
-            self._filter(('foo', 'bar', 'baz'), keys=(1,)),
-            ('bar',),
+            self._filter(("foo", "bar", "baz"), keys=(1,)),
+            ("bar",),
         )
 
         self.assertIsInstance(runner.cleaned_data, tuple)
@@ -1555,15 +1597,15 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterErrors(
             self._filter(
-                ['foo', 'bar'],
+                ["foo", "bar"],
                 keys={0, 2, 4},
                 allow_missing_keys=False,
             ),
             {
-                '2': [f.Pick.CODE_MISSING_KEY],
-                '4': [f.Pick.CODE_MISSING_KEY],
+                "2": [f.Pick.CODE_MISSING_KEY],
+                "4": [f.Pick.CODE_MISSING_KEY],
             },
-            ['foo', None, None],
+            ["foo", None, None],
         )
 
     def test_pass_sequence_allow_missing_keys_iterable(self):
@@ -1573,11 +1615,11 @@ class PickTestCase(BaseFilterTestCase):
         """
         self.assertFilterPasses(
             self._filter(
-                ['foo', 'bar'],
+                ["foo", "bar"],
                 keys={0, 2, 4},
                 allow_missing_keys={2, 4},
             ),
-            ['foo', None, None],
+            ["foo", None, None],
         )
 
     def test_fail_wrong_type(self):
@@ -1610,7 +1652,7 @@ class RequiredTestCase(BaseFilterTestCase):
         """
         The incoming value is a non-empty string.
         """
-        self.assertFilterPasses('Hello, world!')
+        self.assertFilterPasses("Hello, world!")
 
     def test_pass_non_empty_collection(self):
         """
@@ -1618,8 +1660,8 @@ class RequiredTestCase(BaseFilterTestCase):
         """
         # The values in the collection may be empty, but the collection itself
         # is not.
-        self.assertFilterPasses(['', '', ''])
-        self.assertFilterPasses({'': ''})
+        self.assertFilterPasses(["", "", ""])
+        self.assertFilterPasses({"": ""})
         self.assertFilterPasses(Lengthy(1))
         # etc.
 
@@ -1633,7 +1675,7 @@ class RequiredTestCase(BaseFilterTestCase):
         """
         The incoming value is an empty string.
         """
-        self.assertFilterErrors('', [f.Required.CODE_EMPTY])
+        self.assertFilterErrors("", [f.Required.CODE_EMPTY])
 
     def test_fail_empty_collection(self):
         """
@@ -1676,7 +1718,7 @@ class TypeTestCase(BaseFilterTestCase):
         The incoming value has the expected type.
         """
         self.assertFilterPasses(
-            self._filter('Hello, world!', allowed_types=str),
+            self._filter("Hello, world!", allowed_types=str),
         )
 
     def test_fail_non_matching_type(self):
@@ -1684,7 +1726,7 @@ class TypeTestCase(BaseFilterTestCase):
         The incoming value does not have the expected type.
         """
         self.assertFilterErrors(
-            self._filter(b'Not a string, sorry.', allowed_types=str),
+            self._filter(b"Not a string, sorry.", allowed_types=str),
             [f.Type.CODE_WRONG_TYPE],
         )
 
@@ -1693,7 +1735,7 @@ class TypeTestCase(BaseFilterTestCase):
         You can configure the filter to allow multiple types.
         """
         self.assertFilterPasses(
-            self._filter('Hello, world!', allowed_types=(str, int)),
+            self._filter("Hello, world!", allowed_types=(str, int)),
         )
 
         self.assertFilterPasses(
@@ -1701,7 +1743,7 @@ class TypeTestCase(BaseFilterTestCase):
         )
 
         self.assertFilterErrors(
-            self._filter(b'Not a unicode.', allowed_types=(str, int)),
+            self._filter(b"Not a unicode.", allowed_types=(str, int)),
             [f.Type.CODE_WRONG_TYPE],
         )
 

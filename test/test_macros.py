@@ -34,12 +34,12 @@ class FilterMacroTestCase(TestCase):
         self.assertIsInstance(the_filter, f.FilterChain)
 
         self.assertEqual(
-            the_filter.apply('  Hello, world!  '),
-            'Hello, world!',
+            the_filter.apply("  Hello, world!  "),
+            "Hello, world!",
         )
 
         with self.assertRaises(f.FilterError):
-            the_filter.apply('Hi there!')
+            the_filter.apply("Hi there!")
 
     def test_chain(self):
         """
@@ -55,15 +55,15 @@ class FilterMacroTestCase(TestCase):
         # a chain.
         # If you don't believe me, try removing the decorator from
         # ``MyFilter``, and watch this test explode.
-        filter_chain = MyFilter | f.Split(r'\s+')
+        filter_chain = MyFilter | f.Split(r"\s+")
 
         self.assertEqual(
-            filter_chain.apply('Hello, world!'),
-            ['Hello,', 'world!'],
+            filter_chain.apply("Hello, world!"),
+            ["Hello,", "world!"],
         )
 
         with self.assertRaises(f.FilterError):
-            filter_chain.apply('Hi there!')
+            filter_chain.apply("Hi there!")
 
     def test_chain_macros(self):
         """
@@ -76,17 +76,17 @@ class FilterMacroTestCase(TestCase):
 
         @filter_macro
         def Filter2():
-            return f.Split(r'\s+') | f.MinLength(2)
+            return f.Split(r"\s+") | f.MinLength(2)
 
         filter_chain = Filter1 | Filter2
 
         self.assertEqual(
-            filter_chain.apply('  Hello, world!  '),
-            ['Hello,', 'world!'],
+            filter_chain.apply("  Hello, world!  "),
+            ["Hello,", "world!"],
         )
 
         with self.assertRaises(f.FilterError):
-            filter_chain.apply('whazzup!')
+            filter_chain.apply("whazzup!")
 
     def test_decorator_optional_parameters(self):
         """
@@ -101,12 +101,12 @@ class FilterMacroTestCase(TestCase):
         filter_chain = f.Required | MyFilter
 
         self.assertEqual(
-            filter_chain.apply('Hello, world!'),
-            'Hello, world!',
+            filter_chain.apply("Hello, world!"),
+            "Hello, world!",
         )
 
         with self.assertRaises(f.FilterError):
-            filter_chain.apply('Hi there!')
+            filter_chain.apply("Hi there!")
 
     def test_partial(self):
         """
@@ -116,15 +116,13 @@ class FilterMacroTestCase(TestCase):
         MyDatetime = filter_macro(f.Datetime, timezone=12)
 
         self.assertEqual(
-            MyDatetime().apply('2015-10-13 15:22:18'),
-
+            MyDatetime().apply("2015-10-13 15:22:18"),
             # By default, MyDatetime assumes a timezone of UTC+12...
             datetime(2015, 10, 13, 3, 22, 18, tzinfo=utc),
         )
 
         self.assertEqual(
             # ... however, we can override it.
-            MyDatetime(timezone=6).apply('2015-10-13 15:22:18'),
-
+            MyDatetime(timezone=6).apply("2015-10-13 15:22:18"),
             datetime(2015, 10, 13, 9, 22, 18, tzinfo=utc),
         )
