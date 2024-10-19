@@ -121,11 +121,8 @@ class Array(Type):
     Validates that the incoming value is a non-string sequence.
     """
 
-    def __init__(
-        self,
-        aliases: typing.Optional[typing.Mapping[type, str]] = None,
-    ) -> None:
-        super().__init__(typing.Sequence, True, aliases)
+    def __init__(self) -> None:
+        super().__init__(typing.Sequence, True)
 
     def _apply(self, value):
         value: typing.Sequence = super()._apply(value)
@@ -139,7 +136,7 @@ class Array(Type):
                 reason=self.CODE_WRONG_TYPE,
                 template_vars={
                     "incoming": self.get_type_name(type(value)),
-                    "allowed": self.get_allowed_type_names(),
+                    "allowed": self.allowed_types,
                 },
             )
 

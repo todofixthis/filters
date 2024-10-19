@@ -627,7 +627,6 @@ class Type(BaseFilter):
         self,
         allowed_types: typing.Union[type, typing.Tuple[type, ...]],
         allow_subclass: bool = True,
-        aliases: typing.Optional[typing.Mapping[type, str]] = None,
     ) -> None:
         """
         :param allowed_types:
@@ -636,12 +635,6 @@ class Type(BaseFilter):
 
         :param allow_subclass:
             Whether to allow subclasses when checking for type matches.
-
-        :param aliases:
-            Aliases to use for type names in error messages.
-
-            This is useful for providing more context- appropriate
-            names to end users and/or masking native Python type names.
         """
         super().__init__()
 
@@ -651,12 +644,10 @@ class Type(BaseFilter):
         )
         self.allow_subclass = allow_subclass
 
-        self.aliases = aliases or {}
-
     def __str__(self):
         return "{type}({allowed_types}, " "allow_subclass={allow_subclass!r})".format(
             type=type(self).__name__,
-            allowed_types=self.get_allowed_type_names(aliased=False),
+            allowed_types=self.allowed_types,
             allow_subclass=self.allow_subclass,
         )
 
@@ -673,23 +664,14 @@ class Type(BaseFilter):
                 reason=self.CODE_WRONG_TYPE,
                 template_vars={
                     "incoming": self.get_type_name(type(value)),
-                    "allowed": self.get_allowed_type_names(),
+                    "allowed": self.allowed_types,
                 },
             )
 
         return value
 
-    def get_allowed_type_names(self, aliased: bool = True) -> str:
-        """
-        Returns a string with all the allowed types.
-        """
-        # Note that we cast as a set in the middle, to ferret out
-        # duplicates.
-        return ", ".join(
-            sorted({self.get_type_name(t, aliased) for t in self.allowed_types})
-        )
-
-    def get_type_name(self, type_: type, aliased: bool = True) -> str:
+    @staticmethod
+    def get_type_name(type_: type) -> str:
         """
         Returns the name of the specified type.
         """
@@ -701,8 +683,5 @@ class Type(BaseFilter):
             getattr(type_, "__name__", None),
             str(type_),
         ]
-
-        if aliased:
-            possible_names.insert(0, self.aliases.get(type_))
 
         return next(filter(None, possible_names))
