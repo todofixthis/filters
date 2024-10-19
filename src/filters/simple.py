@@ -555,7 +555,7 @@ class MaxLength(BaseFilter[T]):
     def _apply(self, value):
         if len(value) > self.max_length:
             if self.truncate:
-                return value[0 : self.max_length]
+                return value[0: self.max_length]
 
             return self._invalid_value(
                 value=value,
@@ -773,7 +773,7 @@ class Optional(BaseFilter[T]):
         self.default = (
             staticmethod(default).__wrapped__
             if self.call_default is True
-            or (self.call_default is None and callable(default))
+               or (self.call_default is None and callable(default))
             else default
         )
 
@@ -807,7 +807,7 @@ class Optional(BaseFilter[T]):
         return (
             self.default()
             if self.call_default is True
-            or (self.call_default is None and callable(self.default))
+               or (self.call_default is None and callable(self.default))
             else self.default
         )
 
