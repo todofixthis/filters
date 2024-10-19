@@ -10,7 +10,7 @@ class FilterChainTestCase(BaseFilterTestCase):
         """
         Chaining two filters together creates a FilterChain.
         """
-        self.filter_type = lambda: f.Int | f.Max(3)
+        self.filter_type = lambda: f.Int() | f.Max(3)
 
         self.assertFilterPasses("1", 1)
         self.assertFilterErrors("4", [f.Max.CODE_TOO_BIG])
@@ -31,8 +31,8 @@ class FilterChainTestCase(BaseFilterTestCase):
         """
         You can also chain FilterChains together.
         """
-        fc1 = f.NotEmpty | f.Choice(choices=("Lucky", "Dusty", "Ned"))
-        fc2 = f.NotEmpty | f.MinLength(4)
+        fc1 = f.NotEmpty() | f.Choice(choices=("Lucky", "Dusty", "Ned"))
+        fc2 = f.NotEmpty() | f.MinLength(4)
 
         self.filter_type = lambda: fc1 | fc2
 
@@ -70,7 +70,7 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
         """
         A FilterRepeater is applied to a list of valid values.
         """
-        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty | f.Int)
+        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty() | f.Int())
 
         self.assertFilterPasses(
             ["1", 2, 0, None, "-12"],
@@ -82,7 +82,7 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
         A FilterRepeater is applied to a list that contains invalid
         values.
         """
-        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty | f.Int)
+        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty() | f.Int())
 
         self.assertFilterErrors(
             # First element is valid (control group).
@@ -101,7 +101,7 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
         """
         A FilterRepeater is applied to a dict of valid values.
         """
-        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty | f.Int)
+        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty() | f.Int())
 
         self.assertFilterPasses(
             {
@@ -125,7 +125,7 @@ class FilterRepeaterTestCase(BaseFilterTestCase):
         A FilterRepeater is applied to a dict that contains invalid
         values.
         """
-        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty | f.Int)
+        self.filter_type = lambda: f.FilterRepeater(f.NotEmpty() | f.Int())
 
         self.assertFilterErrors(
             {
@@ -405,8 +405,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -435,8 +435,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -461,8 +461,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -498,8 +498,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             },
             # Treat all extra keys as invalid values.s
             allow_extra_keys=False,
@@ -528,8 +528,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             },
             allow_extra_keys={"message", "extra"},
         )
@@ -575,8 +575,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -613,8 +613,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             },
             # Treat missing keys as invalid values.
             allow_missing_keys=False,
@@ -639,8 +639,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             },
             allow_missing_keys={"subject"},
         )
@@ -676,7 +676,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
+                "id": f.Required() | f.Int() | f.Min(1),
                 "subject": None,
             },
             # If you configure a FilterMapper with pass-thru keys(s), you
@@ -725,8 +725,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -748,7 +748,7 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         fm1 = f.FilterMapper(
             {
-                "id": f.Int | f.Min(1),
+                "id": f.Int() | f.Min(1),
             },
             allow_missing_keys=True,
             allow_extra_keys=True,
@@ -756,8 +756,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
 
         fm2 = f.FilterMapper(
             {
-                "id": f.Required | f.Max(256),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Max(256),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             },
             allow_missing_keys=False,
             allow_extra_keys=False,
@@ -800,8 +800,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         fm = f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
             }
         )
 
@@ -838,13 +838,13 @@ class FilterMapperTestCase(BaseFilterTestCase):
         """
         self.filter_type = lambda: f.FilterMapper(
             {
-                "id": f.Required | f.Int | f.Min(1),
-                "subject": f.NotEmpty | f.MaxLength(16),
+                "id": f.Required() | f.Int() | f.Min(1),
+                "subject": f.NotEmpty() | f.MaxLength(16),
                 "attachment": f.FilterMapper(
                     {
-                        "type": f.Required
-                                | f.Choice(choices={"image/jpeg", "image/png"}),
-                        "data": f.Required | f.Base64Decode,
+                        "type": f.Required()
+                        | f.Choice(choices={"image/jpeg", "image/png"}),
+                        "data": f.Required() | f.Base64Decode(),
                     },
                     allow_extra_keys=False,
                     allow_missing_keys=False,
@@ -862,8 +862,8 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 "attachment": {
                     "type": "image/jpeg",
                     "data": b"R0lGODlhDwAPAKECAAAAzMzM/////wAAACwAAAAAD"
-                            b"wAPAAACIISPeQHsrZ5ModrLlN48CXF8m2iQ3YmmKq"
-                            b"VlRtW4MLwWACH+EVRIRSBDQUtFIElTIEEgTElFOw==",
+                    b"wAPAAACIISPeQHsrZ5ModrLlN48CXF8m2iQ3YmmKq"
+                    b"VlRtW4MLwWACH+EVRIRSBDQUtFIElTIEEgTElFOw==",
                 },
             },
             {
@@ -872,11 +872,11 @@ class FilterMapperTestCase(BaseFilterTestCase):
                 "attachment": {
                     "type": "image/jpeg",
                     "data": b"GIF89a\x0f\x00\x0f\x00\xa1\x02\x00\x00\x00"
-                            b"\xcc\xcc\xcc\xff\xff\xff\xff\x00\x00\x00,\x00"
-                            b"\x00\x00\x00\x0f\x00\x0f\x00\x00\x02 \x84\x8f"
-                            b"y\x01\xec\xad\x9eL\xa1\xda\xcb\x94\xde<\tq|"
-                            b"\x9bh\x90\xdd\x89\xa6*\xa5eF\xd5\xb80\xbc\x16"
-                            b"\x00!\xfe\x11THE CAKE IS A LIE;",
+                    b"\xcc\xcc\xcc\xff\xff\xff\xff\x00\x00\x00,\x00"
+                    b"\x00\x00\x00\x0f\x00\x0f\x00\x00\x02 \x84\x8f"
+                    b"y\x01\xec\xad\x9eL\xa1\xda\xcb\x94\xde<\tq|"
+                    b"\x9bh\x90\xdd\x89\xa6*\xa5eF\xd5\xb80\xbc\x16"
+                    b"\x00!\xfe\x11THE CAKE IS A LIE;",
                 },
             },
         )
@@ -1042,8 +1042,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
             Colour,
             {
                 # For whatever reason, we decide not to filter ``r``.
-                "g": f.Required | f.Int | f.Min(0) | f.Max(255),
-                "b": f.Required | f.Int | f.Min(0) | f.Max(255),
+                "g": f.Required() | f.Int() | f.Min(0) | f.Max(255),
+                "b": f.Required() | f.Int() | f.Min(0) | f.Max(255),
             },
         )
 
@@ -1061,8 +1061,8 @@ class NamedTupleTestCase(BaseFilterTestCase):
             Colour,
             {
                 # For whatever reason, we decide not to filter ``r``.
-                "g": f.Required | f.Int | f.Min(0) | f.Max(255),
-                "b": f.Required | f.Int | f.Min(0) | f.Max(255),
+                "g": f.Required() | f.Int() | f.Min(0) | f.Max(255),
+                "b": f.Required() | f.Int() | f.Min(0) | f.Max(255),
             },
         )
 
@@ -1101,7 +1101,7 @@ class FilterSwitchTestCase(BaseFilterTestCase):
                 {"name": "positive", "value": 42},
                 getter=lambda value: value["name"],
                 cases={
-                    "positive": f.FilterMapper({"value": f.Int | f.Min(0)}),
+                    "positive": f.FilterMapper({"value": f.Int() | f.Min(0)}),
                 },
             ),
         )
@@ -1116,7 +1116,7 @@ class FilterSwitchTestCase(BaseFilterTestCase):
                 {"name": "positive", "value": -1},
                 getter=lambda value: value["name"],
                 cases={
-                    "positive": f.FilterMapper({"value": f.Int | f.Min(0)}),
+                    "positive": f.FilterMapper({"value": f.Int() | f.Min(0)}),
                 },
             ),
             {"value": [f.Min.CODE_TOO_SMALL]},
@@ -1135,9 +1135,9 @@ class FilterSwitchTestCase(BaseFilterTestCase):
                 {"name": "negative", "value": -42},
                 getter=lambda value: value["name"],
                 cases={
-                    "positive": f.FilterMapper({"value": f.Int | f.Min(0)}),
+                    "positive": f.FilterMapper({"value": f.Int() | f.Min(0)}),
                 },
-                default=f.FilterMapper({"value": f.Int | f.Max(0)}),
+                default=f.FilterMapper({"value": f.Int() | f.Max(0)}),
             ),
         )
 
@@ -1151,7 +1151,7 @@ class FilterSwitchTestCase(BaseFilterTestCase):
                 {"name": "negative", "value": -42},
                 getter=lambda value: value["name"],
                 cases={
-                    "positive": f.FilterMapper({"value": f.Int | f.Min(0)}),
+                    "positive": f.FilterMapper({"value": f.Int() | f.Min(0)}),
                 },
             ),
             [f.Choice.CODE_INVALID],

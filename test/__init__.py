@@ -1,8 +1,6 @@
 import typing
 
-import filters as f
 from filters.base import BaseFilter
-from filters.macros import filter_macro
 
 
 class FilterAlpha(BaseFilter):
@@ -26,11 +24,3 @@ class FilterBravo(BaseFilter):
 
     def _apply(self, value):
         return value
-
-
-@filter_macro
-def FilterCharlie():
-    """
-    A filter macro that can be used for testing.
-    """
-    return f.NoOp

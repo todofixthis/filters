@@ -1,7 +1,6 @@
 from unittest import TestCase
 
 from filters.extensions import FilterExtensionRegistry
-from filters.macros import FilterMacroType
 from test import FilterAlpha, FilterBravo
 from test.helper import DummyDistributionFinder
 
@@ -39,13 +38,6 @@ class FilterExtensionRegistryTestCase(TestCase):
         self.assertIsInstance(bravo, FilterBravo)
         self.assertEqual(bravo.name, "Batman")
 
-        # I couldn't find any Batman characters whose name begins with
-        # C... and "Commissioner Gordon" doesn't count!
-        charlie = registry.Catwoman
-        # Note that :py:data:`test.TestFilterCharlie` is a filter
-        # macro.
-        self.assertTrue(issubclass(charlie, FilterMacroType))
-
         # Check that the correct number of extension filters were
         # registered.
-        self.assertEqual(len(registry), 3)
+        self.assertEqual(len(registry), 2)

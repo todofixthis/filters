@@ -312,8 +312,8 @@ class ByteArrayTestCase(BaseFilterTestCase):
                 # E.g., how would we convert `['11', 'foo']` into a bytearray?
                 #
                 # To keep things as consistent as possible, the filter will
-                # treat strings inside of iterables the same way it treats
-                # anything else that isn't an int.
+                # treat strings inside iterables the same way it treats anything else
+                # that isn't an int.
                 #
                 "2": [f.Type.CODE_WRONG_TYPE],
                 "3": [f.Type.CODE_WRONG_TYPE],

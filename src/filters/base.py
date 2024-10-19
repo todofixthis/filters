@@ -10,7 +10,6 @@ __all__ = [
     "FilterChain",
     "FilterCompatible",
     "FilterError",
-    "FilterMeta",
     "Type",
 ]
 
@@ -19,7 +18,6 @@ T = typing.TypeVar("T")
 FilterCompatible = typing.Optional[
     typing.Union[
         "BaseFilter[T]",
-        "FilterMeta",
         typing.Callable[[], "BaseFilter[T]"],
     ]
 ]
@@ -29,59 +27,14 @@ into an instance of a :py:class:`filters.base.BaseFilter` subclass.
 """
 
 
-class FilterMeta(ABCMeta):
-    """
-    Metaclass for filters.
-    """
-
-    # noinspection PyShadowingBuiltins
-    def __init__(
-        cls,
-        what: str,
-        bases: tuple[type, ...],
-        dict: dict[str, typing.Any],
-        **kwargs: typing.Any,
-    ):
-        super().__init__(what, bases, dict, **kwargs)
-
-        if not hasattr(cls, "templates"):
-            cls.templates = {}
-
-        # Copy error templates from base class to derived class, but in the
-        # event of a conflict, preserve the derived class' template.
-        templates = {}
-        for base in bases:
-            if isinstance(base, FilterMeta):
-                templates.update(base.templates)
-
-        if templates:
-            templates.update(cls.templates)
-            cls.templates = templates
-
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
-        """
-        Convenience alias for adding a Filter with default
-        configuration to a FilterChain.
-
-        E.g., the following statements do the same thing::
-
-            Int | Max(32)   # FilterMeta.__or__
-            Int() | Max(32) # Filter.__or__
-
-        References:
-          - http://stackoverflow.com/a/10773232
-        """
-        return FilterChain(self) | next_filter
-
-
-class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
+class BaseFilter(typing.Generic[T]):
     """
     Base functionality for all Filters, macros, etc.
     """
 
     CODE_EXCEPTION = "exception"
 
-    templates = {
+    templates: dict[str, str] = {
         CODE_EXCEPTION: "An error occurred while processing this value.",
     }
 
@@ -104,6 +57,24 @@ class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
         #   - :py:mod:`importer.core.filters.handlers`
         #
         self._has_errors = False
+
+    def __init_subclass__(cls, **kwargs: typing.Any) -> None:
+        """
+        Pre-compute some values to improve performance in derived classes.
+        """
+        if not hasattr(cls, "templates"):
+            cls.templates: dict[str, str] = {}
+
+        # Copy error templates from base class to derived class, but in the
+        # event of a conflict, preserve the derived class' template.
+        templates: dict[str, str] = {}
+        for base in cls.__bases__:
+            if issubclass(base, BaseFilter):
+                templates.update(base.templates)
+
+        if templates:
+            templates.update(cls.templates)
+            cls.templates = templates
 
     @classmethod
     def __copy__(cls, the_filter: "BaseFilter") -> "BaseFilter":
