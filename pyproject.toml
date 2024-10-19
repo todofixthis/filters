@@ -69,7 +69,7 @@ django = ["phx-filters-django"]
 iso = ["phx-filters-iso"]
 
 [tool.poetry.group.dev.dependencies]
-autohooks = "^23"
+autohooks = ">=23,<25"
 autohooks-plugin-black = "^23"
 autohooks-plugin-mypy = "^23"
 autohooks-plugin-pytest = "^23"
