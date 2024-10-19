@@ -95,13 +95,13 @@ pytest = ">=7.1.2"
 
 [[package]]
 name = "autohooks-plugin-ruff"
-version = "23.11.0"
+version = "24.1.0"
 description = "An autohooks plugin for python code formatting via ruff"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "autohooks_plugin_ruff-23.11.0-py3-none-any.whl", hash = "sha256:26f7be03e232a505e65246b666ea48a323a900d05bdef68e337a5c93dfdb23b1"},
-    {file = "autohooks_plugin_ruff-23.11.0.tar.gz", hash = "sha256:1f6c3bc92449fc57c71dd4ac0a410d7f5229f3aff96921fa80c70a28d7db9366"},
+    {file = "autohooks_plugin_ruff-24.1.0-py3-none-any.whl", hash = "sha256:2a072805b60abb63311abab84a6600cde9112840ab68f39af53f517648341651"},
+    {file = "autohooks_plugin_ruff-24.1.0.tar.gz", hash = "sha256:1a8dd732a2e7215c1c66faa79ac499195859c499af7ce52284ee6003ece4f25c"},
 ]
 
 [package.dependencies]
@@ -1498,4 +1498,4 @@ iso = []
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a34b9b37aab2137976b7ff44214a0f36898bb6e8099d9ec55ada0d2e64717cd5"
+content-hash = "df36332222656561a050136aed1d7c217014594f605d7be60208ceb69a0fe86d"
