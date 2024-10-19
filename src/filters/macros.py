@@ -34,16 +34,16 @@ class FilterMacroType(BaseFilter, ABC):
     pass
 
 
-F = typing.TypeVar('F', bound=FilterCompatible)
-P = typing.ParamSpec('P')
-R = typing.TypeVar('R', bound=FilterMacroType)
+F = typing.TypeVar("F", bound=FilterCompatible)
+P = typing.ParamSpec("P")
+R = typing.TypeVar("R", bound=FilterMacroType)
 
 
 @typing.overload
 def filter_macro(
     func: typing.Callable[P, R],
     /,
-) -> typing.Type[FilterMacroType] & typing.Callable[P, R]:
+) -> typing.Type[FilterMacroType] | typing.Callable[P, R]:
     """Bare decorator variant"""
     ...
 
@@ -53,7 +53,7 @@ def filter_macro(
     func: typing.Callable[P, F],
     *args: typing.Unpack[P.args],
     **kwargs: typing.Unpack[P.kwargs],
-) -> typing.Type[FilterMacroType] & F:
+) -> typing.Type[FilterMacroType] | F:
     """Decorator factory variant"""
     ...
 
@@ -62,7 +62,7 @@ def filter_macro(
     func: typing.Callable[P, R],
     *args: typing.Unpack[P.args],
     **kwargs: typing.Unpack[P.kwargs],
-) -> typing.Type[FilterMacroType] & typing.Callable[P, R]:
+) -> typing.Type[FilterMacroType] | typing.Callable[P, R]:
     """
     Promotes a function that returns a filter into its own filter type.
 
