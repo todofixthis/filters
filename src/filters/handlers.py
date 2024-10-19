@@ -4,7 +4,7 @@ from logging import ERROR, Logger, LoggerAdapter
 from traceback import format_exc
 from types import TracebackType
 
-from filters.base import BaseFilter, BaseInvalidValueHandler, FilterCompatible
+from filters.base import BaseFilter, BaseInvalidValueHandler
 
 __all__ = [
     "FilterMessage",
@@ -152,7 +152,7 @@ class MemoryHandler(BaseInvalidValueHandler):
         return super().handle_exception(message, exc)
 
 
-class FilterRunner(object):
+class FilterRunner:
     """
     Wrapper for a filter that provides an API similar to what you would expect
     from a Django form -- at least, when it comes to methods related to data
@@ -164,7 +164,7 @@ class FilterRunner(object):
 
     def __init__(
         self,
-        starting_filter: FilterCompatible,
+        starting_filter: BaseFilter[typing.Any],
         incoming_data: typing.Any = None,
         capture_exc_info: bool = False,
     ) -> None:

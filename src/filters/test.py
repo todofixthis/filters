@@ -5,7 +5,7 @@ from pprint import pformat
 from traceback import format_exception
 from unittest import TestCase
 
-from filters.base import FilterCompatible
+from filters.base import BaseFilter
 from filters.handlers import FilterRunner
 
 __all__ = [
@@ -40,7 +40,7 @@ class BaseFilterTestCase(TestCase):
     ``assertFilterErrors`` to check use cases.
     """
 
-    filter_type: FilterCompatible = None
+    filter_type: BaseFilter[typing.Any] | typing.Callable[[], BaseFilter[typing.Any]]
 
     class unmodified(object):
         """

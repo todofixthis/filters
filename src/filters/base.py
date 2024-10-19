@@ -8,7 +8,6 @@ __all__ = [
     "BaseInvalidValueHandler",
     "ExceptionHandler",
     "FilterChain",
-    "FilterCompatible",
     "FilterError",
     "NoOp",
     "Type",
@@ -16,16 +15,6 @@ __all__ = [
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
-
-FilterCompatible = typing.Union[
-    "BaseFilter[T]",
-    "typing.Callable[..., BaseFilter[T]]",
-    None,
-]
-"""
-Used in PEP-484 type hints to indicate a value that can be normalized
-into an instance of a :py:class:`filters.base.BaseFilter` subclass.
-"""
 
 
 class BaseFilter(typing.Generic[T]):
@@ -90,7 +79,7 @@ class BaseFilter(typing.Generic[T]):
 
         return new_filter
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain[T]":
+    def __or__(self, next_filter: "BaseFilter[U] | None") -> "FilterChain[T]":
         """
         Chains another filter with this one.
         """
@@ -262,9 +251,9 @@ class BaseFilter(typing.Generic[T]):
     def _filter(
         self,
         value: typing.Any,
-        filter_chain: FilterCompatible,
+        filter_chain: "BaseFilter[U]",
         sub_key: str | None = None,
-    ) -> typing.Any:
+    ) -> U:
         """
         Applies another filter to a value in the same context as the
         current filter.
@@ -446,10 +435,10 @@ class FilterChain(BaseFilter[T]):
     treated as a single filter.
     """
 
-    def __init__(self, start_filter: FilterCompatible = None) -> None:
+    def __init__(self, start_filter: BaseFilter[T] | None = None) -> None:
         super().__init__()
 
-        self._filters: list[BaseFilter] = []
+        self._filters: list[BaseFilter[typing.Any]] = []
 
         self._add(start_filter)
 
@@ -462,7 +451,7 @@ class FilterChain(BaseFilter[T]):
     @typing.overload
     def __or__(self, next_filter: None) -> "FilterChain[T]": ...
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain[U]":
+    def __or__(self, next_filter: BaseFilter[U]) -> "FilterChain[U]":
         """
         Chains a filter with this one.
 
@@ -479,7 +468,7 @@ class FilterChain(BaseFilter[T]):
             return self
 
     @classmethod
-    def __copy__(cls, the_filter: "FilterChain") -> "FilterChain":
+    def __copy__(cls, the_filter: "FilterChain[T]") -> "FilterChain[T]":
         """
         Creates a shallow copy of the object.
         """
@@ -488,7 +477,7 @@ class FilterChain(BaseFilter[T]):
         # noinspection PyTypeChecker
         return new_filter
 
-    def _add(self, next_filter: FilterCompatible) -> "FilterChain":
+    def _add(self, next_filter: BaseFilter[U]) -> "FilterChain[U]":
         """
         Adds a Filter to the collection directly.
         """

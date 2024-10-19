@@ -1,6 +1,6 @@
 import typing
 
-from filters.base import BaseFilter, FilterCompatible, FilterError, Type
+from filters.base import BaseFilter, FilterError, Type
 from filters.simple import Length
 from filters.string import Choice, Unicode
 
@@ -11,8 +11,10 @@ __all__ = [
     "NamedTuple",
 ]
 
+T = typing.TypeVar("T")
 
-class FilterRepeater(BaseFilter):
+
+class FilterRepeater(BaseFilter[T]):
     """
     Applies a filter to every value in an Iterable.
 
@@ -34,7 +36,7 @@ class FilterRepeater(BaseFilter):
 
     def __init__(
         self,
-        filter_chain: FilterCompatible,
+        filter_chain: BaseFilter[T],
         restrict_keys: typing.Optional[typing.Iterable] = None,
     ) -> None:
         """
@@ -137,8 +139,8 @@ class FilterRepeater(BaseFilter):
         self,
         key: str,
         value: typing.Any,
-        filter_chain: FilterCompatible,
-    ) -> typing.Any:
+        filter_chain: BaseFilter[T],
+    ) -> T:
         """
         Applies filters to a single value in the iterable.
 
@@ -162,7 +164,7 @@ class FilterRepeater(BaseFilter):
             return repr(key)
 
 
-class FilterMapper(BaseFilter):
+class FilterMapper(BaseFilter[dict[str, typing.Any]]):
     """
     Given a dict of filters, applies each filter to the corresponding value in
     incoming mappings.
@@ -184,7 +186,7 @@ class FilterMapper(BaseFilter):
 
     def __init__(
         self,
-        filter_map: typing.Mapping[str, FilterCompatible],
+        filter_map: typing.Mapping[str, BaseFilter[typing.Any]],
         allow_missing_keys: typing.Union[bool, typing.Iterable[str]] = True,
         allow_extra_keys: typing.Union[bool, typing.Iterable[str]] = True,
     ) -> None:
@@ -309,8 +311,8 @@ class FilterMapper(BaseFilter):
         self,
         key: str,
         value: typing.Any,
-        filter_chain: FilterCompatible,
-    ) -> typing.Any:
+        filter_chain: BaseFilter[T],
+    ) -> T:
         """
         Applies filters to a single item in the mapping.
 
@@ -359,7 +361,7 @@ class FilterMapper(BaseFilter):
             return repr(key)
 
 
-class FilterSwitch(BaseFilter):
+class FilterSwitch(BaseFilter[T]):
     """
     Chooses the next filter to apply based on the output of a callable.
     """
@@ -367,8 +369,8 @@ class FilterSwitch(BaseFilter):
     def __init__(
         self,
         getter: typing.Callable[[typing.Any], typing.Hashable],
-        cases: typing.Mapping[typing.Hashable, FilterCompatible],
-        default: typing.Optional[FilterCompatible] = None,
+        cases: typing.Mapping[typing.Hashable, BaseFilter[T]],
+        default: typing.Optional[BaseFilter[T]] = None,
     ) -> None:
         """
         :param getter:
@@ -405,7 +407,7 @@ class FilterSwitch(BaseFilter):
         return self._filter(value, self.default)
 
 
-class NamedTuple(BaseFilter):
+class NamedTuple(BaseFilter[T]):
     """
     Attempts to convert the incoming value into a namedtuple.
     """
@@ -413,7 +415,7 @@ class NamedTuple(BaseFilter):
     def __init__(
         self,
         type_: typing.Type[typing.NamedTuple],
-        filter_map: typing.Optional[typing.Mapping[str, FilterCompatible]] = None,
+        filter_map: typing.Optional[typing.Mapping[str, BaseFilter[T]]] = None,
     ) -> None:
         """
         :param type_:
