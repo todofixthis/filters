@@ -15,7 +15,11 @@ __all__ = [
 ]
 
 FilterCompatible = typing.Optional[
-    typing.Union["BaseFilter", "FilterMeta", typing.Callable[..., "BaseFilter"]]
+    typing.Union[
+        "BaseFilter",
+        "FilterMeta",
+        typing.Callable[[], "BaseFilter"],
+    ]
 ]
 """
 Used in PEP-484 type hints to indicate a value that can be normalized
@@ -450,6 +454,8 @@ class BaseFilter(typing.Generic[T], metaclass=FilterMeta):
 
             return resolved
 
+        return None
+
     @staticmethod
     def _make_key(key_parts: typing.Iterable[str]) -> str:
         """
@@ -540,7 +546,7 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
         self,
         message: str,
         exc_info: bool,
-        context: typing.MutableMapping,
+        context: typing.MutableMapping[str, typing.Any],
     ) -> typing.Any:
         """
         Handles an invalid value.
@@ -596,7 +602,7 @@ class ExceptionHandler(BaseInvalidValueHandler):
         self,
         message: str,
         exc_info: bool,
-        context: typing.MutableMapping,
+        context: typing.MutableMapping[str, typing.Any],
     ) -> None:
         error = FilterError(message)
         error.context = context

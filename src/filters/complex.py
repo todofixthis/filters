@@ -246,7 +246,7 @@ class FilterMapper(BaseFilter):
             type=type(self).__name__,
             filters=", ".join(
                 "{key}={filter}".format(key=key, filter=filter_chain)
-                    for key, filter_chain in self._filters.items()
+                for key, filter_chain in self._filters.items()
             ),
         )
 
