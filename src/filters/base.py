@@ -79,25 +79,23 @@ class BaseFilter(typing.Generic[T]):
 
         return new_filter
 
-    def __or__(self, next_filter: "BaseFilter[U] | None") -> "FilterChain[T]":
+    def __or__(self, next_filter: "BaseFilter[U] | None") -> "FilterChain[U]":
         """
         Chains another filter with this one.
         """
-        normalized = self.resolve(next_filter)
+        # Scrub type info from the chain, so we can modify it later.
+        chain = FilterChain[typing.Any](self)
 
-        if normalized:
-            #
-            # Officially, we should return ``FilterChain(self) | next_filter``
-            #
-            # But that wastes some CPU cycles by creating an extra
-            # FilterChain instance that gets thrown away almost
-            # immediately. It's a bit faster just to create a single
-            # FilterChain instance and modify it in-place.
-            #
-            # noinspection PyProtectedMember
-            return FilterChain(self)._add(next_filter)
-        else:
-            return self if isinstance(self, FilterChain) else FilterChain(self)
+        #
+        # Officially, we should return ``FilterChain(self) | next_filter``
+        #
+        # But that wastes some CPU cycles by creating an extra
+        # FilterChain instance that gets thrown away almost
+        # immediately. It's a bit faster just to create a single
+        # FilterChain instance and modify it in-place.
+        #
+        # noinspection PyProtectedMember
+        return typing.cast(FilterChain[U], chain._add(chain.resolve(next_filter)))
 
     def __str__(self) -> str:
         """
@@ -189,9 +187,9 @@ class BaseFilter(typing.Generic[T]):
         """
         if self._handler is None:
             # Attempt to return the parent filter's handler...
-            try:
+            if self.parent:
                 return self.parent.handler
-            except AttributeError:
+            else:
                 #
                 # ... unless this filter has no parent, in which case
                 # it should use the default.
@@ -211,7 +209,7 @@ class BaseFilter(typing.Generic[T]):
         """
         self._handler = handler
 
-    def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter":
+    def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter[T]":
         """
         Cascading method for setting the filter's invalid value
         handler.
@@ -219,7 +217,7 @@ class BaseFilter(typing.Generic[T]):
         self.handler = handler
         return self
 
-    def apply(self, value: typing.Any) -> typing.Union[T, None]:
+    def apply(self, value: typing.Any) -> T | None:
         """
         Applies the filter to a value.
         """
@@ -291,7 +289,7 @@ class BaseFilter(typing.Generic[T]):
         context: typing.MutableMapping[str, typing.Any] | None = None,
         sub_key: str | None = None,
         template_vars: typing.Mapping[str, str] | None = None,
-    ) -> typing.Any:
+    ) -> T | None:
         """
         Handles an invalid value.
 
