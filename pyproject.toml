@@ -60,7 +60,7 @@ packages = [{ include = "filters", from = "src" }]
 python = "^3.11"
 phx-class-registry = "^5"
 python-dateutil = "^2"
-pytz = "^2024"
+pytz = ">=2024,<2026"
 regex = "^2024"
 
 [tool.poetry.extras]
