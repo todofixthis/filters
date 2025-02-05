@@ -764,7 +764,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
             # Note that the prefix reduces the number of bytes available when
             # truncating the value.
             expected_value=b"\xcf\x83\xcf\x86\xce\xac\xce\xbb\xce\xbc\xce\xb1:"  # Prefix
-                           b"\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83",
+            b"\xce\x93\xce\xb5\xce\xb9\xce\xac\xcf\x83",
         )
 
     def test_pass_string_truncated_with_suffix(self):
@@ -781,8 +781,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 suffix=" (อีก)",
             ),
             expected_value=b"\xe0\xb8\xab\xe0\xb8\xa7\xe0\xb8\xb1"
-                           b"\xe0\xb8\x94\xe0\xb8\x94\xe0\xb8\xb5"
-                           b" (\xe0\xb8\xad\xe0\xb8\xb5\xe0\xb8\x81)",  # Suffix
+            b"\xe0\xb8\x94\xe0\xb8\x94\xe0\xb8\xb5"
+            b" (\xe0\xb8\xad\xe0\xb8\xb5\xe0\xb8\x81)",  # Suffix
         )
 
     def test_pass_string_truncated_max_bytes_param_too_small(self):
@@ -874,8 +874,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
             ),
             # End result is only 12 bytes instead of 13 because UTF-16 uses 2
             # bytes per character.
-            expected_value=BOM_UTF16
-                           + b"\x93\x03\xb5\x03\xb9\x03\xac\x03\xc3\x03",
+            expected_value=BOM_UTF16 + b"\x93\x03\xb5\x03\xb9\x03\xac\x03\xc3\x03",
             # Truncated string
         )
 
@@ -895,10 +894,10 @@ class MaxBytesTestCase(BaseFilterTestCase):
             ),
             # Note that the BOM is only applied once.
             expected_value=BOM_UTF16 +
-                           # Prefix:
-                           b"\xc3\x03\xc6\x03\xac\x03\xbb" b"\x03\xbc\x03\xb1\x03:\x00"
-                           # Truncated string:
-                           b"\x93\x03",
+            # Prefix:
+            b"\xc3\x03\xc6\x03\xac\x03\xbb" b"\x03\xbc\x03\xb1\x03:\x00"
+            # Truncated string:
+            b"\x93\x03",
         )
 
     def test_pass_string_truncated_alt_encoding_has_bom_with_suffix(self):
@@ -916,7 +915,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 encoding="utf-16",
             ),
             expected_value=BOM_UTF16 + b"+\x0e'\x0e1\x0e"  # Truncated string
-                                       b" \x00(\x00-\x0e5\x0e\x01\x0e)\x00",  # Suffix
+            b" \x00(\x00-\x0e5\x0e\x01\x0e)\x00",  # Suffix
         )
 
     def test_pass_string_truncated_alt_encoding_has_bom_with_prefix_and_suffix(self):
@@ -934,8 +933,8 @@ class MaxBytesTestCase(BaseFilterTestCase):
                 encoding="utf-16",
             ),
             expected_value=BOM_UTF16 + b"[\x00\x05\t'\t?\t\x15\t]\x00 \x00"  # Prefix
-                                       b".\tH\t\x02\t \x00\x05\t"  # Truncated string
-                                       b" \x00(\x00\x05\t'\t?\t\x15\t)\x00",  # Suffix
+            b".\tH\t\x02\t \x00\x05\t"  # Truncated string
+            b" \x00(\x00\x05\t'\t?\t\x15\t)\x00",  # Suffix
         )
 
     def test_pass_string_truncated_max_bytes_param_almost_too_small_alt_encoding_has_bom(
@@ -998,7 +997,7 @@ class MaxBytesTestCase(BaseFilterTestCase):
             # Note that the resulting value is truncated to 15 bytes instead of
             # 17, so as not to orphan a multibyte sequence.
             expected_value=b"\xe4\xbd\xa0\xe5\xa5\xbd\xef"
-                           b"\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c",
+            b"\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c",
         )
 
     def test_fail_wrong_type(self):
