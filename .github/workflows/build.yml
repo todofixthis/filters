@@ -28,22 +28,22 @@ jobs:
       - name: Run tests
         run: poetry run pytest
 
-    type-check:
-      runs-on: ubuntu-latest
+  type-check:
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Clone repo
-          uses: actions/checkout@v4
-        - name: Set up Python
-          uses: actions/setup-python@v5
-          with:
-            python-version: "3.13"
-        - name: Install dependencies
-          run: |
-            pip install poetry
-            poetry install --with=ci
-        - name: Type checking
-          run: poetry run mypy src test
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install --with=ci
+      - name: Type checking
+        run: poetry run mypy src test
 
   docs:
     runs-on: ubuntu-latest
