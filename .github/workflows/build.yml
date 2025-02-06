@@ -43,7 +43,7 @@ jobs:
             pip install poetry
             poetry install --with=ci
         - name: Type checking
-          run: poetry run mypyc src test
+          run: poetry run mypy src test
 
   docs:
     runs-on: ubuntu-latest

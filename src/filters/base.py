@@ -510,7 +510,7 @@ class FilterHarness(ABC):
         raise
 
 
-class NoOp[T = typing.Any](BaseFilter[T]):
+class NoOp[T](BaseFilter[T]):
     """
     Filter that does nothing, used when you need a placeholder Filter in a FilterChain.
     """

@@ -8,7 +8,7 @@ mode = "poetry"
 pre-commit = [
     "autohooks.plugins.black",
     "autohooks.plugins.ruff",
-    #    "autohooks.plugins.mypy",
+    "autohooks.plugins.mypy",
     "autohooks.plugins.pytest"
 ]
 
@@ -57,7 +57,7 @@ packages = [{ include = "filters", from = "src" }]
 [tool.poetry.dependencies]
 # I'm only one person, so to keep from getting overwhelmed, I'm only committing to
 # supporting the 3 most recent versions of Python.
-python = "^3.11"
+python = "^3.12"
 phx-class-registry = "^5"
 python-dateutil = "^2"
 pytz = "^2025"
@@ -75,7 +75,7 @@ autohooks-plugin-mypy = "^23"
 autohooks-plugin-pytest = "^23"
 autohooks-plugin-ruff = "^24"
 black = "^25"
-mypy = {extras = ["mypyc"], version = "^1"}
+mypy = "^1"
 pytest = "^8"
 sphinx = "^8"
 sphinx_rtd_theme = "^3"
@@ -83,7 +83,7 @@ tox = "^4"
 
 # Used by GitHub Actions.
 [tool.poetry.group.ci.dependencies]
-mypy = {extras = ["mypyc"], version = "^1"}
+mypy = "^1"
 pytest = "^8"
 sphinx = "^8"
 sphinx_rtd_theme = "^3"
@@ -101,8 +101,8 @@ env_list = ["py313", "py312"]
 [tool.tox.env_run_base]
 skip_install = true
 allowlist_externals = ["poetry"]
-commands_pre = [["poetry", "install", "--with=ci", "--sync"]]
+commands_pre = [["poetry", "sync", "--with=ci"]]
 commands = [
     ["poetry", "run", "pytest"],
-#    ["poetry", "run", "mypyc", "src", "test"]
+    ["poetry", "run", "mypy", "src", "test"]
 ]

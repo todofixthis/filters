@@ -11,7 +11,7 @@ def test_happy_path_filter_passes() -> None:
     """
     value = "Hello, world!"
 
-    runner = FilterRunner(f.NoOp())
+    runner = FilterRunner(f.NoOp[str]())
     runner.apply(value)
 
     assert runner.is_valid() is True
