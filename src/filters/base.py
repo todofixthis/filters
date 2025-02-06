@@ -1,6 +1,5 @@
 import typing
 from abc import ABC, abstractmethod as abstract_method
-from copy import copy
 from weakref import ProxyTypes, proxy
 
 __all__ = [
@@ -14,15 +13,12 @@ __all__ = [
     "UncaughtException",
 ]
 
-P = typing.TypeVar("P")
-T = typing.TypeVar("T")
-U = typing.TypeVar("U")
 
-
-class BaseFilter(ABC, typing.Generic[T]):
+class BaseFilter[T](ABC):
     """
     Base functionality for all Filters, macros, etc.
     """
+
     CODE_EXCEPTION = "exception"
 
     templates: dict[str, str] = {
@@ -34,7 +30,7 @@ class BaseFilter(ABC, typing.Generic[T]):
 
         self._harness: FilterHarness | None = None
         self._key: str | None = None
-        self._parent: BaseFilter[P] | None = None
+        self._parent: BaseFilter[typing.Any] | None = None
 
     def __init_subclass__(cls, **kwargs: typing.Any) -> None:
         """
@@ -54,19 +50,15 @@ class BaseFilter(ABC, typing.Generic[T]):
             templates.update(cls.templates)
             cls.templates = templates
 
-    @classmethod
-    def __copy__(cls, the_filter: "BaseFilter[T]") -> "BaseFilter[T]":
-        """
-        Creates a shallow copy of the object.
-        """
-        new_filter: BaseFilter[T] = type(the_filter)()
+    @typing.overload
+    def __or__(self, next_filter: None) -> "FilterChain[T]": ...
 
-        new_filter._parent = the_filter._parent
-        new_filter._key = the_filter._key
+    @typing.overload
+    def __or__[U](self, next_filter: BaseFilter[U]) -> "FilterChain[U]": ...
 
-        return new_filter
-
-    def __or__(self, next_filter: "BaseFilter[U] | None") -> "FilterChain[U]":
+    def __or__[U](
+        self, next_filter: "BaseFilter[U] | None"
+    ) -> "FilterChain[T] | FilterChain[U]":
         """
         Chains another filter with this one.
         """
@@ -109,7 +101,7 @@ class BaseFilter(ABC, typing.Generic[T]):
         self._harness = harness
 
     @property
-    def parent(self) -> "BaseFilter[P] | None":
+    def parent(self) -> "BaseFilter[typing.Any] | None":
         """
         Returns the parent Filter.
         """
@@ -124,7 +116,7 @@ class BaseFilter(ABC, typing.Generic[T]):
         return self._parent
 
     @parent.setter
-    def parent(self, parent: "BaseFilter[P]") -> None:
+    def parent(self, parent: "BaseFilter[typing.Any]") -> None:
         """
         Sets the parent Filter.
         """
@@ -165,7 +157,7 @@ class BaseFilter(ABC, typing.Generic[T]):
         # Iterate up the parent chain and collect key parts.
         # Alternatively, we could just get ``self.parent._key_parts``, but that is way
         # less efficient.
-        parent: BaseFilter[P] | None = self
+        parent: BaseFilter[typing.Any] | None = self
         while parent:
             # As we move up the chain, push key parts onto the *front* of the path
             # (otherwise the key parts would be in reverse order).
@@ -180,14 +172,20 @@ class BaseFilter(ABC, typing.Generic[T]):
         Applies the filter to a value.
         """
         try:
-            return self._apply_none() if value is None else self._apply(value)
+            if value is None:
+                self._apply_none()
+                return None
+
+            return self._apply(value)
         except FilterError as e:
             if harness := self.harness:
-                return harness.handle_filter_error(e)
+                harness.handle_filter_error(e)
+                return None
             raise
         except Exception as e:
             if harness := self.harness:
-                return harness.handle_exception(UncaughtException(self, value, e))
+                harness.handle_exception(UncaughtException(self, value, e))
+                return None
             raise
 
     @abstract_method
@@ -195,7 +193,7 @@ class BaseFilter(ABC, typing.Generic[T]):
         """
         Applies filter-specific logic to a value.
 
-        .. note::
+        .. Note::
            It is safe to assume that ``value`` is not ``None`` when this method is
            invoked.
         """
@@ -206,15 +204,18 @@ class BaseFilter(ABC, typing.Generic[T]):
     def _apply_none(self) -> None:
         """
         Applies filter-specific logic when the incoming value is ``None``.
-        """
-        return None
 
-    def _filter(
+        .. note::
+           The return value from this method is ignored.
+        """
+        pass
+
+    def _filter[U](
         self,
         value: typing.Any,
         filter_: "BaseFilter[U]",
         sub_key: str | None = None,
-    ) -> U:
+    ) -> U | None:
         """
         Applies another filter to a value in the same context as the current filter.
 
@@ -224,19 +225,18 @@ class BaseFilter(ABC, typing.Generic[T]):
         """
         filter_ = self.resolve(filter_, parent=self, key=sub_key)
 
-        # In rare cases, ``filter_chain`` may be ``None``.
-        # :py:meth:`filters.complex.FilterMapper.__init__`
+        # In rare cases, ``filter_`` may be ``None``.
+        # :see: :py:meth:`filters.complex.FilterMapper.__init__`
         if filter_:
             return filter_.apply(value)
 
-        return value
+        # If we get here, assume that ``value`` is valid.
+        return typing.cast(U, value)
 
     @classmethod
-    def resolve(
+    def resolve[U](
         cls,
-        the_filter: typing.Union[
-            "BaseFilter[U]", typing.Callable[[], "BaseFilter[U]"], None
-        ],
+        the_filter: "BaseFilter[U] | typing.Callable[[], BaseFilter[U]] | None",
         parent: "BaseFilter[typing.Any] | None" = None,
         key: str | None = None,
     ) -> "BaseFilter[U]":
@@ -275,7 +275,7 @@ class BaseFilter(ABC, typing.Generic[T]):
         return ".".join(filter(None, key_parts))
 
 
-class FilterChain(BaseFilter[T]):
+class FilterChain[T](BaseFilter[T]):
     """
     Allows chaining multiple filters together so that they are treated as a single
     filter.
@@ -288,17 +288,21 @@ class FilterChain(BaseFilter[T]):
 
         self._add(start_filter)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{type}({filters})".format(
             type=type(self).__name__,
             filters=" | ".join(map(str, self._filters)),
         )
 
     @typing.overload
-    def __or__(self, next_filter: None) -> "FilterChain[T]":
-        ...
+    def __or__(self, next_filter: None) -> "FilterChain[T]": ...
 
-    def __or__(self, next_filter: BaseFilter[U]) -> "FilterChain[U]":
+    @typing.overload
+    def __or__[U](self, next_filter: BaseFilter[U]) -> "FilterChain[U]": ...
+
+    def __or__[U](
+        self, next_filter: "BaseFilter[U] | None"
+    ) -> "FilterChain[T] | FilterChain[U]":
         """
         Chains a filter with this one.
 
@@ -307,23 +311,19 @@ class FilterChain(BaseFilter[T]):
         resolved = self.resolve(next_filter)
 
         if resolved:
-            new_chain: FilterChain[U] = copy(self)
+            new_chain = FilterChain[U]()
+
+            # Copy internal properties
+            new_chain._harness = self._harness
+            new_chain._key = self._key
+            new_chain._parent = self._parent
+
             new_chain._add(next_filter)
             return new_chain
         else:
             return self
 
-    @classmethod
-    def __copy__(cls, the_filter: "FilterChain[T]") -> "FilterChain[T]":
-        """
-        Creates a shallow copy of the object.
-        """
-        new_filter = super().__copy__(the_filter)
-        new_filter._filters = the_filter._filters[:]
-        # noinspection PyTypeChecker
-        return new_filter
-
-    def _add(self, next_filter: BaseFilter[U]) -> "FilterChain[U]":
+    def _add[U](self, next_filter: BaseFilter[U] | None) -> "FilterChain[U]":
         """
         Adds a Filter to the collection directly.
         """
@@ -331,27 +331,31 @@ class FilterChain(BaseFilter[T]):
         if resolved:
             self._filters.append(resolved)
 
-        return self
+        return typing.cast(FilterChain[U], self)
 
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> T:
         for f in self._filters:
             value = self._filter(value, f)
 
-        return value
+        # If we get here, the incoming value should have been transformed to the correct
+        # type.
+        return typing.cast(T, value)
 
-    def _apply_none(self):
-        return self._apply(None)
+    def _apply_none(self) -> None:
+        self._apply(None)
+
 
 class BaseFilterError(ValueError):
     """
     Base class for errors that occur when filtering values.
     """
+
     def __init__(
         self,
-        filter_: BaseFilter[T],
+        filter_: BaseFilter[typing.Any],
         value: typing.Any,
         code: str,
-        context: typing.MutableMapping[str, typing.Any] | None = None,
+        context: typing.Mapping[str, typing.Any] | None = None,
     ):
         """
         :param filter_:
@@ -370,7 +374,7 @@ class BaseFilterError(ValueError):
         """
         super().__init__()
 
-        self.filter: BaseFilter[T] = filter_
+        self.filter: BaseFilter[typing.Any] = filter_
         self.value: typing.Any = value
         self.reason: str = code
 
@@ -394,12 +398,13 @@ class FilterError(BaseFilterError):
 
     Think of a ``FilterError`` like an HTTP 400 response.
     """
+
     def __init__(
         self,
-        filter_: BaseFilter[T],
+        filter_: BaseFilter[typing.Any],
         value: typing.Any,
         code: str,
-        context: typing.MutableMapping[str, typing.Any] | None = None,
+        context: typing.Mapping[str, typing.Any] | None = None,
         template_vars: typing.Mapping[str, str] | None = None,
     ):
         """
@@ -437,6 +442,7 @@ class FilterError(BaseFilterError):
 
         return message.format(**self.template_vars)
 
+
 class UncaughtException(BaseFilterError):
     """
     Indicates that a given value could not be filtered because of a problem with the
@@ -447,10 +453,10 @@ class UncaughtException(BaseFilterError):
 
     def __init__(
         self,
-        filter_: BaseFilter[T],
+        filter_: BaseFilter[typing.Any],
         value: typing.Any,
         e: Exception,
-        context: typing.MutableMapping[str, typing.Any] | None = None,
+        context: typing.Mapping[str, typing.Any] | None = None,
     ):
         """
         :param filter_:
@@ -467,7 +473,7 @@ class UncaughtException(BaseFilterError):
         """
         # Include context vars attached to the exception if applicable, and anything in
         # ``context`` trumps all.
-        context_ = {}
+        context_: dict[str, typing.Any] = {}
         context_.update(getattr(e, "context", {}))
         context_.update(context or {})
 
@@ -483,31 +489,40 @@ class FilterHarness(ABC):
     """
     Runs filters within a harness, so that it can catch and handle errors.
     """
+
     @abstract_method
-    def handle_filter_error(self, e: BaseFilterError) -> None:
+    def handle_filter_error(self, e: BaseFilterError) -> typing.Any:
+        """
+        Handles a filter error (i.e. invalid incoming value).
+
+        :return: Replacement value that the filter should return (usually ``None``).
+        """
         raise NotImplementedError(
             "Not implemented in {cls}.".format(cls=type(self).__name__),
         )
 
-    def handle_exception(self, e: UncaughtException) -> None:
+    def handle_exception(self, e: UncaughtException) -> typing.Any:
         """
-        Handles any error other than a :py:cls:`FilterError`.
+        Handles an uncaught exception that occurred when the filter ran.
+
+        :return: Replacement value that the filter should return (usually ``None``).
         """
         raise
 
 
-class NoOp(BaseFilter[T]):
+class NoOp[T](BaseFilter[T]):
     """
     Filter that does nothing, used when you need a placeholder Filter in a FilterChain.
     """
 
-    def _apply(self, value):
-        return value
+    def _apply(self, value: typing.Any) -> T:
+        # Assume that whatever got passed in is valid.
+        return typing.cast(T, value)
 
 
 # This filter is used extensively by other filters.
 # To avoid lots of needless circular import hacks, we'll put it in the base module.
-class Type(BaseFilter):
+class Type[T](BaseFilter[T]):
     """
     Checks the type of the incoming value.
     """
@@ -520,7 +535,7 @@ class Type(BaseFilter):
 
     def __init__(
         self,
-        allowed_types: typing.Union[type, typing.Tuple[type, ...]],
+        allowed_types: type | typing.Tuple[type, ...],
         allow_subclass: bool = True,
     ) -> None:
         """
@@ -538,14 +553,14 @@ class Type(BaseFilter):
         )
         self.allow_subclass = allow_subclass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{type}({allowed_types}, allow_subclass={allow_subclass!r})".format(
             type=type(self).__name__,
             allowed_types=self.allowed_types,
             allow_subclass=self.allow_subclass,
         )
 
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> T:
         valid = (
             isinstance(value, self.allowed_types)
             if self.allow_subclass
@@ -563,7 +578,7 @@ class Type(BaseFilter):
                 },
             )
 
-        return value
+        return typing.cast(T, value)
 
     @staticmethod
     def get_type_name(type_: type) -> str:

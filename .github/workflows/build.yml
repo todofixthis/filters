@@ -13,7 +13,6 @@ jobs:
           # version number ends with 0!
           - "3.13"
           - "3.12"
-          - "3.11"
 
     steps:
       - name: Clone repo

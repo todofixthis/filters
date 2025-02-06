@@ -60,7 +60,7 @@ packages = [{ include = "filters", from = "src" }]
 python = "^3.11"
 phx-class-registry = "^5"
 python-dateutil = "^2"
-pytz = ">=2024,<2026"
+pytz = "^2025"
 regex = "^2024"
 
 [tool.poetry.extras]
@@ -74,7 +74,7 @@ autohooks-plugin-black = "^23"
 autohooks-plugin-mypy = "^23"
 autohooks-plugin-pytest = "^23"
 autohooks-plugin-ruff = "^24"
-black = ">=24,<26"
+black = "^25"
 mypy = {extras = ["mypyc"], version = "^1"}
 pytest = "^8"
 sphinx = "^8"
@@ -96,7 +96,7 @@ Issues = "https://github.com/todofixthis/filters/issues"
 testpaths = ["test"]
 
 [tool.tox]
-env_list = ["py313", "py312", "py311"]
+env_list = ["py313", "py312"]
 
 [tool.tox.env_run_base]
 skip_install = true

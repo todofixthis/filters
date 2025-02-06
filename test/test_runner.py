@@ -1,7 +1,7 @@
 import typing
 
 import filters as f
-from filters.base import BaseFilter, T
+from filters.base import BaseFilter
 from filters.runner import FilterRunner
 
 
@@ -11,12 +11,13 @@ def test_happy_path_filter_passes() -> None:
     """
     value = "Hello, world!"
 
-    runner = FilterRunner(f.NoOp())
+    runner = FilterRunner(f.NoOp[str]())
     runner.apply(value)
 
     assert runner.is_valid() is True
     assert runner.cleaned_data is value
     assert runner.errors == {}
+
 
 def test_happy_path_filter_fails() -> None:
     """
@@ -27,20 +28,27 @@ def test_happy_path_filter_fails() -> None:
 
     assert runner.is_valid() is False
     assert runner.cleaned_data is None
-    assert runner.errors == {'': [{
-        "code": f.Type.CODE_WRONG_TYPE,
-        "message": "int is not valid (allowed types: str).",
-    }]}
+    assert runner.errors == {
+        "": [
+            {
+                "code": f.Type.CODE_WRONG_TYPE,
+                "message": "int is not valid (allowed types: str).",
+            }
+        ]
+    }
+
 
 def test_filter_asplodes() -> None:
     """
     The filter raises an unexpected exception.
     """
+
     class Asplode(BaseFilter[None]):
         """
         We do so love our references.
         """
-        def _apply(self, value: typing.Any) -> T:
+
+        def _apply(self, value: typing.Any) -> None:
             raise RuntimeError("Well, my head asplode.")
 
     runner = FilterRunner(Asplode())
@@ -48,8 +56,11 @@ def test_filter_asplodes() -> None:
 
     assert runner.is_valid() is False
     assert runner.cleaned_data is None
-    assert runner.errors == {'': [{
-        "code": BaseFilter.CODE_EXCEPTION,
-        "message": "An error occurred while processing this value.",
-    }]}
-
+    assert runner.errors == {
+        "": [
+            {
+                "code": BaseFilter.CODE_EXCEPTION,
+                "message": "An error occurred while processing this value.",
+            }
+        ]
+    }
