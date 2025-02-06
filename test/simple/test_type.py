@@ -1,7 +1,6 @@
 import pytest
 
 import filters as f
-import typing
 
 from filters.base import FilterError
 
@@ -10,7 +9,8 @@ def test_none() -> None:
     """
     Passing ``None`` to this filter is a no-op.
     """
-    assert f.Type(typing.Any).apply(None) is None
+    assert f.Type(str).apply(None) is None
+
 
 def test_pass_single_type() -> None:
     """
@@ -19,6 +19,7 @@ def test_pass_single_type() -> None:
     value = "Hello, world!"
 
     assert f.Type(str).apply(value) is value
+
 
 def test_fail_single_type() -> None:
     """
@@ -31,20 +32,23 @@ def test_fail_single_type() -> None:
 
     assert str(e.value) == "bytes is not valid (allowed types: str)."
 
+
 def test_pass_multiple_types() -> None:
     """
     The incoming value has one of the required types.
     """
     assert f.Type((str, int)).apply(42) == 42
 
+
 def test_fail_multiple_types() -> None:
     """
     The incoming value doesn't match any of the required types.
     """
     with pytest.raises(FilterError) as e:
-        f.Type((str, int)).apply(b'Still not a string, sorry')
+        f.Type((str, int)).apply(b"Still not a string, sorry")
 
     assert str(e.value) == "bytes is not valid (allowed types: str, int)."
+
 
 def test_pass_subclass() -> None:
     """
@@ -52,6 +56,7 @@ def test_pass_subclass() -> None:
     """
     # bool is a subclass of int
     assert f.Type(int).apply(True) is True
+
 
 def test_fail_subclass_not_allowed() -> None:
     """
@@ -61,6 +66,7 @@ def test_fail_subclass_not_allowed() -> None:
         f.Type(int, allow_subclass=False).apply(True)
 
     assert str(e.value) == "bool is not valid (allowed types: int)."
+
 
 def test_fail_types_are_not_instances() -> None:
     """

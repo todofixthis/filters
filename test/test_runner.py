@@ -11,7 +11,7 @@ def test_happy_path_filter_passes() -> None:
     """
     value = "Hello, world!"
 
-    runner = FilterRunner(f.NoOp[str]())
+    runner = FilterRunner(f.NoOp())
     runner.apply(value)
 
     assert runner.is_valid() is True
@@ -23,7 +23,7 @@ def test_happy_path_filter_fails() -> None:
     """
     Using a filter runner to check an invalid value.
     """
-    runner = FilterRunner(f.Type(str))
+    runner = FilterRunner(f.Type[str](str))
     runner.apply(42)
 
     assert runner.is_valid() is False

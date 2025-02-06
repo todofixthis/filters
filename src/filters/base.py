@@ -54,7 +54,7 @@ class BaseFilter[T](ABC):
     def __or__(self, next_filter: None) -> "FilterChain[T]": ...
 
     @typing.overload
-    def __or__[U](self, next_filter: BaseFilter[U]) -> "FilterChain[U]": ...
+    def __or__[U](self, next_filter: "BaseFilter[U]") -> "FilterChain[U]": ...
 
     def __or__[U](
         self, next_filter: "BaseFilter[U] | None"
@@ -510,7 +510,7 @@ class FilterHarness(ABC):
         raise
 
 
-class NoOp[T](BaseFilter[T]):
+class NoOp[T = typing.Any](BaseFilter[T]):
     """
     Filter that does nothing, used when you need a placeholder Filter in a FilterChain.
     """
@@ -535,7 +535,7 @@ class Type[T](BaseFilter[T]):
 
     def __init__(
         self,
-        allowed_types: type | typing.Tuple[type, ...],
+        allowed_types: type | tuple[type, ...],
         allow_subclass: bool = True,
     ) -> None:
         """
