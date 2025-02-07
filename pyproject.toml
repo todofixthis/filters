@@ -68,12 +68,12 @@ ci = [
 ]
 
 [tool.autohooks]
-mode = "poetry"
+mode = "pythonpath"
 pre-commit = [
     "autohooks.plugins.black",
-    "autohooks.plugins.ruff",
     "autohooks.plugins.mypy",
-    "autohooks.plugins.pytest"
+    "autohooks.plugins.pytest",
+    "autohooks.plugins.ruff",
 ]
 
 [tool.mypy]
