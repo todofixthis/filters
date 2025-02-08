@@ -6,7 +6,7 @@ __all__ = [
     "BaseFilter",
     "BaseFilterError",
     "FilterChain",
-    "FilterError",
+    "InvalidValue",
     "FilterHarness",
     "NoOp",
     "Type",
@@ -67,9 +67,9 @@ class BaseFilter[T](ABC):
 
         # Officially, we should return ``FilterChain(self) | next_filter``
         #
-        # But that wastes some CPU cycles by creating an extra :py:cls:`FilterChain`
+        # But that wastes some CPU cycles by creating an extra :py:class:`FilterChain`
         # instance that gets thrown away almost immediately. It's a bit faster just to
-        # create a single :py:cls:`FilterChain` instance and modify it in-place.
+        # create a single :py:class:`FilterChain` instance and modify it in-place.
         #
         # noinspection PyProtectedMember
         return typing.cast(FilterChain[U], chain._add(chain.resolve(next_filter)))
@@ -177,7 +177,7 @@ class BaseFilter[T](ABC):
                 return None
 
             return self._apply(value)
-        except FilterError as e:
+        except InvalidValue as e:
             if harness := self.harness:
                 harness.handle_filter_error(e)
                 return None
@@ -215,20 +215,25 @@ class BaseFilter[T](ABC):
         value: typing.Any,
         filter_: "BaseFilter[U]",
         sub_key: str | None = None,
-    ) -> U | None:
+    ) -> U:
         """
         Applies another filter to a value in the same context as the current filter.
 
         :param sub_key:
             Appended to the ``key`` value in the error message context (used by complex
             filters).
+
+        :return:
+            Assumed to be not ``None`` to save some typing (this method is almost
+            universally invoked from inside :py:meth:`BaseFilter._apply` where the
+            incoming value is guaranteed not to be ``None``).
         """
         filter_ = self.resolve(filter_, parent=self, key=sub_key)
 
         # In rare cases, ``filter_`` may be ``None``.
         # :see: :py:meth:`filters.complex.FilterMapper.__init__`
         if filter_:
-            return filter_.apply(value)
+            return typing.cast(U, filter_.apply(value))
 
         # If we get here, assume that ``value`` is valid.
         return typing.cast(U, value)
@@ -376,7 +381,7 @@ class BaseFilterError(ValueError):
 
         self.filter: BaseFilter[typing.Any] = filter_
         self.value: typing.Any = value
-        self.reason: str = code
+        self.code: str = code
 
         self.context: dict[str, typing.Any] = {}
         self.context.update(context or {})
@@ -386,12 +391,12 @@ class BaseFilterError(ValueError):
         Returns formatted error message.
         """
         try:
-            return self.filter.templates[self.reason]
+            return self.filter.templates[self.code]
         except KeyError:
-            return self.reason
+            return self.code
 
 
-class FilterError(BaseFilterError):
+class InvalidValue(BaseFilterError):
     """
     Indicates that a given value could not be filtered because it failed validation or
     was otherwise invalid, rather than because of a problem with the filter code itself.
@@ -436,9 +441,9 @@ class FilterError(BaseFilterError):
         Returns the formatted error message.
         """
         try:
-            message = self.filter.templates[self.reason]
+            message = self.filter.templates[self.code]
         except KeyError:
-            message = self.reason
+            message = self.code
 
         return message.format(**self.template_vars)
 
@@ -568,7 +573,7 @@ class Type[T](BaseFilter[T]):
         )
 
         if not valid:
-            raise FilterError(
+            raise InvalidValue(
                 filter_=self,
                 value=value,
                 code=self.CODE_WRONG_TYPE,

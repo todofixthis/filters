@@ -2,6 +2,7 @@
 # Note that the order is important here, due to dependencies.
 # Additional filters are loaded into a separate namespace, so that IDEs don't go insane.
 from .base import NoOp, Type
+
 # from .complex import (
 #     FilterMapper,
 #     FilterRepeater,
@@ -9,13 +10,14 @@ from .base import NoOp, Type
 #     NamedTuple,
 # )
 # from .extensions import FilterExtensionRegistry
-# from .number import (
-#     Decimal,
-#     Int,
-#     Max,
-#     Min,
-#     Round,
-# )
+from .number import (
+    Decimal,
+    Int,
+    Max,
+    Min,
+    Round,
+)
+
 # from .simple import (
 #     Array,
 #     ByteArray,
@@ -59,21 +61,21 @@ __all__ = [
     # "Choice",
     # "Date",
     # "Datetime",
-    # "Decimal",
+    "Decimal",
     # "Empty",
     # "FilterMapper",
     # "FilterRepeater",
     # "FilterSwitch",
-    # "Int",
+    "Int",
     # "IpAddress",
     # "Item",
     # "JsonDecode",
     # "Length",
-    # "Max",
+    "Max",
     # "MaxBytes",
     # "MaxChars",
     # "MaxLength",
-    # "Min",
+    "Min",
     # "MinLength",
     # "NamedTuple",
     "NoOp",
@@ -83,7 +85,7 @@ __all__ = [
     # "Pick",
     # "Regex",
     # "Required",
-    # "Round",
+    "Round",
     # "Split",
     # "Strip",
     "Type",
