@@ -130,7 +130,7 @@ To install the distribution for local development, some additional setup is requ
 
 #. Run the following command to install additional dependencies::
 
-      uv install --with=dev
+      uv sync --group=dev
 
 #. Activate pre-commit hook::
 
