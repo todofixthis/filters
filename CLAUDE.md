@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Testing and Quality Assurance
 - **Run tests**: `uv run pytest` (current environment) or `uv run tox -p` (all supported Python versions)
-- **Type checking**: `uv run mypyc src test`
+- **Linting**: `uv run ruff check` (code quality and imports)
 - **Build package**: `uv build`
 - **Install dev dependencies**: `uv sync --group=dev`
 
@@ -31,10 +31,11 @@ This is a Python data validation and processing pipeline library called "Filters
 - `FilterHarness`: Context manager for error handling
 
 **Filter Categories**:
-- **Simple filters** (`src/filters/simple.py`): Date, Datetime, Optional, Call
-- **Number filters** (`src/filters/number.py`): Int, Decimal, Min, Max, Round  
-- **Collection filters** (`src/filters/collections.py`): Array, Length, Required, etc.
-- **Legacy filters**: String, complex filters are commented out in `__init__.py` (being refactored)
+- **Simple filters** (`src/filters/simple.py`): Date, Datetime, Optional, Call, Array, Length, Required, etc.
+- **Number filters** (`src/filters/number.py`): Int, Decimal, Min, Max, Round
+- **Complex filters** (`src/filters/complex.py`): FilterMapper, FilterRepeater, FilterSwitch, NamedTuple
+- **String filters** (`src/filters/string.py`): Base64Decode, ByteString, CaseFold, Choice, IpAddress, etc.
+- **Extension system** (`src/filters/extensions.py`): FilterExtensionRegistry for loading third-party filters
 
 ### Key Design Patterns
 
@@ -49,9 +50,17 @@ f.Required | f.Decimal | f.Min(Decimal(-90)) | f.Max(Decimal(90))
 
 **Type Safety**: Modern Python typing with generics throughout the codebase.
 
+**Import Strategy**: The `__init__.py` uses explicit imports with `__all__` declarations rather than wildcard imports to satisfy static analysis tools like ruff and improve IDE support.
+
 ## Project Status
 
-This is an active refactor of a legacy codebase. Many string and complex filters are currently disabled (see commented imports in `__init__.py`) as they're being modernised with the new type system.
+This project has undergone significant modernisation. The filters now use explicit imports and proper `__all__` declarations for better static analysis support. All major filter categories (base, simple, number, complex, string) are active and available.
+
+### Git Branch Structure
+- **Release branch**: `main` (for stable releases only)
+- **Development branch**: `develop` (main development branch)
+- **Feature development**: Create feature branches off `develop` for all new work
+- Always create feature branches for new development rather than working directly on `develop`
 
 ## Package Information
 
@@ -59,6 +68,24 @@ This is an active refactor of a legacy codebase. Many string and complex filters
 - Python versions: 3.12+ (3.13, 3.12 tested via tox)
 - Built with: hatchling build backend
 - Uses `uv` for dependency management and virtual environments
+
+## Troubleshooting
+
+### Common Import Issues
+
+**phx-class-registry v5 Breaking Changes**: If you encounter `ImportError: cannot import name 'EntryPointClassRegistry'`, update the import in `src/filters/extensions.py`:
+```python
+# Old (v4): from class_registry import EntryPointClassRegistry
+# New (v5): from class_registry.entry_points import EntryPointClassRegistry
+```
+
+**Ruff Linting F403 Errors**: Use explicit imports with `__all__` declarations instead of wildcard imports (`from module import *`) to satisfy static analysis tools.
+
+**Missing Modules**: If tests fail with `ModuleNotFoundError` for modules like `filters.collections`, check that the package structure matches expectations and that all required modules exist in `src/filters/`.
+
+### Development Environment
+- Always run `uv sync --group=dev` after pulling changes to ensure dependencies are up to date
+- Use `uv run` prefix for all development commands to ensure proper virtual environment activation
 
 ## Language and Style Guidelines
 

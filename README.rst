@@ -214,7 +214,7 @@ Steps to build releases are based on
 #. Go to the `Releases page for the repo`_.
 #. Click ``Draft a new release``.
 #. Select the tag that you created in step 1.
-#. Specify the title of the release (e.g., ``{{ cookiecutter.project_name }} v1.2.3``).
+#. Specify the title of the release (e.g., ``Filters v1.2.3``).
 #. Write a description for the release.  Make sure to include:
    - Credit for code contributed by community members.
    - Significant functionality that was added/changed/removed.
