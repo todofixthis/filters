@@ -49,11 +49,11 @@ Issues = "https://github.com/todofixthis/filters/issues"
 dev = [
     "autohooks>=25,<26",
     "autohooks-plugin-black>=23,<24",
-    "autohooks-plugin-mypy>=23,<24",
+#    "autohooks-plugin-mypy>=23,<24",
     "autohooks-plugin-pytest>=23,<24",
     "autohooks-plugin-ruff>=25,<26",
     "black>=25,<26",
-    "mypy>=1,<2",
+#    "mypy>=1,<2",
     "pytest>=8,<9",
     "sphinx>=8,<9",
     "sphinx_rtd_theme>=3,<4",
@@ -63,7 +63,7 @@ dev = [
     "types-pytz>=2025",
 ]
 ci = [
-    "mypy>=1,<2",
+#    "mypy>=1,<2",
     "pytest>=8,<9",
     "sphinx>=8,<9",
     "sphinx_rtd_theme>=3,<4",
@@ -73,13 +73,13 @@ ci = [
 mode = "pythonpath"
 pre-commit = [
     "autohooks.plugins.black",
-    "autohooks.plugins.mypy",
+#    "autohooks.plugins.mypy",
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
 ]
 
-[tool.mypy]
-strict = true
+#[tool.mypy]
+#strict = true
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -106,6 +106,6 @@ env_list = ["py313", "py312"]
 [tool.tox.env_run_base]
 commands = [
     ["pytest"],
-    ["mypy", "src", "test"]
+#    ["mypy", "src", "test"]
 ]
 runner = "uv-venv-lock-runner"

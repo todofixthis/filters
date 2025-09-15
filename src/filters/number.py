@@ -1,9 +1,7 @@
 import typing
-import warnings
-from abc import abstractmethod as abstract_method
 from decimal import Decimal as DecimalType, InvalidOperation, ROUND_HALF_UP
 
-from filters.base import BaseFilter, InvalidValue, Type
+from filters.base import BaseFilter, Type
 
 __all__ = [
     "Decimal",
@@ -13,22 +11,8 @@ __all__ = [
     "Round",
 ]
 
-T = typing.TypeVar("T")
 
-
-class _Comparable(typing.Protocol):
-    """
-    Used to validate that the value passed to a filter supports comparison methods.
-
-    :see: https://stackoverflow.com/a/65224102
-    """
-
-    @abstract_method
-    def __lt__(self: typing.Any, other: typing.Any, /) -> bool:
-        pass
-
-
-class Decimal(BaseFilter[DecimalType]):
+class Decimal(BaseFilter):
     """
     Interprets the value as a :py:class:`decimal.Decimal` object.
     """
@@ -38,21 +22,22 @@ class Decimal(BaseFilter[DecimalType]):
 
     templates = {
         CODE_INVALID: "Numeric value expected.",
-        CODE_NON_FINITE: "Finite value expected.",
+        CODE_NON_FINITE: "Numeric value expected.",
     }
 
     def __init__(
         self,
-        max_precision: int | DecimalType | None = None,
+        max_precision: typing.Optional[typing.Union[int, DecimalType]] = None,
         allow_tuples: bool = True,
     ) -> None:
         """
         :param max_precision:
-            Max number of decimal places the resulting value is allowed to have. Values
-            that are too precise will be rounded to fit.
+            Max number of decimal places the resulting value is allowed
+            to have.  Values that are too precise will be rounded to
+            fit.
 
-            To avoid ambiguity, specify ``max_precision`` as a ``decimal.Decimal``
-            object.
+            To avoid ambiguity, specify ``max_precision`` as a
+            ``decimal.Decimal`` object.
 
             For example, to round to the nearest 1/100::
 
@@ -61,8 +46,9 @@ class Decimal(BaseFilter[DecimalType]):
         :param allow_tuples:
             Whether to allow tuple-like inputs.
 
-            Allowing tuple inputs might couple the implementation more tightly to
-            Python's Decimal type, so you can choose to disallow it.
+            Allowing tuple inputs might couple the implementation more
+            tightly to Python's Decimal type, so you have the option
+            to disallow it.
         """
         super().__init__()
 
@@ -73,38 +59,46 @@ class Decimal(BaseFilter[DecimalType]):
         self.max_precision = max_precision
         self.allow_tuples = allow_tuples
 
-    def __str__(self) -> str:
+    def __str__(self):
         return "{type}(max_precision={max_precision!r})".format(
             type=type(self).__name__,
             max_precision=self.max_precision,
         )
 
-    def _apply(self, value: typing.Any) -> DecimalType:
-        # Python's Decimal type supports both tuples and lists.
-        # :py:meth:`decimal.Decimal.__init__`
+    def _apply(self, value):
         allowed_types = (
-            (str, int, float, DecimalType, list, tuple)
-            if self.allow_tuples
-            else (
-                str,
-                int,
-                float,
-                DecimalType,
-            )
+            str,
+            int,
+            float,
+            DecimalType,
         )
+        if self.allow_tuples:
+            # Python's Decimal type supports both tuples and lists.
+            # :py:meth:`decimal.Decimal.__init__`
+            allowed_types += (
+                list,
+                tuple,
+            )
 
         value = self._filter(value, Type(allowed_types))
 
+        if self._has_errors:
+            return value
+
         try:
             d = DecimalType(value)
-        except (InvalidOperation, TypeError, ValueError) as e:
-            raise InvalidValue(self, value, self.CODE_INVALID) from e
+        except (InvalidOperation, TypeError, ValueError):
+            return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
-        # Decimal's constructor also accepts values such as 'NaN' or '+Inf', which
-        # aren't valid in this context.
+        # Decimal's constructor also accepts values such as 'NaN' or
+        # '+Inf', which aren't valid in this context.
         # :see: decimal.Decimal._parser
         if not d.is_finite():
-            raise InvalidValue(self, value, self.CODE_NON_FINITE)
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_NON_FINITE,
+                exc_info=True,
+            )
 
         if self.max_precision is not None:
             d = d.quantize(self.max_precision)
@@ -112,23 +106,18 @@ class Decimal(BaseFilter[DecimalType]):
         return d
 
 
-class Int(BaseFilter[int]):
+class Int(BaseFilter):
     """
     Interprets the value as an int.
 
-    Strings and other compatible values will be converted.
+    Strings and other compatible values will be converted, but floats
+    will be treated as INVALID.
 
-    Floats will be accepted as long as the fpart is empty (e.g. 42.0 is valid, but 42.1
-    is not).
+    Note that Python handles really, really big int values
+    transparently, so you don't need to worry about overflow.
 
-    If you want to accept float values with non-empty fparts, pass the value through
-    :py:class:`Round` first.
-
-    Note that `Python handles massive int values transparently`_, so you don't need to
-    worry about overflow.
-
-
-    .. _Python handles massive int values transparently: http://stackoverflow.com/a/538583
+    References:
+      - http://stackoverflow.com/a/538583
     """
 
     CODE_DECIMAL = "not_int"
@@ -137,30 +126,30 @@ class Int(BaseFilter[int]):
         CODE_DECIMAL: "Integer value expected.",
     }
 
-    def _apply(self, value: typing.Any) -> int:
-        decimal_value: DecimalType = self._filter(value, Decimal())
+    def _apply(self, value):
+        decimal = self._filter(value, Decimal)  # type: DecimalType
+
+        if self._has_errors:
+            return None
 
         # Do not allow floats.
         # http://stackoverflow.com/a/19965088
-        if decimal_value % 1:
-            raise InvalidValue(self, value, self.CODE_DECIMAL)
+        if decimal % 1:
+            return self._invalid_value(value, self.CODE_DECIMAL)
 
-        # Once we get to this point, we're pretty confident we've got something that can
-        # be converted into an int.
-        return int(decimal_value)
+        # Once we get to this point, we're pretty confident that we've
+        # got something that can be converted into an int.
+        # noinspection PyTypeChecker
+        return int(decimal)
 
 
-class Max[T: _Comparable](BaseFilter[T]):
+class Max(BaseFilter):
     """
     Enforces a maximum value.
 
-    .. note:
-        Technically, this filter can operate on any type that supports comparison, but
-        it tends to be used exclusively with numeric types.
-
-        In particular, it tends to yield `strange results when applied to strings`_.
-
-        .. _`strange results when applied to strings`: http://stackoverflow.com/q/1097908
+    Note:  Technically, this filter can operate on any type that
+    supports comparison, but it tends to be used exclusively with
+    numeric types.
     """
 
     CODE_TOO_BIG = "too_big"
@@ -169,7 +158,7 @@ class Max[T: _Comparable](BaseFilter[T]):
         CODE_TOO_BIG: "Value is too large (must be {operator} {max}).",
     }
 
-    def __init__(self, max_value: T, exclusive: bool = False) -> None:
+    def __init__(self, max_value: typing.Any, exclusive: bool = False) -> None:
         """
         :param max_value:
             The max value that the Filter will accept.
@@ -177,48 +166,50 @@ class Max[T: _Comparable](BaseFilter[T]):
         :param exclusive:
             Whether to exclude the max value itself as a valid value:
 
-            - True: The incoming value must be *less than* the max value.
-            - False (default): The incoming value must be *less than or equal
-              to* the max value.
+            - True: The incoming value must be _less than_ the max value.
+            - False (default): The incoming value must be _less than
+              or equal to_ the max value.
         """
         super().__init__()
 
         self.max_value = max_value
         self.exclusive = exclusive
 
-    def __str__(self) -> str:
+    def __str__(self):
         return "{type}({max_value!r}, exclusive={exclusive!r})".format(
             type=type(self).__name__,
             max_value=self.max_value,
             exclusive=self.exclusive,
         )
 
-    def _apply[U: _Comparable](self, value: U) -> U:
+    def _apply(self, value):
+        # Note that this will yield weird results for string values.
+        # We could add better unicode support, if we ever need it.
+        # http://stackoverflow.com/q/1097908
         if (value > self.max_value) or (self.exclusive and (value == self.max_value)):
-            raise InvalidValue(
-                self,
-                value,
-                self.CODE_TOO_BIG,
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_TOO_BIG,
+                # This only makes sense if `self.exclusive` is False.
+                # Better to be consistent and replace all invalid
+                # values with `None`.
+                # replacement = self.max_value,
                 template_vars={
                     "operator": "<" if self.exclusive else "<=",
-                    "max": str(self.max_value),
+                    "max": self.max_value,
                 },
             )
 
         return value
 
 
-class Min[T: _Comparable](BaseFilter[T]):
+class Min(BaseFilter):
     """
     Enforces a minimum value.
 
-    .. note:
-        Technically, this filter can operate on any type that supports comparison, but
-        it tends to be used exclusively with numeric types.
-
-        In particular, it tends to yield `strange results when applied to strings`_.
-
-        .. _`strange results when applied to strings`: http://stackoverflow.com/q/1097908
+    Note:  Technically, this filter can operate on any type that
+    supports comparison, but it tends to be used exclusively with
+    numeric types.
     """
 
     CODE_TOO_SMALL = "too_small"
@@ -227,7 +218,7 @@ class Min[T: _Comparable](BaseFilter[T]):
         CODE_TOO_SMALL: "Value is too small (must be {operator} {min}).",
     }
 
-    def __init__(self, min_value: T, exclusive: bool = False) -> None:
+    def __init__(self, min_value: typing.Any, exclusive: bool = False) -> None:
         """
         :param min_value:
             The min value that the Filter will accept.
@@ -235,89 +226,95 @@ class Min[T: _Comparable](BaseFilter[T]):
         :param exclusive:
             Whether to exclude the min value itself as a valid value:
 
-            - True: The incoming value must be *greater than* the min
+            - True: The incoming value must be _greater than_ the min
               value.
-            - False (default): The incoming value must be *greater than
-              or equal to* the min value.
+            - False (default): The incoming value must be _greater than
+              or equal to_ the min value.
         """
         super().__init__()
 
         self.min_value = min_value
         self.exclusive = exclusive
 
-    def __str__(self) -> str:
+    def __str__(self):
         return "{type}({min_value!r}, exclusive={exclusive!r})".format(
             type=type(self).__name__,
             min_value=self.min_value,
             exclusive=self.exclusive,
         )
 
-    def _apply[U: _Comparable](self, value: U) -> U:
+    def _apply(self, value):
+        # Note that this will yield weird results for string values.
+        # We could add better unicode support, if we ever need it.
+        # http://stackoverflow.com/q/1097908
         if (value < self.min_value) or (self.exclusive and (value == self.min_value)):
-            raise InvalidValue(
-                self,
-                value,
-                self.CODE_TOO_SMALL,
+            return self._invalid_value(
+                value=value,
+                reason=self.CODE_TOO_SMALL,
+                # This only makes sense if ``self.exclusive`` is False.
+                # Better to be consistent and replace all invalid
+                # values with ``None``.
+                # replacement = self.min_value,
                 template_vars={
                     "operator": ">" if self.exclusive else ">=",
-                    "min": str(self.min_value),
+                    "min": self.min_value,
                 },
             )
 
         return value
 
 
-class Round(BaseFilter[DecimalType]):
+class Round(BaseFilter):
     """
     Rounds incoming values to whole numbers or decimals.
     """
 
     def __init__(
         self,
-        to_nearest: int | str | DecimalType = 1,
+        to_nearest: typing.Union[int, str, DecimalType] = 1,
         rounding: str = ROUND_HALF_UP,
+        result_type: type = DecimalType,
     ):
         """
         :param to_nearest:
             The value that the filter should round to.
 
-            E.g. ``Round(1)`` rounds to the nearest whole number.
+            E.g., ``Round(1)`` rounds to the nearest whole number.
 
-            If you want to round to a float value, it is recommended that you provide it
-            as a string or Decimal, to avoid floating point precision errors.
+            If you want to round to a float value, it is recommended that you
+            provide it as a string or Decimal, to avoid floating point
+            precision errors.
 
         :param rounding:
             Controls how to round values.
 
-            See https://docs.python.org/3/library/decimal.html#rounding-modes for
-            available rounding modes.
+        :param result_type:
+            The type of result to return.
         """
         super().__init__()
 
-        if isinstance(to_nearest, float):
-            warnings.warn(
-                "Specifying `to_nearest` as a float may cause floating point issues. "
-                "For safety, always specify `to_nearest` as a string."
-            )
-
         self.to_nearest = DecimalType(to_nearest)
 
-        # Rounding to zero / negative values isn't supported.
+        # Rounding to negative values isn't supported.
         # I'm not even sure if that concept is valid.
-        self._filter(self.to_nearest, Min(DecimalType("0"), exclusive=True))
+        Min(DecimalType("0")).apply(self.to_nearest)
 
-        self.mode = rounding
+        self.result_type = result_type
+        self.rounding = rounding
 
-    def _apply(self, value: typing.Any) -> DecimalType:
-        value = self._filter(value, Decimal())
+    def _apply(self, value):
+        value: DecimalType = self._filter(value, Decimal)
+
+        if self._has_errors:
+            return None
 
         one = DecimalType("1")
 
-        # Scale -> round -> unscale.
+        # Scale, round, unscale.
         # Note that we use :py:meth:`decimal.Decimal.quantize` instead of
         # :py:func:`round` to avoid floating-point precision errors.
-        # :see: http://stackoverflow.com/a/4340355
-        return DecimalType(
-            (value * one / self.to_nearest).quantize(one, rounding=self.mode)
+        # http://stackoverflow.com/a/4340355
+        return self.result_type(
+            (value * one / self.to_nearest).quantize(one, rounding=self.rounding)
             * self.to_nearest
         )
