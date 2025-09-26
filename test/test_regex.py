@@ -1,3 +1,7 @@
+"""
+Tests for the Regex filter.
+"""
+
 import re
 
 import regex

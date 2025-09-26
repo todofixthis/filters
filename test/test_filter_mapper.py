@@ -1,3 +1,7 @@
+"""
+Tests for the FilterMapper filter.
+"""
+
 import filters as f
 
 

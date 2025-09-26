@@ -1,3 +1,7 @@
+"""
+Tests for the MaxBytes filter.
+"""
+
 from codecs import BOM_UTF16
 
 import pytest

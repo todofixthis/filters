@@ -1,3 +1,7 @@
+"""
+Tests for the error handlers.
+"""
+
 import logging
 import sys
 import typing

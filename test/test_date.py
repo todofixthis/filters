@@ -1,3 +1,7 @@
+"""
+Tests for the Date filter.
+"""
+
 from datetime import date, datetime
 
 from dateutil.tz import tzoffset

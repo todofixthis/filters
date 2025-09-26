@@ -1,3 +1,7 @@
+"""
+Tests for the CaseFold filter.
+"""
+
 import filters as f
 
 

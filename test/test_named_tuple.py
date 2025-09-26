@@ -1,3 +1,7 @@
+"""
+Tests for the NamedTuple filter.
+"""
+
 from collections import namedtuple
 
 import filters as f

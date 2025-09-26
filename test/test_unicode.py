@@ -1,3 +1,7 @@
+"""
+Tests for the Unicode filter.
+"""
+
 from decimal import Decimal
 from xml.etree.ElementTree import Element
 

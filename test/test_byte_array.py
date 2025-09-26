@@ -1,3 +1,7 @@
+"""
+Tests for the ByteArray filter.
+"""
+
 import filters as f
 
 

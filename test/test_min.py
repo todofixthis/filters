@@ -1,7 +1,8 @@
+"""
+Tests for the Min filter.
+"""
+
 import filters as f
-
-
-# Min Filter Tests
 
 
 def test_min_pass_none(assert_filter_passes):

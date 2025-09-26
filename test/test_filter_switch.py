@@ -1,3 +1,7 @@
+"""
+Tests for the FilterSwitch filter.
+"""
+
 import filters as f
 
 

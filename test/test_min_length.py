@@ -1,3 +1,7 @@
+"""
+Tests for the MinLength filter.
+"""
+
 import filters as f
 from .conftest import Lengthy
 

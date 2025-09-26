@@ -1,7 +1,8 @@
+"""
+Tests for the Max filter.
+"""
+
 import filters as f
-
-
-# Max Filter Tests
 
 
 def test_max_pass_none(assert_filter_passes):

@@ -1,3 +1,7 @@
+"""
+Tests for the Choice filter.
+"""
+
 import pytest
 
 import filters as f

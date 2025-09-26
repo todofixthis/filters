@@ -1,3 +1,7 @@
+"""
+Tests for the FilterChain filter.
+"""
+
 import filters as f
 import pytest
 

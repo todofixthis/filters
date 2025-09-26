@@ -1,3 +1,7 @@
+"""
+Tests for the FilterRepeater filter.
+"""
+
 import filters as f
 
 

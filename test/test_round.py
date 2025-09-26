@@ -1,9 +1,10 @@
+"""
+Tests for the Round filter.
+"""
+
 from decimal import Decimal, ROUND_CEILING
 
 import filters as f
-
-
-# Round Filter Tests
 
 
 def test_round_pass_none(assert_filter_passes):

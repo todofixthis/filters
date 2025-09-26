@@ -1,3 +1,7 @@
+"""
+Tests for the Type filter.
+"""
+
 import filters as f
 
 

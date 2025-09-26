@@ -1,3 +1,7 @@
+"""
+Tests for the Base64Decode filter.
+"""
+
 import filters as f
 
 

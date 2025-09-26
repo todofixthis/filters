@@ -1,3 +1,7 @@
+"""
+Tests for the Strip filter.
+"""
+
 import filters as f
 
 

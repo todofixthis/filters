@@ -1,3 +1,7 @@
+"""
+Tests for the Split filter.
+"""
+
 import re
 
 import regex

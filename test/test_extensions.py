@@ -1,3 +1,7 @@
+"""
+Tests for the Extensions system.
+"""
+
 from filters.extensions import FilterExtensionRegistry
 from filters.macros import FilterMacroType
 from test import FilterAlpha, FilterBravo

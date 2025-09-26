@@ -1,3 +1,7 @@
+"""
+Tests for the Array filter.
+"""
+
 import typing
 
 import filters as f

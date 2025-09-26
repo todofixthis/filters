@@ -1,3 +1,7 @@
+"""
+Tests for the NoOp filter.
+"""
+
 import filters as f
 
 

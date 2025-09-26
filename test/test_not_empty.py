@@ -1,3 +1,7 @@
+"""
+Tests for the NotEmpty filter.
+"""
+
 import filters as f
 from .conftest import Lengthy
 

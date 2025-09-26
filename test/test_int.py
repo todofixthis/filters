@@ -1,7 +1,8 @@
+"""
+Tests for the Int filter.
+"""
+
 import filters as f
-
-
-# Int Filter Tests
 
 
 def test_int_pass_none(assert_filter_passes):

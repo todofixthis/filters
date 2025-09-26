@@ -1,3 +1,7 @@
+"""
+Tests for the Optional filter.
+"""
+
 from functools import partial
 
 import filters as f

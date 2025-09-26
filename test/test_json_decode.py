@@ -1,3 +1,7 @@
+"""
+Tests for the JsonDecode filter.
+"""
+
 import filters as f
 
 

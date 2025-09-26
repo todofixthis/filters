@@ -1,3 +1,7 @@
+"""
+Tests for the Pick filter.
+"""
+
 from collections import OrderedDict
 
 import pytest

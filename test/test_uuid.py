@@ -1,3 +1,7 @@
+"""
+Tests for the Uuid filter.
+"""
+
 from uuid import UUID
 
 import filters as f

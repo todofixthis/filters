@@ -1,3 +1,7 @@
+"""
+Tests for the Omit filter.
+"""
+
 import pytest
 
 import filters as f

@@ -1,3 +1,7 @@
+"""
+Tests for the MaxChars filter.
+"""
+
 import pytest
 
 import filters as f

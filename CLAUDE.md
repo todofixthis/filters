@@ -33,6 +33,16 @@ The test suite uses **pytest-style function-based tests** with a **modular file 
 - **Function naming**: `test_{filter_name}_{scenario}` (e.g., `test_decimal_pass_none`)
 - **Filter import**: Always use `import filters as f`
 
+**Documentation Standards**:
+- **Module docstrings**: Each test file must have a module-level docstring at the very top:
+  ```python
+  """
+  Tests for the [FilterName] filter.
+  """
+  ```
+- **Multi-line format**: Use multi-line docstrings with opening and closing `"""` on separate lines
+- **Consistent naming**: Use proper capitalisation in docstrings (e.g., "FilterChain", "Base64Decode", "Extensions system")
+
 ### Pre-commit Setup
 - **Activate pre-commit hooks**: `uv run autohooks activate --mode=pythonpath`
 - Pre-commit runs: black, mypy, pytest, ruff
@@ -137,6 +147,11 @@ assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f")  # Wrong 
 - Use the **Task tool with general-purpose agent** for systematic file operations
 - The agent can handle bulk file creation, splitting, and organisation tasks efficiently
 - Always verify test counts before and after major structural changes: `uv run pytest --collect-only`
+
+**Code Formatting Tasks**: For systematic formatting changes across multiple files:
+- **Task tool for bulk operations**: Use the general-purpose agent for tasks affecting 10+ files (e.g., docstring formatting, import standardisation)
+- **Direct tools for small changes**: Use Edit/MultiEdit for 1-5 files
+- **Pattern-based changes**: The Task tool excels at applying consistent patterns across the codebase
 
 **File Organisation**: When working with large codebases:
 - Individual test files per filter improve maintainability and navigation

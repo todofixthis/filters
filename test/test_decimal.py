@@ -1,9 +1,10 @@
+"""
+Tests for the Decimal filter.
+"""
+
 from decimal import Decimal
 
 import filters as f
-
-
-# Decimal Filter Tests
 
 
 def test_decimal_pass_none(assert_filter_passes):
