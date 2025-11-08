@@ -166,9 +166,9 @@ class Max(BaseFilter):
         :param exclusive:
             Whether to exclude the max value itself as a valid value:
 
-            - True: The incoming value must be _less than_ the max value.
-            - False (default): The incoming value must be _less than
-              or equal to_ the max value.
+            - True: The incoming value must be *less than* the max value.
+            - False (default): The incoming value must be *less than
+              or equal to* the max value.
         """
         super().__init__()
 
@@ -226,10 +226,10 @@ class Min(BaseFilter):
         :param exclusive:
             Whether to exclude the min value itself as a valid value:
 
-            - True: The incoming value must be _greater than_ the min
+            - True: The incoming value must be *greater than* the min
               value.
-            - False (default): The incoming value must be _greater than
-              or equal to_ the min value.
+            - False (default): The incoming value must be *greater than
+              or equal to* the min value.
         """
         super().__init__()
 

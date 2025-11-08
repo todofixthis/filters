@@ -849,9 +849,10 @@ class Unicode(BaseFilter):
 
         :param normalize:
             Whether to normalize the resulting value:
-                - Convert to NFC form.
-                - Remove non-printable characters.
-                - Convert all line endings to unix-style ('\n').
+
+            - Convert to NFC form.
+            - Remove non-printable characters.
+            - Convert all line endings to unix-style ('\n').
         """
         super().__init__()
 
@@ -952,9 +953,9 @@ class ByteString(Unicode):
             Whether to normalize the unicode value before converting
             back into bytes:
 
-                - Convert to NFC form.
-                - Remove non-printable characters.
-                - Convert all line endings to unix-style ('\n').
+            - Convert to NFC form.
+            - Remove non-printable characters.
+            - Convert all line endings to unix-style ('\n').
 
             Note that ``normalize`` is ``False`` by default for
             :py:class:`ByteString`, but ``True`` by default for
