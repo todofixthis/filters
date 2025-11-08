@@ -950,7 +950,7 @@ class ByteString(Unicode):
             Used to decode non-unicode values.
 
         :param normalize:
-            Whether to normalize the unicode value before converting
+            Whether to normalise the unicode value before converting
             back into bytes:
 
             - Convert to NFC form.
