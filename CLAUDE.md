@@ -6,9 +6,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Testing and Quality Assurance
 - **Run tests**: `uv run pytest` (current environment) or `uv run tox -p` (all supported Python versions)
+- **Run specific filter tests**: `uv run pytest test/test_decimal.py test/test_uuid.py`
+- **Run filter category tests**: `uv run pytest test/test_filter_*.py` (complex filters)
+- **Run pattern-based tests**: `uv run pytest -k "decimal or uuid"` (tests containing keywords)
+- **Check test collection**: `uv run pytest --collect-only` (verify test count: should be 401 total)
 - **Linting**: `uv run ruff check` (code quality and imports)
 - **Build package**: `uv build`
 - **Install dev dependencies**: `uv sync --group=dev`
+
+### Test Architecture
+The test suite uses **pytest-style function-based tests** with a **modular file structure**:
+
+**Test Organisation**: Each filter has its own test file (e.g., `test_decimal.py`, `test_uuid.py`, `test_filter_mapper.py`). This modular approach provides:
+- Easy location of filter-specific tests
+- Ability to run individual filter test suites
+- Clear separation of concerns
+- Better maintainability and navigation
+
+**Custom Fixtures** (`test/conftest.py`):
+- **`assert_filter_passes(filter_instance, test_value, expected_value)`**: Verifies successful filter processing
+- **`assert_filter_errors(filter_instance, test_value, expected_codes)`**: Verifies filter validation errors
+- **Helper classes**: `Lengthy`, `Bytesy`, `Unicody` available from conftest for object-like testing
+
+**Naming Conventions**:
+- **File naming**: `test_{filter_name}.py` (e.g., `test_decimal.py`, `test_filter_chain.py`)
+- **Function naming**: `test_{filter_name}_{scenario}` (e.g., `test_decimal_pass_none`)
+- **Filter import**: Always use `import filters as f`
+
+**Documentation Standards**:
+- **Module docstrings**: Each test file must have a module-level docstring at the very top:
+  ```python
+  """
+  Tests for the [FilterName] filter.
+  """
+  ```
+- **Multi-line format**: Use multi-line docstrings with opening and closing `"""` on separate lines
+- **Consistent naming**: Use proper capitalisation in docstrings (e.g., "FilterChain", "Base64Decode", "Extensions system")
 
 ### Pre-commit Setup
 - **Activate pre-commit hooks**: `uv run autohooks activate --mode=pythonpath`
@@ -28,7 +61,6 @@ This is a Python data validation and processing pipeline library called "Filters
 - `FilterChain[T]`: Allows chaining multiple filters using `|` operator
 - `InvalidValue`: Exception for validation failures
 - `UncaughtException`: Exception wrapper for unexpected errors
-- `FilterHarness`: Context manager for error handling
 
 **Filter Categories**:
 - **Simple filters** (`src/filters/simple.py`): Date, Datetime, Optional, Call, Array, Length, Required, etc.
@@ -81,7 +113,50 @@ This project has undergone significant modernisation. The filters now use explic
 
 **Ruff Linting F403 Errors**: Use explicit imports with `__all__` declarations instead of wildcard imports (`from module import *`) to satisfy static analysis tools.
 
-**Missing Modules**: If tests fail with `ModuleNotFoundError` for modules like `filters.collections`, check that the package structure matches expectations and that all required modules exist in `src/filters/`.
+### Test-Specific Troubleshooting
+
+**Test Import Errors**: If tests fail importing helper classes like `Bytesy` or `Unicody`, use relative imports:
+```python
+from .conftest import Bytesy, Unicody
+```
+
+**Expected Value Mismatches**: When filter output types differ from input (e.g., UUID filter returns UUID objects, not strings), specify the actual expected object type rather than using `unmodified`.
+
+**Test Count Verification**: After test modifications, always verify the total remains 401 tests using `uv run pytest --collect-only`.
+
+### Test Development Best Practices
+
+**Writing New Tests**: When creating tests, always specify explicit expected values:
+```python
+# Good: Explicit expected value
+assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f", UUID("3466c56a-2ebc-449d-97d2-9b119721ff0f"))
+
+# Avoid: Using unmodified when filter transforms the value
+assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f")  # Wrong - returns UUID object, not string
+```
+
+**Test Organisation Principles**: When working with the test suite:
+- Each filter has its own dedicated test file for better organisation and maintainability
+- Run specific filter tests: `uv run pytest test/test_decimal.py`
+- Run filter category tests: `uv run pytest test/test_*decimal*.py test/test_*int*.py` (number filters)
+- The modular structure makes it easy to locate, run, and maintain tests for specific functionality
+
+### Development Workflows
+
+**Large-Scale Refactoring**: For complex multi-step tasks involving many files (e.g., test reorganisation, mass refactoring):
+- Use the **Task tool with general-purpose agent** for systematic file operations
+- The agent can handle bulk file creation, splitting, and organisation tasks efficiently
+- Always verify test counts before and after major structural changes: `uv run pytest --collect-only`
+
+**Code Formatting Tasks**: For systematic formatting changes across multiple files:
+- **Task tool for bulk operations**: Use the general-purpose agent for tasks affecting 10+ files (e.g., docstring formatting, import standardisation)
+- **Direct tools for small changes**: Use Edit/MultiEdit for 1-5 files
+- **Pattern-based changes**: The Task tool excels at applying consistent patterns across the codebase
+
+**File Organisation**: When working with large codebases:
+- Individual test files per filter improve maintainability and navigation
+- Use consistent naming patterns: `test_{filter_name}.py`
+- Group related functionality logically (complex, simple, number, string filter categories)
 
 ### Development Environment
 - Always run `uv sync --group=dev` after pulling changes to ensure dependencies are up to date
