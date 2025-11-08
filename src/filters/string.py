@@ -83,7 +83,7 @@ class Base64Decode(BaseFilter):
         else:
             url_safe = False
 
-        # Normalize padding.
+        # Normalise padding.
         # http://stackoverflow.com/a/9807138/
         value = value.rstrip(b"=")
         value += b"=" * (4 - (len(value) % 4))
@@ -255,7 +255,7 @@ class IpAddress(BaseFilter):
                 pass
             else:
                 # Convert the binary value back into a string representation,
-                # so that the end result is normalized.
+                # so that the end result is normalised.
                 # https://en.wikipedia.org/wiki/IPv6_address#Presentation
                 return socket.inet_ntop(socket.AF_INET6, n)
 
@@ -848,7 +848,7 @@ class Unicode(BaseFilter):
             Used to decode non-unicode values.
 
         :param normalize:
-            Whether to normalize the resulting value:
+            Whether to normalise the resulting value:
 
             - Convert to NFC form.
             - Remove non-printable characters.
