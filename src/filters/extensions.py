@@ -45,9 +45,7 @@ logger = getLogger(__name__)
 
 
 class FilterExtensionRegistry(EntryPointClassRegistry):
-    """Creates a registry for dynamically loading 3rd-party filters.
-
-    Creates a registry that can be used to dynamically load 3rd-party
+    """Creates a registry that can be used to dynamically load 3rd-party
     filters into the (nearly) top-level namespace.
     """
 
