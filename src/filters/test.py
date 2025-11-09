@@ -14,9 +14,16 @@ __all__ = [
 
 
 def sorted_dict(value: typing.Mapping) -> typing.Any:
-    """
-    Sorts a dict's keys, to make it easier to compare filter messages from
-    test failures.
+    """Sorts a dict's keys for easier comparison.
+
+    Sorts a dict's keys, to make it easier to compare filter messages
+    from test failures.
+
+    Args:
+        value: The value to sort (can be dict, list, or other).
+
+    Returns:
+        The value with sorted dict keys at all levels.
     """
     if isinstance(value, typing.Mapping):
         # Note: ``dict`` preserves key insertion order since Python 3.6.
@@ -31,19 +38,20 @@ def sorted_dict(value: typing.Mapping) -> typing.Any:
 
 
 class BaseFilterTestCase(TestCase):
-    """
-    Base functionality for request filter unit tests.
+    """Base functionality for request filter unit tests.
 
-    Prevents typos from causing invalid test passes/failures by abstracting the
-    Filter type out of filtering ops; just set ``filter_type`` at the top of
-    your test case, and then use ``assertFilterPasses`` and
-    ``assertFilterErrors`` to check use cases.
+    Prevents typos from causing invalid test passes/failures by
+    abstracting the Filter type out of filtering ops; just set
+    ``filter_type`` at the top of your test case, and then use
+    ``assertFilterPasses`` and ``assertFilterErrors`` to check use
+    cases.
     """
 
     filter_type: typing.Callable[[...], BaseFilter] = None
 
     class unmodified(object):
-        """
+        """Used by assertFilterPasses to omit expected_value parameter.
+
         Used by ``assertFilterPasses`` so that you can omit the
         ``expected_value`` parameter.
         """
@@ -51,13 +59,16 @@ class BaseFilterTestCase(TestCase):
         pass
 
     class skip_value_check(object):
-        """
-        Sentinal value; used by ``assertFilterPasses`` to skip checking the
-        filtered value.  This is useful for tests where a simple equality check
-        is not practical.
+        """Sentinel value to skip checking the filtered value.
 
-        Note:  If you use ``skip_value_check``, you should add extra assertions
-        to your test to make sure the filtered value conforms to expectations.
+        Sentinel value; used by ``assertFilterPasses`` to skip
+        checking the filtered value. This is useful for tests where a
+        simple equality check is not practical.
+
+        Note:
+            If you use ``skip_value_check``, you should add extra
+            assertions to your test to make sure the filtered value
+            conforms to expectations.
         """
 
         pass
@@ -67,20 +78,20 @@ class BaseFilterTestCase(TestCase):
         runner: typing.Any,
         expected_value: typing.Any = unmodified,
     ) -> FilterRunner:
-        """
-        Asserts that the FilterRunner returns the specified value, without
-        errors.
+        """Asserts that the FilterRunner returns the value without errors.
 
-        :param runner:
-            Usually a FilterRunner instance, but you can pass in the test value
-            itself if you want (it will automatically be run through
-            ``_filter``).
+        Args:
+            runner: Usually a FilterRunner instance, but you can pass
+                in the test value itself if you want (it will
+                automatically be run through ``_filter``).
+            expected_value: The expected value for
+                ``runner.cleaned_data``.
 
-        :param expected_value:
-            The expected value for ``runner.cleaned_data``.
+                If omitted, the assertion will check that the incoming
+                value is returned unmodified.
 
-            If omitted, the assertion will check that the incoming value is
-            returned unmodified.
+        Returns:
+            The FilterRunner instance for further assertions.
         """
         return self.assertFilterErrors(runner, {}, expected_value)
 
@@ -93,19 +104,18 @@ class BaseFilterTestCase(TestCase):
         ],
         expected_value: typing.Any = None,
     ) -> FilterRunner:
-        """
-        Asserts that the FilterRunner generates the specified error codes.
+        """Asserts that the FilterRunner generates the specified errors.
 
-        :param runner:
-            Usually a FilterRunner instance, but you can pass in the test value
-            itself if you want (it will automatically be run through
-            `_filter`).
+        Args:
+            runner: Usually a FilterRunner instance, but you can pass
+                in the test value itself if you want (it will
+                automatically be run through `_filter`).
+            expected_codes: Expected error codes.
+            expected_value: Expected value for ``runner.cleaned_data``
+                (usually ``None``).
 
-        :param expected_codes:
-            Expected error codes.
-
-        :param expected_value:
-            Expected value for ``runner.cleaned_data`` (usually ``None``).
+        Returns:
+            The FilterRunner instance for further assertions.
         """
         if not isinstance(runner, FilterRunner):
             runner: FilterRunner = self._filter(runner)
@@ -151,11 +161,10 @@ class BaseFilterTestCase(TestCase):
         return runner
 
     def _filter(self, *args, **kwargs) -> FilterRunner:
-        """
-        Applies the Filter to the specified value.
+        """Applies the Filter to the specified value.
 
-        Generally, you don't have to use this method in your test case, unless
-        you want to specify Filter options.
+        Generally, you don't have to use this method in your test
+        case, unless you want to specify Filter options.
 
         Example::
 
@@ -167,11 +176,14 @@ class BaseFilterTestCase(TestCase):
             # Min(min_val=40).apply(42)
             self.assertFilterPasses(self._filter(42, min_val=40))
 
-        :param args:
-            Positional params to pass to the Filter's initializer.
+        Args:
+            *args: Positional params to pass to the Filter's
+                initialiser.
+            **kwargs: Keyword params to pass to the Filter's
+                initialiser.
 
-        :param kwargs:
-            Keyword params to pass to the Filter's initializer.
+        Returns:
+            FilterRunner instance with the filter applied to the value.
         """
         if not callable(self.filter_type):
             self.fail(
@@ -195,14 +207,15 @@ class BaseFilterTestCase(TestCase):
         )
 
     def _check_filter_value(self, cleaned_data, expected):
-        """
-        Checks the value returned by the Filter, used by
-        ``assertFilterPasses``.
+        """Checks the value returned by the Filter.
 
-        In certain cases, it may be useful to override this method in your test
-        case subclass.
+        Used by ``assertFilterPasses``.
 
-        :param cleaned_data:
-            ``cleaned_data`` from the FilterRunner.
+        In certain cases, it may be useful to override this method in
+        your test case subclass.
+
+        Args:
+            cleaned_data: ``cleaned_data`` from the FilterRunner.
+            expected: The expected value.
         """
         self.assertEqual(cleaned_data, expected)
