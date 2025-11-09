@@ -156,14 +156,9 @@ class MemoryHandler(BaseInvalidValueHandler):
 
 
 class FilterRunner(object):
-    """Wrapper for a filter providing a Django form-like API.
-
-    Wrapper for a filter that provides an API similar to what you would
+    """Wrapper for a filter that provides an API similar to what you would
     expect from a Django form -- at least, when it comes to methods
     related to data validation :)
-
-    Note that FilterRunner is intended to be a "one-shot" tool; once
-    initialised, it does not expect the data it is filtering to change.
     """
 
     def __init__(
