@@ -32,9 +32,7 @@ __all__ = [
 
 
 class Base64Decode(BaseFilter):
-    """
-    Decodes an incoming value using the Base64 algo.
-    """
+    """Decodes an incoming value using the Base64 algo."""
 
     CODE_INVALID = "not_base64"
 
@@ -95,22 +93,23 @@ class Base64Decode(BaseFilter):
 
 
 class CaseFold(BaseFilter):
-    """
-    Applies case folding to an incoming string, allowing you to perform
-    case-insensitive comparisons.
+    """Applies case folding to an incoming string, allowing you to
+    perform case-insensitive comparisons.
 
-    The result tends to be lowercase, but it is recommended that you NOT treat
-    CaseFold as a Unicode-aware lowercase filter!  The proper way to lowercase
-    a string is very much locale-dependent.
+    The result tends to be lowercase, but it is recommended that you
+    NOT treat CaseFold as a Unicode-aware lowercase filter! The proper
+    way to lowercase a string is very much locale-dependent.
 
-    Note that the built-in :py:meth:`str.upper` and :py:meth:`str.lower`
-    methods tend do a pretty good job of properly changing the case of unicode
-    strings.
+    Note:
+        The built-in :py:meth:`str.upper` and :py:meth:`str.lower`
+        methods tend do a pretty good job of properly changing the case
+        of unicode strings.
 
-    References:
-      - http://www.w3.org/International/wiki/Case_folding
-      - https://docs.python.org/3/library/stdtypes.html#str.lower
-      - https://docs.python.org/3/library/stdtypes.html#str.upper
+        References:
+
+        - http://www.w3.org/International/wiki/Case_folding
+        - https://docs.python.org/3/library/stdtypes.html#str.lower
+        - https://docs.python.org/3/library/stdtypes.html#str.upper
     """
 
     def _apply(self, value):
@@ -123,16 +122,15 @@ class CaseFold(BaseFilter):
 
 
 class Choice(BaseFilter):
-    """
-    Requires an incoming value to match one of a set of allowed options.
+    """Requires an incoming value to match one of a set of allowed
+    options.
 
-    By default, the comparison is case-sensitive, but you can control this via
-    the filter's initialiser.
+    By default, the comparison is case-sensitive, but you can control
+    this via the filter's initialiser.
 
-    .. note::
-
-       This filter is technically able to work with any hashable value, not
-       just strings.
+    Note:
+        This filter is technically able to work with any hashable
+        value, not just strings.
     """
 
     CODE_INVALID = "not_valid_choice"
@@ -195,9 +193,7 @@ class Choice(BaseFilter):
 
 
 class IpAddress(BaseFilter):
-    """
-    Validates an incoming value as an IPv[46] address.
-    """
+    """Validates an incoming value as an IPv[46] address."""
 
     CODE_INVALID = "not_ip_address"
 
@@ -206,6 +202,12 @@ class IpAddress(BaseFilter):
     }
 
     def __init__(self, ipv4: bool = True, ipv6: bool = False) -> None:
+        """Initialises the IpAddress filter.
+
+        Args:
+            ipv4: Whether to accept IPv4 addresses.
+            ipv6: Whether to accept IPv6 addresses.
+        """
         super().__init__()
 
         self.ipv4 = ipv4
@@ -220,8 +222,11 @@ class IpAddress(BaseFilter):
 
     @property
     def ip_type(self) -> typing.Text:
-        """
-        Returns the IP address versions that this Filter accepts.
+        """Returns the IP address versions that this Filter accepts.
+
+        Returns:
+            String indicating accepted IP versions (e.g., "IPv4", "IPv6",
+            "IPv4/IPv6").
         """
         return "/".join(
             filter(
@@ -269,9 +274,7 @@ class IpAddress(BaseFilter):
 
 
 class JsonDecode(BaseFilter):
-    """
-    Interprets the value as JSON.
-    """
+    """Interprets the value as JSON."""
 
     CODE_INVALID = "not_json"
 
@@ -280,6 +283,12 @@ class JsonDecode(BaseFilter):
     }
 
     def __init__(self, decoder: typing.Callable = json.loads) -> None:
+        """Initialises the JsonDecode filter.
+
+        Args:
+            decoder: Callable used to decode JSON strings. Defaults to
+                json.loads.
+        """
         super().__init__()
 
         self.decoder = decoder
@@ -297,12 +306,9 @@ class JsonDecode(BaseFilter):
 
 
 class MaxBytes(BaseFilter):
-    """
-    Ensures that an incoming string value is small enough to fit into a
-    specified number of bytes when encoded.
+    """Ensures an incoming string fits in a specified number of bytes.
 
-    .. note::
-
+    Note:
         The resulting value is always byte string (``bytes`` type).
     """
 
@@ -321,38 +327,31 @@ class MaxBytes(BaseFilter):
         suffix: typing.Text = "",
         encoding: typing.Text = "utf-8",
     ) -> None:
-        """
-        :param max_bytes:
-            Max number of bytes to allow.
+        """Initialises the MaxBytes filter.
 
-        :param truncate:
-            How to handle values that are too long:
+        Args:
+            max_bytes: Max number of bytes to allow.
+            truncate: How to handle values that are too long:
 
-            - ``truncate is True``:  Return truncated string.
-            - ``truncate is False``:  Treat as invalid value.
+                - ``truncate is True``: Return truncated string.
+                - ``truncate is False``: Treat as invalid value.
+            prefix: Prefix to apply to truncated values.
 
-        :param prefix:
-            Prefix to apply to truncated values.
+                The prefix will count towards the number of bytes, so
+                even with a prefix the resulting string will not exceed
+                ``max_bytes`` in length.
 
-            The prefix will count towards the number of bytes, so even with a
-            prefix the resulting string will not exceed ``max_bytes`` in
-            length.
+                Ignored when the incoming value is short enough, or
+                when ``truncate is False``.
+            suffix: Suffix to apply to truncated values.
 
-            Ignored when the incoming value is short enough, or when
-            ``truncate is False``.
+                The suffix will count towards the number of bytes, so
+                even with a suffix the resulting string will not exceed
+                ``max_bytes`` in length.
 
-        :param suffix:
-            Suffix to apply to truncated values.
-
-            The suffix will count towards the number of bytes, so even with a
-            suffix the resulting string will not exceed ``max_bytes`` in
-            length.
-
-            Ignored when the incoming value is short enough, or when
-            ``truncate is False``.
-
-        :param encoding:
-            The character encoding to check against.
+                Ignored when the incoming value is short enough, or
+                when ``truncate is False``.
+            encoding: The character encoding to check against.
         """
         super().__init__()
 
@@ -372,8 +371,9 @@ class MaxBytes(BaseFilter):
         )
 
     def _apply(self, value):
-        """
-        :return:
+        """Applies the MaxBytes filter.
+
+        Returns:
             Returns bytes, truncated to the correct length.
 
             Note: Might be a bit shorter than the max length, to avoid
@@ -416,15 +416,18 @@ class MaxBytes(BaseFilter):
         return bytes_value
 
     def truncate_bytes(self, bytes_value: bytes) -> bytes:
-        """
-        Truncates a too-long bytes value to the specified number of bytes,
-        using the filter's current configuration.
+        """Truncates a too-long bytes value to the specified length.
 
-        :return:
+        Uses the filter's current configuration to truncate the value.
+
+        Args:
+            bytes_value: The bytes value to truncate.
+
+        Returns:
             Returns bytes, truncated to the correct length.
 
-            Note: Might be a bit shorter than ``self.max_bytes``, to avoid
-            orphaning a multibyte sequence.
+            Note: Might be a bit shorter than ``self.max_bytes``, to
+            avoid orphaning a multibyte sequence.
         """
         if len(bytes_value) <= self.max_bytes:
             return bytes_value
@@ -528,13 +531,10 @@ class MaxBytes(BaseFilter):
 
 
 class MaxChars(BaseFilter):
-    """
-    Ensures the incoming value is small enough to fit in a certain number of
-    characters.
+    """Ensures incoming value fits in a certain number of characters.
 
-    .. note::
-
-       The resulting value is always a unicode string (``str`` type).
+    Note:
+        The resulting value is always a unicode string (``str`` type).
     """
 
     CODE_TOO_LONG = "too_long"
@@ -550,35 +550,30 @@ class MaxChars(BaseFilter):
         prefix: typing.Text = "",
         suffix: typing.Text = "",
     ) -> None:
-        """
-        :param max_chars:
-            Max number of characters to allow.
+        """Initialises the MaxChars filter.
 
-        :param truncate:
-            How to handle values that are too long:
+        Args:
+            max_chars: Max number of characters to allow.
+            truncate: How to handle values that are too long:
 
-            - ``truncate is True``:  Return truncated string.
-            - ``truncate is False``:  Treat as invalid value.
+                - ``truncate is True``: Return truncated string.
+                - ``truncate is False``: Treat as invalid value.
+            prefix: Prefix to apply to truncated values.
 
-        :param prefix:
-            Prefix to apply to truncated values.
+                The prefix will count towards the max number of
+                characters, so even with a prefix the resulting string
+                will not exceed ``max_chars`` in length.
 
-            The prefix will count towards the max number of characters, so even
-            with a prefix the resulting string will not exceed ``max_chars`` in
-            length.
+                Ignored when the incoming value is short enough, or
+                when ``truncate is False``.
+            suffix: Suffix to apply to truncated values.
 
-            Ignored when the incoming value is short enough, or when
-            ``truncate is False``.
+                The suffix will count towards the max number of
+                characters, so even with a suffix the resulting string
+                will not exceed ``max_chars`` in length.
 
-        :param suffix:
-            Suffix to apply to truncated values.
-
-            The suffix will count towards the max number of characters, so even
-            with a suffix the resulting string will not exceed ``max_chars`` in
-            length.
-
-            Ignored when the incoming value is short enough, or when
-            ``truncate is False``.
+                Ignored when the incoming value is short enough, or
+                when ``truncate is False``.
         """
         super().__init__()
 
@@ -617,20 +612,19 @@ class MaxChars(BaseFilter):
 
 
 class Regex(BaseFilter):
-    """
-    Matches a regular expression in the value.
+    """Matches a regular expression in the value.
 
-    IMPORTANT: This filter returns a LIST of all sequences in the input value
-    that matched the regex!
+    IMPORTANT: This filter returns a LIST of all sequences in the input
+    value that matched the regex!
 
-    IMPORTANT: This Filter uses the ``regex`` library, which behaves slightly
-    differently than Python's ``re`` library.
+    IMPORTANT: This Filter uses the ``regex`` library, which behaves
+    slightly differently than Python's ``re`` library.
 
-    If you've never used ``regex`` before, try it; you'll never want to go
-    back!
+    If you've never used ``regex`` before, try it; you'll never want
+    to go back!
 
-    References:
-      - https://pypi.python.org/pypi/regex
+    Note:
+        Reference: https://pypi.python.org/pypi/regex
     """
 
     CODE_INVALID = "malformed"
@@ -648,12 +642,13 @@ class Regex(BaseFilter):
         self,
         pattern: typing.Union[typing.Text, typing.Pattern],
     ) -> None:
-        """
-        :param pattern:
-            String pattern, or pre-compiled regex.
+        """Initialises the Regex filter.
 
-            IMPORTANT:  If you specify your own compiled regex, be sure to add
-            the ``UNICODE`` flag for Unicode support!
+        Args:
+            pattern: String pattern, or pre-compiled regex.
+
+                IMPORTANT: If you specify your own compiled regex, be
+                sure to add the ``UNICODE`` flag for Unicode support!
         """
         super().__init__()
 
@@ -690,8 +685,7 @@ class Regex(BaseFilter):
 
 
 class Split(BaseFilter):
-    """
-    Splits an incoming string into parts.
+    """Splits an incoming string into parts.
 
     The result is either a list or a dict, depending on whether you
     specify keys to map to the result.
@@ -703,21 +697,18 @@ class Split(BaseFilter):
         pattern: typing.Union[typing.Text, typing.Pattern],
         keys: typing.Optional[typing.Sequence[typing.Text]] = None,
     ) -> None:
-        """
-        :param pattern:
-            Regex used to split incoming string values.
+        """Initialises the Split filter.
 
-            IMPORTANT:  If you specify your own compiled regex, be sure to add
-            the ``UNICODE`` flag for Unicode support!
+        Args:
+            pattern: Regex used to split incoming string values.
 
-        :param keys:
-            If set, the resulting list will be converted into a dict, using the
-            specified keys.
+                IMPORTANT: If you specify your own compiled regex, be
+                sure to add the ``UNICODE`` flag for Unicode support!
+            keys: If set, the resulting list will be converted into a
+                dict, using the specified keys.
 
-            .. important::
-
-               If ``keys`` is set, the split value's length must be less than
-               or equal to ``len(keys)``.
+                Important: If ``keys`` is set, the split value's length
+                must be less than or equal to ``len(keys)``.
         """
         super().__init__()
 
@@ -757,15 +748,15 @@ class Split(BaseFilter):
 
 
 class Strip(BaseFilter):
-    """
-    Strips characters (whitespace and non-printables by default) from the
-    end(s) of a string.
+    """Strips characters from the end(s) of a string.
 
-    IMPORTANT:  This Filter uses the ``regex`` library, which behaves slightly
-    differently than Python's ``re`` library.
+    Strips whitespace and non-printables by default.
 
-    If you've never used ``regex`` before, try it; you'll never want to go
-    back!
+    IMPORTANT: This Filter uses the ``regex`` library, which behaves
+    slightly differently than Python's ``re`` library.
+
+    If you've never used ``regex`` before, try it; you'll never want
+    to go back!
     """
 
     def __init__(
@@ -773,12 +764,11 @@ class Strip(BaseFilter):
         leading: typing.Text = r"[\p{C}\s]+",
         trailing: typing.Text = r"[\p{C}\s]+",
     ) -> None:
-        """
-        :param leading:
-            Regex to match at the start of the string.
+        """Initialises the Strip filter.
 
-        :param trailing:
-            Regex to match at the end of the string.
+        Args:
+            leading: Regex to match at the start of the string.
+            trailing: Regex to match at the end of the string.
         """
         super().__init__()
 
@@ -821,15 +811,16 @@ class Strip(BaseFilter):
 
 
 class Unicode(BaseFilter):
-    """
-    Converts a value into a unicode string.
+    """Converts a value into a unicode string.
 
-    Note:  By default, additional normalization is applied to the resulting
-    value.  See the initialiser docstring for more info.
+    Note:
+        By default, additional normalisation is applied to the
+        resulting value. See the initialiser docstring for more info.
 
-    References:
-      - https://docs.python.org/2/howto/unicode.html
-      - https://en.wikipedia.org/wiki/Unicode_equivalence
+        References:
+
+        - https://docs.python.org/2/howto/unicode.html
+        - https://en.wikipedia.org/wiki/Unicode_equivalence
     """
 
     CODE_DECODE_ERROR = "wrong_encoding"
@@ -843,16 +834,15 @@ class Unicode(BaseFilter):
         encoding: typing.Text = "utf-8",
         normalize: bool = True,
     ) -> None:
-        """
-        :param encoding:
-            Used to decode non-unicode values.
+        """Initialises the Unicode filter.
 
-        :param normalize:
-            Whether to normalise the resulting value:
+        Args:
+            encoding: Used to decode non-unicode values.
+            normalize: Whether to normalise the resulting value:
 
-            - Convert to NFC form.
-            - Remove non-printable characters.
-            - Convert all line endings to unix-style ('\n').
+                - Convert to NFC form.
+                - Remove non-printable characters.
+                - Convert all line endings to unix-style ('\\n').
         """
         super().__init__()
 
@@ -934,8 +924,7 @@ class Unicode(BaseFilter):
 
 
 class ByteString(Unicode):
-    """
-    Converts a value into a byte string, encoded as UTF-8.
+    """Converts a value into a byte string, encoded as UTF-8.
 
     IMPORTANT: This filter returns bytes objects, not bytearrays!
     """
@@ -945,21 +934,20 @@ class ByteString(Unicode):
         encoding: typing.Text = "utf-8",
         normalize: bool = False,
     ) -> None:
-        """
-        :param encoding:
-            Used to decode non-unicode values.
+        """Initialises the ByteString filter.
 
-        :param normalize:
-            Whether to normalise the unicode value before converting
-            back into bytes:
+        Args:
+            encoding: Used to decode non-unicode values.
+            normalize: Whether to normalise the unicode value before
+                converting back into bytes:
 
-            - Convert to NFC form.
-            - Remove non-printable characters.
-            - Convert all line endings to unix-style ('\n').
+                - Convert to NFC form.
+                - Remove non-printable characters.
+                - Convert all line endings to unix-style ('\\n').
 
-            Note that ``normalize`` is ``False`` by default for
-            :py:class:`ByteString`, but ``True`` by default for
-            :py:class:`Unicode`.
+                Note that ``normalize`` is ``False`` by default for
+                :py:class:`ByteString`, but ``True`` by default for
+                :py:class:`Unicode`.
         """
         super().__init__(encoding, normalize)
 
@@ -998,8 +986,10 @@ class ByteString(Unicode):
 
 
 class Uuid(BaseFilter):
-    """
-    Interprets an incoming value as a UUID.
+    """Interprets an incoming value as a UUID.
+
+    Note:
+        Reference: https://en.wikipedia.org/wiki/Uuid#RFC_4122_Variant
     """
 
     CODE_INVALID = "not_uuid"
@@ -1011,13 +1001,11 @@ class Uuid(BaseFilter):
     }
 
     def __init__(self, version: typing.Optional[int] = None) -> None:
-        """
-        :type version:
-            If specified, requires the resulting UUID to match the specified
-            version.
+        """Initialises the Uuid filter.
 
-        References:
-          - https://en.wikipedia.org/wiki/Uuid#RFC_4122_Variant
+        Args:
+            version: If specified, requires the resulting UUID to match
+                the specified version.
         """
         super().__init__()
 

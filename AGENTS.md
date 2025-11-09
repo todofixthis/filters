@@ -12,6 +12,8 @@ This file provides guidance to LLM agents when working with code in this reposit
 - **Build package**: `uv build`
 - **Install dev dependencies**: `uv sync --group=dev`
 
+**Important**: Always run `uv sync --group=dev` after pulling changes to ensure dependencies are up to date. Use `uv run` prefix for all development commands to ensure proper virtual environment activation.
+
 ### Test Architecture
 The test suite uses **pytest-style function-based tests** with a **modular file structure**:
 
@@ -31,22 +33,61 @@ The test suite uses **pytest-style function-based tests** with a **modular file 
 - **Function naming**: `test_{filter_name}_{scenario}` (e.g., `test_decimal_pass_none`)
 - **Filter import**: Always use `import filters as f`
 
-**Documentation Standards**:
-- **Module docstrings**: Each test file must have a module-level docstring at the very top:
-  ```python
-  """
-  Tests for the [FilterName] filter.
-  """
-  ```
-- **Multi-line format**: Use multi-line docstrings with opening and closing `"""` on separate lines
-- **Consistent naming**: Use proper capitalisation in docstrings (e.g., "FilterChain", "Base64Decode", "Extensions system")
+**Test Module Docstrings**: Each test file must have a module-level docstring at the very top:
+```python
+"""
+Tests for the [FilterName] filter.
+"""
+```
 
 ### Pre-commit Setup
 - **Activate pre-commit hooks**: `uv run autohooks activate --mode=pythonpath`
 - Pre-commit runs: black, mypy, pytest, ruff
 
 ### Documentation
-- **Build docs**: `cd docs && uv run make html`
+
+**Building Documentation**:
+- **Build docs**: `uv run make clean && uv run make html` (always clean before building for accurate error reporting)
+- **View docs**: Open `docs/_build/html/index.html` in a browser after building
+- **Check for errors**: Sphinx will report warnings/errors at the end of the build output
+
+**Documentation System**: This project uses Sphinx with the Napoleon extension for Google-style docstrings. All docstrings must use Google/Napoleon format (not Sphinx `:param:` style). The Napoleon extension is configured in `docs/conf.py`.
+
+**Docstring Format Standards** (applies to all code):
+- **Line length**: Maximum 80 characters per line
+- **Format**: Use Google/Napoleon style with `Args:`, `Returns:`, `Note:` sections (not `:param:`, `:return:`)
+- **Paragraphs**: Preserve paragraph structure with blank lines between paragraphs
+- **Lists**: Use `-` bullets with proper indentation for nested content
+- **Code references**: Preserve all `:py:class:`, `:py:meth:`, etc. references
+- **Special characters**: Escape special characters in docstrings (e.g., `'\\n'` not `'\n'`)
+- **Multi-line format**: Use multi-line docstrings with opening and closing `"""` on separate lines
+- **Consistent naming**: Use proper capitalisation in docstrings (e.g., "FilterChain", "Base64Decode")
+
+**Example Format**:
+```python
+def function_name(param1, param2):
+    """Brief one-line description.
+
+    Longer description with multiple paragraphs if needed.
+
+    Args:
+        param1: Description of param1.
+        param2: Description with longer text that wraps to the
+            next line with proper indentation.
+
+    Returns:
+        Description of return value.
+
+    Note:
+        Additional notes here.
+    """
+```
+
+## Language and Style Guidelines
+
+- **Language**: Use New Zealand English spelling and incorporate commonly-used Te Reo Māori terms where appropriate (e.g. "mahi", "kaupapa", "whānau", etc.)
+- **Docstrings**: Use "Initialises" not "Initializes"
+- **Git commits**: Add a relevant emoji to the end of the title of every git commit
 
 ## Architecture Overview
 
@@ -94,35 +135,14 @@ This project has undergone significant modernisation. The filters now use explic
 
 ## Package Information
 
-- Package name: `phx-filters` 
+- Package name: `phx-filters`
 - Python versions: 3.12+ (3.13, 3.12 tested via tox)
 - Built with: hatchling build backend
 - Uses `uv` for dependency management and virtual environments
 
-## Troubleshooting
+## Best Practices
 
-### Common Import Issues
-
-**phx-class-registry v5 Breaking Changes**: If you encounter `ImportError: cannot import name 'EntryPointClassRegistry'`, update the import in `src/filters/extensions.py`:
-```python
-# Old (v4): from class_registry import EntryPointClassRegistry
-# New (v5): from class_registry.entry_points import EntryPointClassRegistry
-```
-
-**Ruff Linting F403 Errors**: Use explicit imports with `__all__` declarations instead of wildcard imports (`from module import *`) to satisfy static analysis tools.
-
-### Test-Specific Troubleshooting
-
-**Test Import Errors**: If tests fail importing helper classes like `Bytesy` or `Unicody`, use relative imports:
-```python
-from .conftest import Bytesy, Unicody
-```
-
-**Expected Value Mismatches**: When filter output types differ from input (e.g., UUID filter returns UUID objects, not strings), specify the actual expected object type rather than using `unmodified`.
-
-**Test Count Verification**: After test modifications, always verify the total remains 401 tests using `uv run pytest --collect-only`.
-
-### Test Development Best Practices
+### Test Development
 
 **Writing New Tests**: When creating tests, always specify explicit expected values:
 ```python
@@ -133,11 +153,12 @@ assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f", UUID("346
 assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f")  # Wrong - returns UUID object, not string
 ```
 
-**Test Organisation Principles**: When working with the test suite:
+**Test Organisation**: When working with the test suite:
 - Each filter has its own dedicated test file for better organisation and maintainability
 - Run specific filter tests: `uv run pytest test/test_decimal.py`
 - Run filter category tests: `uv run pytest test/test_*decimal*.py test/test_*int*.py` (number filters)
 - The modular structure makes it easy to locate, run, and maintain tests for specific functionality
+- Always verify test count remains 401 after modifications: `uv run pytest --collect-only`
 
 ### Development Workflows
 
@@ -156,12 +177,43 @@ assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f")  # Wrong 
 - Use consistent naming patterns: `test_{filter_name}.py`
 - Group related functionality logically (complex, simple, number, string filter categories)
 
-### Development Environment
+## Troubleshooting
 
-- Always run `uv sync --group=dev` after pulling changes to ensure dependencies are up to date
-- Use `uv run` prefix for all development commands to ensure proper virtual environment activation
+### Import Issues
 
-## Language and Style Guidelines
+**phx-class-registry v5 Breaking Changes**: If you encounter `ImportError: cannot import name 'EntryPointClassRegistry'`, update the import in `src/filters/extensions.py`:
+```python
+# Old (v4): from class_registry import EntryPointClassRegistry
+# New (v5): from class_registry.entry_points import EntryPointClassRegistry
+```
 
-- Use New Zealand English spelling and incorporate commonly-used Te Reo Māori terms where appropriate (e.g. "mahi", "kaupapa", "whānau", etc.)
-- Add a relevant emoji to the end of the title of every git commit
+**Ruff Linting F403 Errors**: Use explicit imports with `__all__` declarations instead of wildcard imports (`from module import *`) to satisfy static analysis tools.
+
+### Test Issues
+
+**Test Import Errors**: If tests fail importing helper classes like `Bytesy` or `Unicody`, use relative imports:
+```python
+from .conftest import Bytesy, Unicody
+```
+
+**Expected Value Mismatches**: When filter output types differ from input (e.g., UUID filter returns UUID objects, not strings), specify the actual expected object type rather than using `unmodified`.
+
+### Documentation Issues
+
+**Sphinx Warning: "Unexpected indentation"**: This usually occurs when bullet lists in Args sections aren't properly formatted. Ensure:
+- Blank line before the list
+- Consistent indentation (4 spaces for continuation, 4 more for list items)
+- Example of correct format:
+  ```python
+  Args:
+      param_name: Description of parameter.
+
+          - List item 1
+          - List item 2
+
+          Additional paragraph about the parameter.
+  ```
+
+**Sphinx Warning: "Block quote ends without a blank line"**: Add a blank line before closing nested sections in Args descriptions.
+
+**Special Characters in Docstrings**: Escape backslashes in string literals (e.g., `'\\n'` instead of `'\n'`) to prevent Sphinx parsing errors.

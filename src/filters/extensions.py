@@ -18,7 +18,8 @@ __all__ = [
 ]
 
 GROUP_NAME = "filters.extensions"
-"""
+"""The key to use when declaring entry points.
+
 The key to use when declaring entry points in your library's
 ``setup.py`` file.
 
@@ -36,27 +37,40 @@ Example::
    )
 
 Filters that are loaded this way are accessible from
-:py:data:`filters.ext` (not imported into the global namespace because
-it gives IDEs a heart attack).
+:py:data:`filters.ext` (not imported into the global namespace
+because it gives IDEs a heart attack).
 """
 
 logger = getLogger(__name__)
 
 
 class FilterExtensionRegistry(EntryPointClassRegistry):
-    """
+    """Creates a registry for dynamically loading 3rd-party filters.
+
     Creates a registry that can be used to dynamically load 3rd-party
     filters into the (nearly) top-level namespace.
     """
 
     def __init__(self, group: str = GROUP_NAME) -> None:
+        """Initialises the FilterExtensionRegistry.
+
+        Args:
+            group: The entry point group name to use. Defaults to
+                GROUP_NAME.
+        """
         super().__init__(group)
 
     def __getattr__(self, item: str) -> typing.Type[BaseFilter]:
-        """
-        Provides attr-like interface for accessing extension filters (the
-        default interface for class registries is to access items rather than
-        attributes).
+        """Provides attr-like interface for accessing extension filters.
+
+        The default interface for class registries is to access items
+        rather than attributes.
+
+        Args:
+            item: The name of the filter to access.
+
+        Returns:
+            The filter class.
         """
         return self[item]
 
@@ -94,12 +108,14 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
 
 
 def is_filter_type(target: typing.Any) -> typing.Union[bool, str]:
-    """
-    Returns whether the specified object can be registered as a filter.
+    """Returns whether the specified object can be registered as a filter.
 
-    :return:
-        Returns ``True`` if the object is a filter.
-        Otherwise, returns a string indicating why it is not valid.
+    Args:
+        target: The object to check.
+
+    Returns:
+        Returns ``True`` if the object is a filter. Otherwise, returns
+        a string indicating why it is not valid.
     """
     if not is_class(target):
         return "not a class"
@@ -116,8 +132,13 @@ def is_filter_type(target: typing.Any) -> typing.Union[bool, str]:
 def iter_filters_in(
     target: typing.Any,
 ) -> typing.Generator[typing.Tuple[str, typing.Type[BaseFilter]], None, None]:
-    """
-    Iterates over all filters in the specified module/class.
+    """Iterates over all filters in the specified module/class.
+
+    Args:
+        target: The module or class to iterate over.
+
+    Yields:
+        Tuples of (filter_name, filter_class) for each filter found.
     """
     ift_result = is_filter_type(target)
 

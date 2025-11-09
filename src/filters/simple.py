@@ -32,18 +32,14 @@ def selective_copy_mapping(
     source: typing.Mapping,
     keys: typing.Iterable[typing.Hashable],
 ) -> typing.Mapping:
-    """
-    Creates a copy of a mapping, with the same type (if practical).
+    """Creates a copy of a mapping, with the same type (if practical).
 
-    :param source:
-        Source mapping, contains values to be copied and determines the type
-        of the result.
-
-    :param keys:
-        List of keys that should be present in the copy.
-
-        Any keys that don't exist in ``source`` will be set to ``None`` in the
-        resulting mapping.
+    Args:
+        source: Source mapping, contains values to be copied and
+            determines the type of the result.
+        keys: List of keys that should be present in the copy. Any keys
+            that don't exist in ``source`` will be set to ``None`` in
+            the resulting mapping.
     """
     values = {key: source.get(key) for key in keys}
 
@@ -73,18 +69,14 @@ def selective_copy_sequence(
     source: typing.Sequence,
     indices: typing.Iterable[int],
 ) -> typing.Sequence:
-    """
-    Creates a copy of a sequence, with the same type (if practical).
+    """Creates a copy of a sequence, with the same type (if practical).
 
-    :param source:
-        Source sequence, contains values to be copied and determines the type
-        of the result.
-
-    :param indices:
-        List of indices from ``source`` that should be present in the copy.
-
-        Any indices that don't exist in ``source`` will be set to ``None`` in
-        the resulting sequence.
+    Args:
+        source: Source sequence, contains values to be copied and
+            determines the type of the result.
+        indices: List of indices from ``source`` that should be present
+            in the copy. Any indices that don't exist in ``source`` will
+            be set to ``None`` in the resulting sequence.
     """
     values = []
 
@@ -117,9 +109,7 @@ def selective_copy_sequence(
 
 
 class Array(Type):
-    """
-    Validates that the incoming value is a non-string sequence.
-    """
+    """Validates that the incoming value is a non-string sequence."""
 
     def __init__(
         self,
@@ -147,9 +137,7 @@ class Array(Type):
 
 
 class ByteArray(BaseFilter):
-    """
-    Converts an incoming value into a bytearray.
-    """
+    """Converts an incoming value into a bytearray."""
 
     CODE_BAD_ENCODING = "bad_encoding"
 
@@ -158,9 +146,11 @@ class ByteArray(BaseFilter):
     }
 
     def __init__(self, encoding: str = "utf-8") -> None:
-        """
-        :param encoding:
-            The encoding to use when decoding strings into bytes.
+        """Initialises the ByteArray filter.
+
+        Args:
+            encoding: The encoding to use when decoding strings into
+                bytes.
         """
         super().__init__()
 
@@ -217,8 +207,7 @@ class ByteArray(BaseFilter):
 
 
 class Call(BaseFilter):
-    """
-    Runs the value through a callable.
+    """Runs the value through a callable.
 
     Usually, creating a custom filter type works better, as you have
     more control over how invalid values are handled, you can specify
@@ -231,15 +220,15 @@ class Call(BaseFilter):
     def __init__(
         self, callable_: typing.Callable[..., typing.Any], *extra_args, **extra_kwargs
     ) -> None:
-        """
-        :param callable_:
-            The callable that will be applied to incoming values.
+        """Initialises the Call filter.
 
-        :param extra_args:
-            Extra positional arguments to pass to the callable.
-
-        :param extra_kwargs:
-            Extra keyword arguments to pass to the callable.
+        Args:
+            callable_: The callable that will be applied to incoming
+                values.
+            extra_args: Extra positional arguments to pass to the
+                callable.
+            extra_kwargs: Extra keyword arguments to pass to the
+                callable.
         """
         super().__init__()
 
@@ -259,9 +248,7 @@ class Call(BaseFilter):
 
 
 class Datetime(BaseFilter):
-    """
-    Interprets the value as a UTC datetime.
-    """
+    """Interprets the value as a UTC datetime."""
 
     CODE_INVALID = "not_datetime"
 
@@ -274,24 +261,20 @@ class Datetime(BaseFilter):
         timezone: typing.Optional[typing.Union[tzinfo, int, float]] = None,
         naive: bool = False,
     ) -> None:
-        """
-        :param timezone:
-            Specifies the timezone to use when the *incoming* value is a naive
-            timestamp.  Has no effect on timezone-aware timestamps.
+        """Initialises the Datetime filter.
 
-            IMPORTANT:  The result is always converted to UTC, regardless of
-            the value of the ``timezone`` param!
-
-            You can provide an int/float here, which is the offset from UTC in
-            hours (e.g., 5 = UTC+5).
-
-        :param naive:
-            If True, the filter will *return* naive datetime objects (sans
-            tzinfo).  This is useful e.g., for datetime values that will be
-            stored in a database that doesn't understand aware timestamps.
-
-            IMPORTANT:  Incoming values are still converted to UTC before
-            stripping tzinfo!
+        Args:
+            timezone: Specifies the timezone to use when the *incoming*
+                value is a naive timestamp. Has no effect on
+                timezone-aware timestamps. The result is always
+                converted to UTC, regardless of the value of the
+                ``timezone`` param! You can provide an int/float here,
+                which is the offset from UTC in hours (e.g., 5 = UTC+5).
+            naive: If True, the filter will *return* naive datetime
+                objects (sans tzinfo). This is useful e.g., for datetime
+                values that will be stored in a database that doesn't
+                understand aware timestamps. Incoming values are still
+                converted to UTC before stripping tzinfo!
         """
         super().__init__()
 
@@ -349,13 +332,12 @@ class Datetime(BaseFilter):
 
 
 class Date(Datetime):
-    """
-    Interprets the value as a UTC date.
+    """Interprets the value as a UTC date.
 
-    Note that the value is first converted to a datetime with UTC
-    timezone, which may cause the resulting date to appear to be
-    off by +/- 1 day (does not apply if the value is already a date
-    object).
+    Note:
+        The value is first converted to a datetime with UTC timezone,
+        which may cause the resulting date to appear to be off by +/- 1
+        day (does not apply if the value is already a date object).
     """
 
     CODE_INVALID = "not_date"
@@ -376,13 +358,11 @@ class Date(Datetime):
 
 
 class Empty(BaseFilter):
-    """
-    Expects the value to be empty.
+    """Expects the value to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this Filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length. Note
+    that this Filter considers values that do not have length to be not
+    empty (in particular, False and 0 are not considered empty here).
     """
 
     CODE_NOT_EMPTY = "not_empty"
@@ -401,9 +381,7 @@ class Empty(BaseFilter):
 
 
 class Item(BaseFilter):
-    """
-    Returns a single item from an incoming mapping or sequence.
-    """
+    """Returns a single item from an incoming mapping or sequence."""
 
     CODE_MISSING_KEY = "missing"
 
@@ -440,9 +418,7 @@ class Item(BaseFilter):
         )
 
     def _apply_mapping(self, value: typing.Mapping) -> typing.Any:
-        """
-        Extracts value from incoming mapping.
-        """
+        """Extracts value from incoming mapping."""
         if self.target is None:
             for v in value.values():
                 return v
@@ -457,9 +433,7 @@ class Item(BaseFilter):
             )
 
     def _apply_sequence(self, value: typing.Sequence) -> typing.Any:
-        """
-        Extracts value from incoming sequence.
-        """
+        """Extracts value from incoming sequence."""
         try:
             return value[0 if self.target is None else self.target]
         except IndexError:
@@ -471,9 +445,7 @@ class Item(BaseFilter):
 
 
 class Length(BaseFilter):
-    """
-    Ensures incoming values have exactly the right length.
-    """
+    """Ensures incoming values have exactly the right length."""
 
     CODE_TOO_LONG = "too_long"
     CODE_TOO_SHORT = "too_short"
@@ -521,9 +493,7 @@ class Length(BaseFilter):
 
 
 class MaxLength(BaseFilter):
-    """
-    Enforces a maximum length on the value.
-    """
+    """Enforces a maximum length on the value."""
 
     CODE_TOO_LONG = "too_long"
 
@@ -532,12 +502,12 @@ class MaxLength(BaseFilter):
     }
 
     def __init__(self, max_length: int, truncate: bool = False) -> None:
-        """
-        :param max_length:
-            Incoming value must have at most this many items to be valid.
+        """Initialises the MaxLength filter.
 
-        :param truncate:
-            Whether to truncate values that are too long.
+        Args:
+            max_length: Incoming value must have at most this many items
+                to be valid.
+            truncate: Whether to truncate values that are too long.
         """
         super().__init__()
 
@@ -568,9 +538,7 @@ class MaxLength(BaseFilter):
 
 
 class MinLength(BaseFilter):
-    """
-    Enforces a minimum length on the value.
-    """
+    """Enforces a minimum length on the value."""
 
     CODE_TOO_SHORT = "too_short"
 
@@ -612,9 +580,8 @@ class MinLength(BaseFilter):
 
 
 class NoOp(BaseFilter):
-    """
-    Filter that does nothing, used when you need a placeholder Filter
-    in a FilterChain.
+    """Filter that does nothing, used when you need a placeholder
+    Filter in a FilterChain.
     """
 
     def _apply(self, value):
@@ -622,17 +589,15 @@ class NoOp(BaseFilter):
 
 
 class NotEmpty(BaseFilter):
-    """
-    Expects the value not to be empty.
+    """Expects the value not to be empty.
 
-    In this context, "empty" is defined as having zero length.  Note
-    that this filter considers values that do not have length to be
-    not empty (in particular, False and 0 are not considered empty
-    here).
+    In this context, "empty" is defined as having zero length. Note
+    that this filter considers values that do not have length to be not
+    empty (in particular, False and 0 are not considered empty here).
 
     By default, this filter treats ``None`` as valid, just like every
-    other filter.  However, you can configure the filter to reject
-    ``None`` in its initializer method.
+    other filter. However, you can configure the filter to reject
+    ``None`` in its initialiser method.
     """
 
     CODE_EMPTY = "empty"
@@ -642,9 +607,10 @@ class NotEmpty(BaseFilter):
     }
 
     def __init__(self, allow_none: bool = True) -> None:
-        """
-        :param allow_none:
-            Whether to allow ``None``.
+        """Initialises the NotEmpty filter.
+
+        Args:
+            allow_none: Whether to allow ``None``.
         """
         super().__init__()
 
@@ -672,15 +638,16 @@ class NotEmpty(BaseFilter):
 
 
 class Omit(BaseFilter):
-    """
-    Returns a copy of an incoming mapping or sequence, with the specified keys
-    omitted.  Any other items will be passed through.
+    """Returns a copy of an incoming mapping or sequence, with the
+    specified keys omitted. Any other items will be passed through.
     """
 
     def __init__(self, keys: typing.Iterable):
-        """
-        :param: keys
-            List of keys that will be omitted from incoming values.
+        """Initialises the Omit filter.
+
+        Args:
+            keys: List of keys that will be omitted from incoming
+                values.
         """
         super().__init__()
 
@@ -707,18 +674,14 @@ class Omit(BaseFilter):
         )
 
     def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
-        """
-        Filters items from an incoming mapping.
-        """
+        """Filters items from an incoming mapping."""
         return selective_copy_mapping(
             value,
             [key for key in value.keys() if key not in self.keys],
         )
 
     def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
-        """
-        Filters items from an incoming sequence.
-        """
+        """Filters items from an incoming sequence."""
         return selective_copy_sequence(
             value,
             [idx for idx in range(len(value)) if idx not in self.keys],
@@ -726,16 +689,14 @@ class Omit(BaseFilter):
 
 
 class Optional(BaseFilter):
-    """
-    Changes empty and null values into a default value.
+    """Changes empty and null values into a default value.
 
     In this context, "empty" is defined as having zero length.
 
-    .. note::
-
-       If an incoming value does not have a length, it is considered to be not
-       empty (in particular, note that ``False`` and ``0`` are considered not
-       empty in this context).
+    Note:
+        If an incoming value does not have a length, it is considered
+        to be not empty (in particular, note that ``False`` and ``0``
+        are considered not empty in this context).
     """
 
     def __init__(
@@ -743,28 +704,31 @@ class Optional(BaseFilter):
         default: typing.Any = None,
         call_default: typing.Optional[bool] = None,
     ):
-        """
-        :param default:
-            The default value used to replace empty values.
+        """Initialises the Optional filter.
 
-            If ``default`` is callable, then when the filter encounters an
-            empty incoming value, it will call ``default`` and use the return
-            value as the replacement, instead of using ``default`` itself.
+        Args:
+            default: The default value used to replace empty values.
 
-            For example, if ``default=list``, then each time the filter
-            encounters an empty value, it will create a new ``list`` to use as
-            the replacement.
+                If ``default`` is callable, then when the filter
+                encounters an empty incoming value, it will call
+                ``default`` and use the return value as the replacement,
+                instead of using ``default`` itself.
 
-        :param call_default:
-            Whether to call ``default`` to determine the replacement value.
+                For example, if ``default=list``, then each time the
+                filter encounters an empty value, it will create a new
+                ``list`` to use as the replacement.
+            call_default: Whether to call ``default`` to determine the
+                replacement value.
 
-            Effect:
+                Effect:
 
-            - ``None`` (default) - only call ``default`` if it is callable.
-            - ``False`` - do not call ``default`` even if it is callable.
-            - ``True`` - call ``default`` even if it is not callable (pretty
-              sure you'd never need this, but we're all consenting adults
-              here).
+                - ``None`` (default) - only call ``default`` if it is
+                  callable.
+                - ``False`` - do not call ``default`` even if it is
+                  callable.
+                - ``True`` - call ``default`` even if it is not callable
+                  (pretty sure you'd never need this, but we're all
+                  consenting adults here).
         """
         super().__init__()
 
@@ -804,9 +768,8 @@ class Optional(BaseFilter):
         return self._get_default()
 
     def _get_default(self):
-        """
-        Returns the default value that should be used to replace an empty
-        value.
+        """Returns the default value that should be used to replace an
+        empty value.
         """
         return (
             self.callable_default()
@@ -817,9 +780,8 @@ class Optional(BaseFilter):
 
 
 class Pick(BaseFilter):
-    """
-    Returns a copy of an incoming mapping or sequence, with only the specified
-    keys included.
+    """Returns a copy of an incoming mapping or sequence, with only the
+    specified keys included.
     """
 
     CODE_MISSING_KEY = "missing"
@@ -833,17 +795,17 @@ class Pick(BaseFilter):
         keys: typing.Iterable,
         allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
     ):
-        """
-        :param: keys
-            List of keys that will be picked from incoming values.
+        """Initialises the Pick filter.
 
-        :param allow_missing_keys:
-            Determines how values with missing keys get handled:
+        Args:
+            keys: List of keys that will be picked from incoming values.
+            allow_missing_keys: Determines how values with missing keys
+                get handled:
 
-            - True (default): Missing keys are ignored.
-            - False: Missing keys are treated as invalid values.
-            - <Iterable>: Only the specified keys are allowed to be
-              omitted.
+                - True (default): Missing keys are ignored.
+                - False: Missing keys are treated as invalid values.
+                - <Iterable>: Only the specified keys are allowed to be
+                  omitted.
         """
         super().__init__()
 
@@ -875,9 +837,7 @@ class Pick(BaseFilter):
         )
 
     def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
-        """
-        Picks items out of an incoming mapping.
-        """
+        """Picks items out of an incoming mapping."""
         picked_keys = []
 
         for key in self.keys:
@@ -893,9 +853,7 @@ class Pick(BaseFilter):
         return selective_copy_mapping(value, picked_keys)
 
     def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
-        """
-        Picks items out of an incoming sequence.
-        """
+        """Picks items out of an incoming sequence."""
         picked_indices = []
 
         for idx in self.keys:
@@ -911,9 +869,8 @@ class Pick(BaseFilter):
         return selective_copy_sequence(value, picked_indices)
 
     def _missing_key_allowed(self, key: str) -> bool:
-        """
-        Returns whether the specified key is allowed to be omitted from
-        the incoming value.
+        """Returns whether the specified key is allowed to be omitted
+        from the incoming value.
         """
         if self.allow_missing_keys is True:
             return True
@@ -925,8 +882,8 @@ class Pick(BaseFilter):
 
 
 class Required(NotEmpty):
-    """
-    Same as NotEmpty, but with ``allow_none`` hard-wired to ``False``.
+    """Same as NotEmpty, but with ``allow_none`` hard-wired to
+    ``False``.
 
     This filter is the only exception to the "``None`` passes by
     default" rule.

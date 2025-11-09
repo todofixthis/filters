@@ -10,14 +10,14 @@ __all__ = [
 
 
 class FilterMacroType(BaseFilter, metaclass=ABCMeta):
-    """
-    Base type for filter macros.  Doesn't do anything on its own, but
-    it is useful for identifying filter macros when paired with an
-    ``issubclass`` check.
+    """Base type for filter macros.
 
-    Important:  Use ``issubclass``, not ``isinstance``!
+    Doesn't do anything on its own, but it is useful for identifying
+    filter macros when paired with an ``issubclass`` check.
 
-    .. code-block:: python
+    Important: Use ``issubclass``, not ``isinstance``!
+
+    Example::
 
        @filter_macro
        def MyMacro():
@@ -34,8 +34,7 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
 
 
 def filter_macro(func, *args, **kwargs):
-    """
-    Promotes a function that returns a filter into its own filter type.
+    """Promotes a function returning a filter into its own filter type.
 
     Example::
 
@@ -43,14 +42,23 @@ def filter_macro(func, *args, **kwargs):
         def String():
             return Unicode | Strip | NotEmpty
 
-        # You can now use `String` anywhere you would use a regular Filter:
+        # You can now use `String` anywhere you would use a regular
+        # Filter:
         (String | Split(':')).apply('...')
 
-    You can also use ``filter_macro`` to create partials, allowing you to
-    preset one or more initialization arguments::
+    You can also use ``filter_macro`` to create partials, allowing you
+    to preset one or more initialisation arguments::
 
         Minor = filter_macro(Max, max_value=18, inclusive=False)
         Minor(inclusive=True).apply(18)
+
+    Args:
+        func: The function to promote to a filter type.
+        *args: Positional arguments to preset.
+        **kwargs: Keyword arguments to preset.
+
+    Returns:
+        A new filter type based on the function.
     """
     filter_partial = partial(func, *args, **kwargs)
 

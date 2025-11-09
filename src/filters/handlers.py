@@ -15,21 +15,18 @@ __all__ = [
 
 
 class LogHandler(BaseInvalidValueHandler):
-    """
-    Invalid value handler that sends the details to a logger.
-    """
+    """Invalid value handler that sends the details to a logger."""
 
     def __init__(
         self,
         logger: typing.Union[Logger, LoggerAdapter],
         level: int = ERROR,
     ) -> None:
-        """
-        :param logger:
-            The logger that log messages will get sent to.
+        """Initialises the LogHandler.
 
-        :param level:
-            Level of the logged messages.
+        Args:
+            logger: The logger that log messages will get sent to.
+            level: Level of the logged messages.
         """
         super().__init__()
 
@@ -48,9 +45,7 @@ class LogHandler(BaseInvalidValueHandler):
 
 
 class FilterMessage(object):
-    """
-    Provides a consistent API for messages sent to MemoryHandler.
-    """
+    """Provides a consistent API for messages sent to MemoryHandler."""
 
     def __init__(
         self,
@@ -58,8 +53,12 @@ class FilterMessage(object):
         context: typing.MutableMapping,
         exc_info: typing.Optional[str] = None,
     ) -> None:
-        """
-        :param exc_info: Exception traceback (if applicable).
+        """Initialises the FilterMessage.
+
+        Args:
+            message: The error message.
+            context: The context mapping.
+            exc_info: Exception traceback (if applicable).
         """
         super().__init__()
 
@@ -79,11 +78,15 @@ class FilterMessage(object):
         return self.message
 
     def as_dict(self, with_debug_info: bool = False) -> dict:
-        """
-        Returns a dict representation of the FilterMessage.
+        """Returns a dict representation of the FilterMessage.
 
-        :param with_debug_info:
-            Whether to include context and exception traceback in the result.
+        Args:
+            with_debug_info: Whether to include context and exception
+                traceback in the result.
+
+        Returns:
+            Dict representation with code and message, and optionally
+            context and exc_info if with_debug_info is True.
         """
         res = {
             "code": self.code,
@@ -98,21 +101,21 @@ class FilterMessage(object):
 
 
 class MemoryHandler(BaseInvalidValueHandler):
-    """
-    Invalid value handler that stores messages locally.
-    """
+    """Invalid value handler that stores messages locally."""
 
     def __init__(self, capture_exc_info: bool = False) -> None:
-        """
-        :param capture_exc_info:
-            Whether to capture `sys.exc_info` when handling an exception.
+        """Initialises the MemoryHandler.
 
-            This is turned off by default to reduce memory usage, but it is
-            useful in certain cases (e.g., if you want to send exceptions to a
-            logger that expect exc_info).
+        Args:
+            capture_exc_info: Whether to capture `sys.exc_info` when
+                handling an exception.
 
-            Regardless, you can still check ``self.has_exceptions`` to see if
-            an exception occurred.
+                This is turned off by default to reduce memory usage,
+                but it is useful in certain cases (e.g., if you want to
+                send exceptions to a logger that expect exc_info).
+
+                Regardless, you can still check ``self.has_exceptions``
+                to see if an exception occurred.
         """
         super().__init__()
 
@@ -153,10 +156,11 @@ class MemoryHandler(BaseInvalidValueHandler):
 
 
 class FilterRunner(object):
-    """
-    Wrapper for a filter that provides an API similar to what you would expect
-    from a Django form -- at least, when it comes to methods related to data
-    validation 0:)
+    """Wrapper for a filter providing a Django form-like API.
+
+    Wrapper for a filter that provides an API similar to what you would
+    expect from a Django form -- at least, when it comes to methods
+    related to data validation :)
 
     Note that FilterRunner is intended to be a "one-shot" tool; once
     initialised, it does not expect the data it is filtering to change.
@@ -168,18 +172,20 @@ class FilterRunner(object):
         incoming_data: typing.Any = None,
         capture_exc_info: bool = False,
     ) -> None:
-        """
-        :param incoming_data: E.g., ``request.POST``.
+        """Initialises the FilterRunner.
 
-        :param capture_exc_info:
-            Whether to capture ``sys.exc_info`` when handling an exception.
+        Args:
+            starting_filter: The filter to run.
+            incoming_data: E.g., ``request.POST``.
+            capture_exc_info: Whether to capture ``sys.exc_info`` when
+                handling an exception.
 
-            This is turned off by default to reduce memory usage, but it is
-            useful in certain cases (e.g., if you want to send exceptions to a
-            logger).
+                This is turned off by default to reduce memory usage,
+                but it is useful in certain cases (e.g., if you want to
+                send exceptions to a logger).
 
-            Regardless, you can still check ``self.has_exceptions`` to see if
-            an exception occurred.
+                Regardless, you can still check ``self.has_exceptions``
+                to see if an exception occurred.
         """
         super().__init__()
 
@@ -194,8 +200,10 @@ class FilterRunner(object):
         return str(self.filter_chain)
 
     def apply(self, incoming_data: typing.Any):
-        """
-        Reruns the filter chain against a new value.
+        """Reruns the filter chain against a new value.
+
+        Args:
+            incoming_data: The new value to filter.
         """
         self.data = incoming_data
 
@@ -204,8 +212,10 @@ class FilterRunner(object):
 
     @property
     def cleaned_data(self):
-        """
-        Returns the resulting value after applying the request filter.
+        """Returns the resulting value after applying the filter.
+
+        Returns:
+            The resulting value after applying the request filter.
         """
         self.full_clean()
         return self._cleaned_data
@@ -215,11 +225,12 @@ class FilterRunner(object):
         typing.Text,
         typing.List[typing.Dict[typing.Text, typing.Text]],
     ]:
-        """
-        Returns a dict of error messages generated by the Filter, in a format
-        suitable for inclusion in e.g., a 400 Bad Request response payload.
+        """Returns a dict of error messages generated by the Filter.
 
-        E.g.::
+        The format is suitable for inclusion in e.g., a 400 Bad Request
+        response payload.
+
+        Example::
 
             {
                 'authToken': [
@@ -239,6 +250,9 @@ class FilterRunner(object):
 
                 # etc.
             }
+
+        Returns:
+            Dict mapping keys to lists of error dicts.
         """
         return self.get_errors()
 
@@ -249,15 +263,19 @@ class FilterRunner(object):
         typing.Text,
         typing.List[typing.Dict[typing.Text, typing.Text]],
     ]:
-        """
-        Returns a dict of error messages generated by the Filter, in a format
-        suitable for inclusion in e.g., a 400 Bad Request response payload.
+        """Returns a dict of error messages generated by the Filter.
 
-        :param with_context:
-            Whether to include the context object in the result (for debugging
-            purposes).
+        The format is suitable for inclusion in e.g., a 400 Bad Request
+        response payload.
 
-            Note: context is usually not safe to expose to clients!
+        Args:
+            with_context: Whether to include the context object in the
+                result (for debugging purposes).
+
+                Note: context is usually not safe to expose to clients!
+
+        Returns:
+            Dict mapping keys to lists of error dicts.
         """
         return {
             key: [m.as_dict(with_context) for m in messages]
@@ -269,8 +287,10 @@ class FilterRunner(object):
         typing.Text,
         typing.List[typing.Text],
     ]:
-        """
-        Returns a dict of error codes generated by the Filter.
+        """Returns a dict of error codes generated by the Filter.
+
+        Returns:
+            Dict mapping keys to lists of error codes.
         """
         return {
             key: [m.code for m in messages]
@@ -279,17 +299,21 @@ class FilterRunner(object):
 
     @property
     def has_exceptions(self) -> bool:
-        """
-        Returns whether any unhandled exceptions occurred while filtering the
-        value.
+        """Returns whether any unhandled exceptions occurred.
+
+        Returns:
+            Whether any unhandled exceptions occurred while filtering
+            the value.
         """
         self.full_clean()
         return self._handler.has_exceptions
 
     @property
     def exc_info(self) -> typing.List[typing.Tuple[type, Exception, TracebackType],]:
-        """
-        Returns tracebacks from any exceptions that were captured.
+        """Returns tracebacks from any exceptions that were captured.
+
+        Returns:
+            List of exception info tuples (type, exception, traceback).
         """
         self.full_clean()
         return self._handler.exc_info
@@ -299,22 +323,24 @@ class FilterRunner(object):
         typing.Text,
         typing.List[FilterMessage],
     ]:
-        """
-        Returns the raw FilterMessages that were generated by the Filter.
+        """Returns the raw FilterMessages generated by the Filter.
+
+        Returns:
+            Dict mapping keys to lists of FilterMessage objects.
         """
         self.full_clean()
         return self._handler.messages
 
     def is_valid(self) -> bool:
-        """
-        Returns whether the request payload successfully passed the Filter.
+        """Returns whether the payload successfully passed the Filter.
+
+        Returns:
+            True if no filter messages were generated, False otherwise.
         """
         return not self.filter_messages
 
     def full_clean(self):
-        """
-        Applies the filter to the request data.
-        """
+        """Applies the filter to the request data."""
         if self._handler is None:
             self._handler = MemoryHandler(self.capture_exc_info)
 

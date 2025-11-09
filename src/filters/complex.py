@@ -13,14 +13,14 @@ __all__ = [
 
 
 class FilterRepeater(BaseFilter):
-    """
-    Applies a filter to every value in an Iterable.
+    """Applies a filter to every value in an Iterable.
 
-    You can apply a FilterRepeater to a dict (or other Mapping).  The
+    You can apply a FilterRepeater to a dict (or other Mapping). The
     filters will be applied to the Mapping's values.
 
-    Note:  The resulting value will be coerced to a list or dict
-    (depending on the input value).
+    Note:
+        The resulting value will be coerced to a list or dict
+        (depending on the input value).
     """
 
     CODE_EXTRA_KEY = "unexpected"
@@ -37,20 +37,19 @@ class FilterRepeater(BaseFilter):
         filter_chain: FilterCompatible,
         restrict_keys: typing.Optional[typing.Iterable] = None,
     ) -> None:
-        """
-        :param filter_chain:
-            The filter(s) that will be applied to each item in the
-            incoming iterables.
+        """Initialises the FilterRepeater filter.
 
-        :param restrict_keys:
-            Only these keys/indexes will be allowed (any other
-            keys/indexes encountered will be treated as invalid
-            values).
+        Args:
+            filter_chain: The filter(s) that will be applied to each
+                item in the incoming iterables.
+            restrict_keys: Only these keys/indexes will be allowed (any
+                other keys/indexes encountered will be treated as
+                invalid values).
 
-            Important:  If this is an empty container will result in
-            EVERY key/index being rejected!
+                Important: If this is an empty container will result in
+                EVERY key/index being rejected!
 
-            Set to ``None`` (default) to allow any key/index.
+                Set to ``None`` (default) to allow any key/index.
         """
         super().__init__()
 
@@ -95,9 +94,7 @@ class FilterRepeater(BaseFilter):
         return result_type(self.iter(value))
 
     def iter(self, value: typing.Iterable) -> typing.Generator[typing.Any, None, None]:
-        """
-        Iterator version of :py:meth:`apply`.
-        """
+        """Iterator version of :py:meth:`apply`."""
         if value is not None:
             if isinstance(value, typing.Mapping):
                 for k, v in value.items():
@@ -139,18 +136,16 @@ class FilterRepeater(BaseFilter):
         value: typing.Any,
         filter_chain: FilterCompatible,
     ) -> typing.Any:
-        """
-        Applies filters to a single value in the iterable.
+        """Applies filters to a single value in the iterable.
 
-        Override this method in a subclass if you want to customize the
+        Override this method in a subclass if you want to customise the
         way specific items get filtered.
         """
         return self._filter(value, filter_chain, sub_key=key)
 
     @staticmethod
     def unicodify_key(key: typing.Any) -> str:
-        """
-        Converts a key value into a unicode so that it can be
+        """Converts a key value into a unicode so that it can be
         represented in e.g., error message contexts.
         """
         if key is None:
@@ -163,15 +158,16 @@ class FilterRepeater(BaseFilter):
 
 
 class FilterMapper(BaseFilter):
-    """
-    Given a dict of filters, applies each filter to the corresponding value in
-    incoming mappings.
+    """Given a dict of filters, applies each filter to the
+    corresponding value in incoming mappings.
 
-    The resulting value is a dict.  The order of keys in the ``filter_map``
-    passed to the initializer determines the order of keys in the filtered
-    value.
+    The resulting value is a dict. The order of keys in the
+    ``filter_map`` passed to the initialiser determines the order of
+    keys in the filtered value.
 
-    Note: The order of extra keys is undefined, but they will always be last.
+    Note:
+        The order of extra keys is undefined, but they will always be
+        last.
     """
 
     CODE_EXTRA_KEY = "unexpected"
@@ -188,28 +184,27 @@ class FilterMapper(BaseFilter):
         allow_missing_keys: typing.Union[bool, typing.Iterable[str]] = True,
         allow_extra_keys: typing.Union[bool, typing.Iterable[str]] = True,
     ) -> None:
-        """
-        :param filter_map:
-            Maps each filter chain to the corresponding key that it will be
-            applied to.
+        """Initialises the FilterMapper filter.
 
-        :param allow_missing_keys:
-            Determines how values with missing keys (according to
-            ``filter_map``) get handled:
+        Args:
+            filter_map: Maps each filter chain to the corresponding key
+                that it will be applied to.
+            allow_missing_keys: Determines how values with missing keys
+                (according to ``filter_map``) get handled:
 
-            - True: The missing values are set to ``None`` and then filtered as
-              normal.
-            - False: Missing keys are treated as invalid values.
-            - <Iterable>: Only the specified keys are allowed to be omitted.
+                - True: The missing values are set to ``None`` and then
+                  filtered as normal.
+                - False: Missing keys are treated as invalid values.
+                - <Iterable>: Only the specified keys are allowed to be
+                  omitted.
+            allow_extra_keys: Determines how values with extra keys
+                (according to ``filter_map``) get handled:
 
-        :param allow_extra_keys:
-            Determines how values with extra keys (according to
-            ``filter_map``) get handled:
-
-            - True: The extra values are passed through to the filtered value.
-            - False: Extra values are treated as invalid values and omitted
-              from the filtered value.
-            - <Iterable>: Only the specified extra keys are allowed.
+                - True: The extra values are passed through to the
+                  filtered value.
+                - False: Extra values are treated as invalid values and
+                  omitted from the filtered value.
+                - <Iterable>: Only the specified extra keys are allowed.
         """
         super().__init__()
 
@@ -262,9 +257,7 @@ class FilterMapper(BaseFilter):
     def iter(
         self, value: typing.Mapping
     ) -> typing.Generator[typing.Tuple[str, typing.Any], None, None]:
-        """
-        Iterator version of :py:meth:`apply`.
-        """
+        """Iterator version of :py:meth:`apply`."""
         if value is not None:
             # Apply filtered values first.
             for key, filter_chain in self._filters.items():
@@ -312,18 +305,16 @@ class FilterMapper(BaseFilter):
         value: typing.Any,
         filter_chain: FilterCompatible,
     ) -> typing.Any:
-        """
-        Applies filters to a single item in the mapping.
+        """Applies filters to a single item in the mapping.
 
-        Override this method in a subclass if you want to customize the way
-        specific items get filtered.
+        Override this method in a subclass if you want to customise the
+        way specific items get filtered.
         """
         return self._filter(value, filter_chain, sub_key=key)
 
     def _missing_key_allowed(self, key: str) -> bool:
-        """
-        Returns whether the specified key is allowed to be omitted from the
-        incoming value.
+        """Returns whether the specified key is allowed to be omitted
+        from the incoming value.
         """
         if self.allow_missing_keys is True:
             return True
@@ -334,9 +325,7 @@ class FilterMapper(BaseFilter):
             return False
 
     def _extra_key_allowed(self, key: str) -> bool:
-        """
-        Returns whether the specified extra key is allowed.
-        """
+        """Returns whether the specified extra key is allowed."""
         if self.allow_extra_keys is True:
             return True
 
@@ -347,9 +336,8 @@ class FilterMapper(BaseFilter):
 
     @staticmethod
     def unicodify_key(key: typing.Any) -> str:
-        """
-        Converts a key value into a unicode so that it can be represented in
-        e.g., error message contexts.
+        """Converts a key value into a unicode so that it can be
+        represented in e.g., error message contexts.
         """
         if key is None:
             return "None"
@@ -361,8 +349,8 @@ class FilterMapper(BaseFilter):
 
 
 class FilterSwitch(BaseFilter):
-    """
-    Chooses the next filter to apply based on the output of a callable.
+    """Chooses the next filter to apply based on the output of a
+    callable.
     """
 
     def __init__(
@@ -371,18 +359,18 @@ class FilterSwitch(BaseFilter):
         cases: typing.Mapping[typing.Hashable, FilterCompatible],
         default: typing.Optional[FilterCompatible] = None,
     ) -> None:
-        """
-        :param getter:
-            Callable used to extract the value to match against switch cases.
+        """Initialises the FilterSwitch filter.
 
-        :param cases:
-            Mapping of possible values to the corresponding filters.
+        Args:
+            getter: Callable used to extract the value to match against
+                switch cases.
+            cases: Mapping of possible values to the corresponding
+                filters.
+            default: Default filter to use, if none of the cases are
+                matched.
 
-        :param default:
-            Default filter to use, if none of the cases are matched.
-
-            If null (default) then the value will be considered invalid if it
-            doesn't match any cases.
+                If null (default) then the value will be considered
+                invalid if it doesn't match any cases.
         """
         super().__init__()
 
@@ -407,39 +395,37 @@ class FilterSwitch(BaseFilter):
 
 
 class NamedTuple(BaseFilter):
-    """
-    Attempts to convert the incoming value into a namedtuple.
-    """
+    """Attempts to convert the incoming value into a namedtuple."""
 
     def __init__(
         self,
         type_: typing.Type[typing.NamedTuple],
         filter_map: typing.Optional[typing.Mapping[str, FilterCompatible]] = None,
     ) -> None:
-        """
-        :param type_:
-            The type of namedtuple into which the filter will attempt to
-            convert incoming values.
+        """Initialises the NamedTuple filter.
 
-        :param filter_map:
-            Specifies additional filters that should be applied to each
-            attribute in the resulting namedtuple object.
+        Args:
+            type_: The type of namedtuple into which the filter will
+                attempt to convert incoming values.
+            filter_map: Specifies additional filters that should be
+                applied to each attribute in the resulting namedtuple
+                object.
 
-            For example::
+                For example::
 
-                >>> import filters as f
-                >>> from collections import namedtuple
-                >>> Color = namedtuple('Color', ('r', 'g', 'b'))
+                    >>> import filters as f
+                    >>> from collections import namedtuple
+                    >>> Color = namedtuple('Color', ('r', 'g', 'b'))
 
-                >>> # noinspection PyTypeChecker
-                >>> filter_chain = f.NamedTuple(Color, {
-                ...     'r': f.Required | f.Int | f.Min(0) | f.Max(255),
-                ...     'g': f.Required | f.Int | f.Min(0) | f.Max(255),
-                ...     'b': f.Required | f.Int | f.Min(0) | f.Max(255),
-                ... })
+                    >>> # noinspection PyTypeChecker
+                    >>> filter_chain = f.NamedTuple(Color, {
+                    ...     'r': f.Required | f.Int | f.Min(0) | f.Max(255),
+                    ...     'g': f.Required | f.Int | f.Min(0) | f.Max(255),
+                    ...     'b': f.Required | f.Int | f.Min(0) | f.Max(255),
+                    ... })
 
-                >>> filter_chain.apply(['64', '128', '192'])
-                Color(r=64, g=128, b=192)
+                    >>> filter_chain.apply(['64', '128', '192'])
+                    Color(r=64, g=128, b=192)
         """
         super().__init__()
 
