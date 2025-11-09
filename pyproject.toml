@@ -53,7 +53,7 @@ dev = [
     "autohooks-plugin-ruff>=25,<26",
     "black>=25,<26",
 #    "mypy>=1,<2",
-    "pytest>=8,<9",
+    "pytest>=9,<10",
     "sphinx>=8,<9",
     "sphinx_rtd_theme>=3,<4",
     "tox>=4,<5",
@@ -63,7 +63,7 @@ dev = [
 ]
 ci = [
 #    "mypy>=1,<2",
-    "pytest>=8,<9",
+    "pytest>=9,<10",
     "sphinx>=8,<9",
     "sphinx_rtd_theme>=3,<4",
 ]
