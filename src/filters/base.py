@@ -1,16 +1,7 @@
 from abc import ABCMeta, abstractmethod as abstract_method
+from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from copy import copy
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
-    Optional as OptionalType,
-    Tuple,
-    Union,
-)
+from typing import Any, Optional, Union
 from weakref import ProxyTypes, proxy
 
 __all__ = [
@@ -24,7 +15,10 @@ __all__ = [
     "Type",
 ]
 
-FilterCompatible = OptionalType[
+# Note: Using typing.Optional/Union instead of PEP 604 syntax (X | Y) for
+# forward references to avoid Sphinx autodoc warnings. Sphinx cannot parse
+# the | operator when combined with string forward references like "BaseFilter".
+FilterCompatible = Optional[
     Union["BaseFilter", "FilterMeta", Callable[[], "BaseFilter"]]
 ]
 """Used in PEP-484 type hints to indicate a value that can be
@@ -81,9 +75,9 @@ class BaseFilter(metaclass=FilterMeta):
     def __init__(self):
         super().__init__()
 
-        self._parent = None  # type: OptionalType[BaseFilter]
-        self._handler = None  # type: OptionalType[BaseInvalidValueHandler]
-        self._key = None  # type: OptionalType[str]
+        self._parent: BaseFilter | None = None
+        self._handler: BaseInvalidValueHandler | None = None
+        self._key: str | None = None
 
         #
         # Indicates whether the Filter detected any invalid values.
@@ -102,7 +96,7 @@ class BaseFilter(metaclass=FilterMeta):
     @classmethod
     def __copy__(cls, the_filter: "BaseFilter") -> "BaseFilter":
         """Creates a shallow copy of the object."""
-        new_filter = type(the_filter)()  # type: BaseFilter
+        new_filter: BaseFilter = type(the_filter)()
 
         new_filter._parent = the_filter._parent
         new_filter._key = the_filter._key
@@ -143,7 +137,7 @@ class BaseFilter(metaclass=FilterMeta):
         )
 
     @property
-    def parent(self) -> OptionalType["BaseFilter"]:
+    def parent(self) -> Optional["BaseFilter"]:  # Use Optional for Sphinx compat
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
@@ -182,7 +176,7 @@ class BaseFilter(metaclass=FilterMeta):
         return self._make_key(self._key_parts + [sub_key])
 
     @property
-    def _key_parts(self) -> List[str]:
+    def _key_parts(self) -> list[str]:
         """Assembles each key part in the filter hierarchy."""
         key_parts = []
 
@@ -260,7 +254,7 @@ class BaseFilter(metaclass=FilterMeta):
         self,
         value: Any,
         filter_chain: FilterCompatible,
-        sub_key: OptionalType[str] = None,
+        sub_key: str | None = None,
     ) -> Any:
         """Applies another filter to a value in the same context as
         the current filter.
@@ -292,12 +286,12 @@ class BaseFilter(metaclass=FilterMeta):
     def _invalid_value(
         self,
         value: Any,
-        reason: Union[str, Exception],
-        replacement: OptionalType[Any] = None,
+        reason: str | Exception,
+        replacement: Any | None = None,
         exc_info: bool = False,
-        context: OptionalType[MutableMapping] = None,
-        sub_key: OptionalType[str] = None,
-        template_vars: OptionalType[Mapping] = None,
+        context: MutableMapping | None = None,
+        sub_key: str | None = None,
+        template_vars: Mapping | None = None,
     ) -> Any:
         """Handles an invalid value.
 
@@ -391,9 +385,9 @@ class BaseFilter(metaclass=FilterMeta):
     def resolve_filter(
         cls,
         the_filter: FilterCompatible,
-        parent: OptionalType["BaseFilter"] = None,
-        key: OptionalType[str] = None,
-    ) -> OptionalType["FilterChain"]:
+        parent: Optional["BaseFilter"] = None,  # Use Optional for Sphinx compat
+        key: str | None = None,
+    ) -> Optional["FilterChain"]:  # Use Optional for Sphinx compat
         """Converts a filter-compatible value into a consistent type."""
         if the_filter is not None:
             if isinstance(the_filter, BaseFilter):
@@ -435,7 +429,7 @@ class FilterChain(BaseFilter):
     def __init__(self, start_filter: FilterCompatible = None) -> None:
         super().__init__()
 
-        self._filters = []  # type: List[BaseFilter]
+        self._filters: list[BaseFilter] = []
 
         self._add(start_filter)
 
@@ -454,7 +448,7 @@ class FilterChain(BaseFilter):
         resolved = self.resolve_filter(next_filter)
 
         if resolved:
-            new_chain = copy(self)  # type: FilterChain
+            new_chain: FilterChain = copy(self)
             new_chain._add(next_filter)
             return new_chain
         else:
@@ -568,9 +562,9 @@ class Type(BaseFilter):
 
     def __init__(
         self,
-        allowed_types: Union[type, Tuple[type, ...]],
+        allowed_types: type | tuple[type, ...],
         allow_subclass: bool = True,
-        aliases: OptionalType[Mapping[type, str]] = None,
+        aliases: Mapping[type, str] | None = None,
     ) -> None:
         """
         :param allowed_types:

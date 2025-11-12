@@ -1,5 +1,5 @@
-import typing
 from decimal import Decimal as DecimalType, InvalidOperation, ROUND_HALF_UP
+from typing import Any
 
 from filters.base import BaseFilter, Type
 
@@ -25,7 +25,7 @@ class Decimal(BaseFilter):
 
     def __init__(
         self,
-        max_precision: typing.Optional[typing.Union[int, DecimalType]] = None,
+        max_precision: int | DecimalType | None = None,
         allow_tuples: bool = True,
     ) -> None:
         """Initialises the Decimal filter.
@@ -123,7 +123,7 @@ class Int(BaseFilter):
     }
 
     def _apply(self, value):
-        decimal = self._filter(value, Decimal)  # type: DecimalType
+        decimal: DecimalType = self._filter(value, Decimal)
 
         if self._has_errors:
             return None
@@ -154,7 +154,7 @@ class Max(BaseFilter):
         CODE_TOO_BIG: "Value is too large (must be {operator} {max}).",
     }
 
-    def __init__(self, max_value: typing.Any, exclusive: bool = False) -> None:
+    def __init__(self, max_value: Any, exclusive: bool = False) -> None:
         """Initialises the Max filter.
 
         Args:
@@ -215,7 +215,7 @@ class Min(BaseFilter):
         CODE_TOO_SMALL: "Value is too small (must be {operator} {min}).",
     }
 
-    def __init__(self, min_value: typing.Any, exclusive: bool = False) -> None:
+    def __init__(self, min_value: Any, exclusive: bool = False) -> None:
         """Initialises the Min filter.
 
         Args:
@@ -266,7 +266,7 @@ class Round(BaseFilter):
 
     def __init__(
         self,
-        to_nearest: typing.Union[int, str, DecimalType] = 1,
+        to_nearest: int | str | DecimalType = 1,
         rounding: str = ROUND_HALF_UP,
         result_type: type = DecimalType,
     ):

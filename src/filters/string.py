@@ -1,7 +1,9 @@
 import json
+import re
 import socket
-import typing
 import unicodedata
+from collections.abc import Callable, Iterable, Sequence
+from typing import Hashable
 from base64 import standard_b64decode, urlsafe_b64decode
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
@@ -47,7 +49,7 @@ class Base64Decode(BaseFilter):
         self.base64_re = regex.compile(b"^[-+_/A-Za-z0-9=]+$", regex.ASCII)
 
     def _apply(self, value):
-        value = self._filter(value, Type(bytes))  # type: bytes
+        value: bytes = self._filter(value, Type(bytes))
 
         if self._has_errors:
             return None
@@ -113,7 +115,7 @@ class CaseFold(BaseFilter):
     """
 
     def _apply(self, value):
-        value = self._filter(value, Type(str))  # type: str
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -141,7 +143,7 @@ class Choice(BaseFilter):
 
     def __init__(
         self,
-        choices: typing.Iterable[typing.Hashable],
+        choices: Iterable[Hashable],
         case_sensitive: bool = True,
     ) -> None:
         """
@@ -156,12 +158,12 @@ class Choice(BaseFilter):
 
         self.case_sensitive: bool = case_sensitive
 
-        self.choice_map: typing.Dict[typing.Hashable, typing.Hashable] = {}
+        self.choice_map: dict[Hashable, Hashable] = {}
 
         MinLength(1).apply(choices)
 
         for choice in choices:
-            if self.case_sensitive or not isinstance(choice, typing.Text):
+            if self.case_sensitive or not isinstance(choice, str):
                 self.choice_map[choice] = choice
             else:
                 self.choice_map[CaseFold().apply(choice)] = choice
@@ -173,7 +175,7 @@ class Choice(BaseFilter):
         )
 
     def _apply(self, value):
-        if (not self.case_sensitive) and isinstance(value, typing.Text):
+        if (not self.case_sensitive) and isinstance(value, str):
             value = self._filter(value, CaseFold)
 
             if self._has_errors:
@@ -221,7 +223,7 @@ class IpAddress(BaseFilter):
         )
 
     @property
-    def ip_type(self) -> typing.Text:
+    def ip_type(self) -> str:
         """Returns the IP address versions that this Filter accepts.
 
         Returns:
@@ -239,7 +241,7 @@ class IpAddress(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -282,7 +284,7 @@ class JsonDecode(BaseFilter):
         CODE_INVALID: "This value is not valid JSON.",
     }
 
-    def __init__(self, decoder: typing.Callable = json.loads) -> None:
+    def __init__(self, decoder: Callable = json.loads) -> None:
         """Initialises the JsonDecode filter.
 
         Args:
@@ -294,7 +296,7 @@ class JsonDecode(BaseFilter):
         self.decoder = decoder
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -323,9 +325,9 @@ class MaxBytes(BaseFilter):
         self,
         max_bytes: int,
         truncate: bool = False,
-        prefix: typing.Text = "",
-        suffix: typing.Text = "",
-        encoding: typing.Text = "utf-8",
+        prefix: str = "",
+        suffix: str = "",
+        encoding: str = "utf-8",
     ) -> None:
         """Initialises the MaxBytes filter.
 
@@ -379,7 +381,7 @@ class MaxBytes(BaseFilter):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value: typing.Text = self._filter(
+        value: str = self._filter(
             value=value,
             filter_chain=(
                 Type(
@@ -547,8 +549,8 @@ class MaxChars(BaseFilter):
         self,
         max_chars: int,
         truncate: bool = False,
-        prefix: typing.Text = "",
-        suffix: typing.Text = "",
+        prefix: str = "",
+        suffix: str = "",
     ) -> None:
         """Initialises the MaxChars filter.
 
@@ -584,7 +586,7 @@ class MaxChars(BaseFilter):
         self.suffix = suffix
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -634,13 +636,13 @@ class Regex(BaseFilter):
     }
 
     pattern_types = (
-        typing.Pattern,
+        re.Pattern,
         regex.regex.Pattern,
     )
 
     def __init__(
         self,
-        pattern: typing.Union[typing.Text, typing.Pattern],
+        pattern: str | re.Pattern,
     ) -> None:
         """Initialises the Regex filter.
 
@@ -665,7 +667,7 @@ class Regex(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -694,8 +696,8 @@ class Split(BaseFilter):
     # noinspection PyProtectedMember
     def __init__(
         self,
-        pattern: typing.Union[typing.Text, typing.Pattern],
-        keys: typing.Optional[typing.Sequence[typing.Text]] = None,
+        pattern: str | re.Pattern,
+        keys: Sequence[str] | None = None,
     ) -> None:
         """Initialises the Split filter.
 
@@ -728,7 +730,7 @@ class Split(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -761,8 +763,8 @@ class Strip(BaseFilter):
 
     def __init__(
         self,
-        leading: typing.Text = r"[\p{C}\s]+",
-        trailing: typing.Text = r"[\p{C}\s]+",
+        leading: str = r"[\p{C}\s]+",
+        trailing: str = r"[\p{C}\s]+",
     ) -> None:
         """Initialises the Strip filter.
 
@@ -796,7 +798,7 @@ class Strip(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Text = self._filter(value, Type(typing.Text))
+        value: str = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -831,7 +833,7 @@ class Unicode(BaseFilter):
 
     def __init__(
         self,
-        encoding: typing.Text = "utf-8",
+        encoding: str = "utf-8",
         normalize: bool = True,
     ) -> None:
         """Initialises the Unicode filter.
@@ -869,7 +871,7 @@ class Unicode(BaseFilter):
 
     def _apply(self, value):
         try:
-            if isinstance(value, typing.Text):
+            if isinstance(value, str):
                 decoded = value
 
             elif isinstance(value, bytes):
@@ -931,7 +933,7 @@ class ByteString(Unicode):
 
     def __init__(
         self,
-        encoding: typing.Text = "utf-8",
+        encoding: str = "utf-8",
         normalize: bool = False,
     ) -> None:
         """Initialises the ByteString filter.
@@ -953,7 +955,7 @@ class ByteString(Unicode):
 
     # noinspection SpellCheckingInspection
     def _apply(self, value):
-        decoded: typing.Text = super()._apply(value)
+        decoded: str = super()._apply(value)
 
         #
         # No need to catch UnicodeEncodeErrors here; UTF-8 can handle any
@@ -1000,7 +1002,7 @@ class Uuid(BaseFilter):
         CODE_WRONG_VERSION: "v{incoming} UUID not allowed (expected v{expected}).",
     }
 
-    def __init__(self, version: typing.Optional[int] = None) -> None:
+    def __init__(self, version: int | None = None) -> None:
         """Initialises the Uuid filter.
 
         Args:
@@ -1018,9 +1020,9 @@ class Uuid(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Union[typing.Text, UUID] = self._filter(
+        value: str | UUID = self._filter(
             value,
-            Type((typing.Text, UUID)),
+            Type((str, UUID)),
         )
 
         if self._has_errors:

@@ -83,6 +83,7 @@ Requirements
 ------------
 Filters is known to be compatible with the following Python versions:
 
+- 3.14
 - 3.13
 - 3.12
 

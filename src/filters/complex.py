@@ -1,4 +1,5 @@
-import typing
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any, Hashable
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
@@ -35,7 +36,7 @@ class FilterRepeater(BaseFilter):
     def __init__(
         self,
         filter_chain: FilterCompatible,
-        restrict_keys: typing.Optional[typing.Iterable] = None,
+        restrict_keys: Iterable | None = None,
     ) -> None:
         """Initialises the FilterRepeater filter.
 
@@ -77,26 +78,26 @@ class FilterRepeater(BaseFilter):
         return new_filter
 
     def _apply(self, value):
-        value = self._filter(
+        value: Iterable = self._filter(
             value,
-            Type(typing.Iterable),
-        )  # type: typing.Iterable
+            Type(Iterable),
+        )
 
         if self._has_errors:
             return None
 
         result_type = (
             self.mapping_result_type
-            if isinstance(value, typing.Mapping)
+            if isinstance(value, Mapping)
             else self.sequence_result_type
         )
 
         return result_type(self.iter(value))
 
-    def iter(self, value: typing.Iterable) -> typing.Generator[typing.Any, None, None]:
+    def iter(self, value: Iterable):
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
-            if isinstance(value, typing.Mapping):
+            if isinstance(value, Mapping):
                 for k, v in value.items():
                     u_key = self.unicodify_key(k)
 
@@ -133,9 +134,9 @@ class FilterRepeater(BaseFilter):
     def _apply_item(
         self,
         key: str,
-        value: typing.Any,
+        value: Any,
         filter_chain: FilterCompatible,
-    ) -> typing.Any:
+    ) -> Any:
         """Applies filters to a single value in the iterable.
 
         Override this method in a subclass if you want to customise the
@@ -144,7 +145,7 @@ class FilterRepeater(BaseFilter):
         return self._filter(value, filter_chain, sub_key=key)
 
     @staticmethod
-    def unicodify_key(key: typing.Any) -> str:
+    def unicodify_key(key: Any) -> str:
         """Converts a key value into a unicode so that it can be
         represented in e.g., error message contexts.
         """
@@ -180,9 +181,9 @@ class FilterMapper(BaseFilter):
 
     def __init__(
         self,
-        filter_map: typing.Mapping[str, FilterCompatible],
-        allow_missing_keys: typing.Union[bool, typing.Iterable[str]] = True,
-        allow_extra_keys: typing.Union[bool, typing.Iterable[str]] = True,
+        filter_map: Mapping[str, FilterCompatible],
+        allow_missing_keys: bool | Iterable[str] = True,
+        allow_extra_keys: bool | Iterable[str] = True,
     ) -> None:
         """Initialises the FilterMapper filter.
 
@@ -212,13 +213,13 @@ class FilterMapper(BaseFilter):
 
         self.allow_missing_keys = (
             set(allow_missing_keys)
-            if isinstance(allow_missing_keys, typing.Iterable)
+            if isinstance(allow_missing_keys, Iterable)
             else bool(allow_missing_keys)
         )
 
         self.allow_extra_keys = (
             set(allow_extra_keys)
-            if isinstance(allow_extra_keys, typing.Iterable)
+            if isinstance(allow_extra_keys, Iterable)
             else bool(allow_extra_keys)
         )
 
@@ -247,16 +248,14 @@ class FilterMapper(BaseFilter):
         )
 
     def _apply(self, value):
-        value: typing.Mapping = self._filter(value, Type(typing.Mapping))
+        value: Mapping = self._filter(value, Type(Mapping))
 
         if self._has_errors:
             return None
 
         return dict(self.iter(value))
 
-    def iter(
-        self, value: typing.Mapping
-    ) -> typing.Generator[typing.Tuple[str, typing.Any], None, None]:
+    def iter(self, value: Mapping):
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             # Apply filtered values first.
@@ -302,9 +301,9 @@ class FilterMapper(BaseFilter):
     def _apply_item(
         self,
         key: str,
-        value: typing.Any,
+        value: Any,
         filter_chain: FilterCompatible,
-    ) -> typing.Any:
+    ) -> Any:
         """Applies filters to a single item in the mapping.
 
         Override this method in a subclass if you want to customise the
@@ -335,7 +334,7 @@ class FilterMapper(BaseFilter):
             return False
 
     @staticmethod
-    def unicodify_key(key: typing.Any) -> str:
+    def unicodify_key(key: Any) -> str:
         """Converts a key value into a unicode so that it can be
         represented in e.g., error message contexts.
         """
@@ -355,9 +354,9 @@ class FilterSwitch(BaseFilter):
 
     def __init__(
         self,
-        getter: typing.Callable[[typing.Any], typing.Hashable],
-        cases: typing.Mapping[typing.Hashable, FilterCompatible],
-        default: typing.Optional[FilterCompatible] = None,
+        getter: Callable[[Any], Hashable],
+        cases: Mapping[Hashable, FilterCompatible],
+        default: FilterCompatible = None,  # FilterCompatible already includes None
     ) -> None:
         """Initialises the FilterSwitch filter.
 
@@ -379,7 +378,7 @@ class FilterSwitch(BaseFilter):
         self.default = default
 
     def _apply(self, value):
-        gotten: typing.Hashable = self.getter(value)
+        gotten: Hashable = self.getter(value)
 
         if not self.default:
             gotten = self._filter(gotten, Choice(self.cases.keys()))
@@ -399,8 +398,8 @@ class NamedTuple(BaseFilter):
 
     def __init__(
         self,
-        type_: typing.Type[typing.NamedTuple],
-        filter_map: typing.Optional[typing.Mapping[str, FilterCompatible]] = None,
+        type_: type[tuple],
+        filter_map: Mapping[str, FilterCompatible] | None = None,
     ) -> None:
         """Initialises the NamedTuple filter.
 
@@ -437,13 +436,13 @@ class NamedTuple(BaseFilter):
             self.filter_mapper = None
 
     def _apply(self, value):
-        value = self._filter(value, Type((typing.Iterable, typing.Mapping)))
+        value = self._filter(value, Type((Iterable, Mapping)))
 
         if self._has_errors:
             return None
 
         if not isinstance(value, self.type):
-            if isinstance(value, typing.Mapping):
+            if isinstance(value, Mapping):
                 # Check that the incoming value has exactly the right keys.
                 # noinspection PyProtectedMember
                 value = self._filter(

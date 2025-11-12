@@ -136,7 +136,7 @@ This project has undergone significant modernisation. The filters now use explic
 ## Package Information
 
 - Package name: `phx-filters`
-- Python versions: 3.12+ (3.13, 3.12 tested via tox)
+- Python versions: 3.12+ (3.14, 3.13, 3.12 tested via tox)
 - Built with: hatchling build backend
 - Uses `uv` for dependency management and virtual environments
 

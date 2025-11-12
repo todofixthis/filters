@@ -1,8 +1,9 @@
 import json
-import typing
+from collections.abc import Callable, Mapping, Sequence
 from itertools import starmap
 from pprint import pformat
 from traceback import format_exception
+from typing import Any
 from unittest import TestCase
 
 from filters.base import BaseFilter
@@ -13,7 +14,7 @@ __all__ = [
 ]
 
 
-def sorted_dict(value: typing.Mapping) -> typing.Any:
+def sorted_dict(value: Mapping) -> Any:
     """Sorts a dict's keys for easier comparison.
 
     Sorts a dict's keys, to make it easier to compare filter messages
@@ -25,12 +26,12 @@ def sorted_dict(value: typing.Mapping) -> typing.Any:
     Returns:
         The value with sorted dict keys at all levels.
     """
-    if isinstance(value, typing.Mapping):
+    if isinstance(value, Mapping):
         # Note: ``dict`` preserves key insertion order since Python 3.6.
         # https://docs.python.org/3/library/stdtypes.html#dict
         return dict((key, sorted_dict(value[key])) for key in sorted(value.keys()))
 
-    elif isinstance(value, typing.Sequence) and not isinstance(value, str):
+    elif isinstance(value, Sequence) and not isinstance(value, str):
         return list(map(sorted_dict, value))
 
     else:
@@ -47,7 +48,7 @@ class BaseFilterTestCase(TestCase):
     cases.
     """
 
-    filter_type: typing.Callable[[...], BaseFilter] = None
+    filter_type: Callable[[...], BaseFilter] = None
 
     class unmodified(object):
         """Used by assertFilterPasses to omit expected_value parameter.
@@ -75,8 +76,8 @@ class BaseFilterTestCase(TestCase):
 
     def assertFilterPasses(
         self,
-        runner: typing.Any,
-        expected_value: typing.Any = unmodified,
+        runner: Any,
+        expected_value: Any = unmodified,
     ) -> FilterRunner:
         """Asserts that the FilterRunner returns the value without errors.
 
@@ -97,12 +98,9 @@ class BaseFilterTestCase(TestCase):
 
     def assertFilterErrors(
         self,
-        runner: typing.Any,
-        expected_codes: typing.Union[
-            typing.Mapping[str, typing.Sequence[str]],
-            typing.Sequence[str],
-        ],
-        expected_value: typing.Any = None,
+        runner: Any,
+        expected_codes: Mapping[str, Sequence[str]] | Sequence[str],
+        expected_value: Any = None,
     ) -> FilterRunner:
         """Asserts that the FilterRunner generates the specified errors.
 

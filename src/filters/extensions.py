@@ -1,4 +1,3 @@
-import typing
 from importlib.metadata import entry_points
 from inspect import (
     getmembers as get_members,
@@ -7,6 +6,7 @@ from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
+from typing import Any
 
 from class_registry.entry_points import EntryPointClassRegistry
 
@@ -58,7 +58,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         """
         super().__init__(group)
 
-    def __getattr__(self, item: str) -> typing.Type[BaseFilter]:
+    def __getattr__(self, item: str) -> type[BaseFilter]:
         """Provides attr-like interface for accessing extension filters.
 
         The default interface for class registries is to access items
@@ -75,7 +75,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
     def __repr__(self):
         return repr(self._get_cache())
 
-    def _get_cache(self) -> typing.Dict[str, typing.Type[BaseFilter]]:
+    def _get_cache(self) -> dict[str, type[BaseFilter]]:
         if self._cache is None:
             self._cache = {}
 
@@ -98,14 +98,14 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         return self._cache
 
     @staticmethod
-    def create_instance(class_: type, *args, **kwargs) -> typing.Any:
+    def create_instance(class_: type, *args, **kwargs) -> Any:
         if args or kwargs:
             return class_(*args, **kwargs)
 
         return class_
 
 
-def is_filter_type(target: typing.Any) -> typing.Union[bool, str]:
+def is_filter_type(target: Any) -> bool | str:
     """Returns whether the specified object can be registered as a filter.
 
     Args:
@@ -128,8 +128,8 @@ def is_filter_type(target: typing.Any) -> typing.Union[bool, str]:
 
 
 def iter_filters_in(
-    target: typing.Any,
-) -> typing.Generator[typing.Tuple[str, typing.Type[BaseFilter]], None, None]:
+    target: Any,
+):
     """Iterates over all filters in the specified module/class.
 
     Args:

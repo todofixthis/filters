@@ -1,5 +1,14 @@
-import typing
+from collections.abc import (
+    Callable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Sequence,
+    Sized,
+)
 from datetime import date, datetime, time, tzinfo
+from typing import Any, Hashable
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
@@ -29,9 +38,9 @@ __all__ = [
 
 
 def selective_copy_mapping(
-    source: typing.Mapping,
-    keys: typing.Iterable[typing.Hashable],
-) -> typing.Mapping:
+    source: Mapping,
+    keys: Iterable[Hashable],
+) -> Mapping:
     """Creates a copy of a mapping, with the same type (if practical).
 
     Args:
@@ -53,7 +62,7 @@ def selective_copy_mapping(
 
     # As a fallback, ``MutableMapping`` gives us an explicit
     # interface to build the result using the same type as ``value``.
-    if isinstance(source, typing.MutableMapping):
+    if isinstance(source, MutableMapping):
         result = type(source)()
 
         for k, v in values.items():
@@ -66,9 +75,9 @@ def selective_copy_mapping(
 
 
 def selective_copy_sequence(
-    source: typing.Sequence,
-    indices: typing.Iterable[int],
-) -> typing.Sequence:
+    source: Sequence,
+    indices: Iterable[int],
+) -> Sequence:
     """Creates a copy of a sequence, with the same type (if practical).
 
     Args:
@@ -96,7 +105,7 @@ def selective_copy_sequence(
 
     # As a fallback, ``MutableSequence`` gives us an explicit
     # interface to build the result using the same type as ``value``.
-    if isinstance(source, typing.MutableSequence):
+    if isinstance(source, MutableSequence):
         result = type(source)()
 
         for v in values:
@@ -113,12 +122,12 @@ class Array(Type):
 
     def __init__(
         self,
-        aliases: typing.Optional[typing.Mapping[type, str]] = None,
+        aliases: Mapping[type, str] | None = None,
     ) -> None:
-        super().__init__(typing.Sequence, True, aliases)
+        super().__init__(Sequence, True, aliases)
 
     def _apply(self, value):
-        value = super()._apply(value)  # type: typing.Sequence
+        value: Sequence = super()._apply(value)
 
         if self._has_errors:
             return None
@@ -157,7 +166,7 @@ class ByteArray(BaseFilter):
         self.encoding = encoding
 
     def _apply(self, value):
-        value = self._filter(value, Type(typing.Iterable))
+        value = self._filter(value, Type(Iterable))
 
         if self._has_errors:
             return None
@@ -218,7 +227,7 @@ class Call(BaseFilter):
     """
 
     def __init__(
-        self, callable_: typing.Callable[..., typing.Any], *extra_args, **extra_kwargs
+        self, callable_: Callable[..., Any], *extra_args, **extra_kwargs
     ) -> None:
         """Initialises the Call filter.
 
@@ -258,7 +267,7 @@ class Datetime(BaseFilter):
 
     def __init__(
         self,
-        timezone: typing.Optional[typing.Union[tzinfo, int, float]] = None,
+        timezone: tzinfo | int | float | None = None,
         naive: bool = False,
     ) -> None:
         """Initialises the Datetime filter.
@@ -350,7 +359,7 @@ class Date(Datetime):
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
 
-        filtered = super()._apply(value)  # type: datetime
+        filtered: datetime = super()._apply(value)
 
         # Normally we return `None` if we get any errors, but in this
         # case, we'll let the superclass method decide.
@@ -389,7 +398,7 @@ class Item(BaseFilter):
         CODE_MISSING_KEY: "{key} is required.",
     }
 
-    def __init__(self, key: typing.Optional[typing.Hashable] = None):
+    def __init__(self, key: Hashable | None = None):
         super().__init__()
 
         # ``key`` is already defined in ``BaseFilter``, so we have to pick a
@@ -405,7 +414,7 @@ class Item(BaseFilter):
     def _apply(self, value):
         value = self._filter(
             value,
-            Type((typing.Mapping, typing.Sequence)) | NotEmpty,
+            Type((Mapping, Sequence)) | NotEmpty,
         )
 
         if self._has_errors:
@@ -413,11 +422,11 @@ class Item(BaseFilter):
 
         return (
             self._apply_mapping(value)
-            if isinstance(value, typing.Mapping)
+            if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: typing.Mapping) -> typing.Any:
+    def _apply_mapping(self, value: Mapping) -> Any:
         """Extracts value from incoming mapping."""
         if self.target is None:
             for v in value.values():
@@ -432,7 +441,7 @@ class Item(BaseFilter):
                 sub_key=self.target,
             )
 
-    def _apply_sequence(self, value: typing.Sequence) -> typing.Any:
+    def _apply_sequence(self, value: Sequence) -> Any:
         """Extracts value from incoming sequence."""
         try:
             return value[0 if self.target is None else self.target]
@@ -467,7 +476,7 @@ class Length(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type(typing.Sized))
+        value = self._filter(value, Type(Sized))
 
         if self._has_errors:
             return None
@@ -642,7 +651,7 @@ class Omit(BaseFilter):
     specified keys omitted. Any other items will be passed through.
     """
 
-    def __init__(self, keys: typing.Iterable):
+    def __init__(self, keys: Iterable):
         """Initialises the Omit filter.
 
         Args:
@@ -662,25 +671,25 @@ class Omit(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+        value = self._filter(value, Type((Mapping, Sequence)))
 
         if self._has_errors:
             return None
 
         return (
             self._apply_mapping(value)
-            if isinstance(value, typing.Mapping)
+            if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+    def _apply_mapping(self, value: Mapping) -> Mapping:
         """Filters items from an incoming mapping."""
         return selective_copy_mapping(
             value,
             [key for key in value.keys() if key not in self.keys],
         )
 
-    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+    def _apply_sequence(self, value: Sequence) -> Sequence:
         """Filters items from an incoming sequence."""
         return selective_copy_sequence(
             value,
@@ -701,8 +710,8 @@ class Optional(BaseFilter):
 
     def __init__(
         self,
-        default: typing.Any = None,
-        call_default: typing.Optional[bool] = None,
+        default: Any = None,
+        call_default: bool | None = None,
     ):
         """Initialises the Optional filter.
 
@@ -792,8 +801,8 @@ class Pick(BaseFilter):
 
     def __init__(
         self,
-        keys: typing.Iterable,
-        allow_missing_keys: typing.Union[bool, typing.Iterable] = True,
+        keys: Iterable,
+        allow_missing_keys: bool | Iterable = True,
     ):
         """Initialises the Pick filter.
 
@@ -814,7 +823,7 @@ class Pick(BaseFilter):
         self.keys = keys
         self.allow_missing_keys = (
             set(allow_missing_keys)
-            if isinstance(allow_missing_keys, typing.Iterable)
+            if isinstance(allow_missing_keys, Iterable)
             else bool(allow_missing_keys)
         )
 
@@ -825,18 +834,18 @@ class Pick(BaseFilter):
         )
 
     def _apply(self, value):
-        value = self._filter(value, Type((typing.Mapping, typing.Sequence)))
+        value = self._filter(value, Type((Mapping, Sequence)))
 
         if self._has_errors:
             return None
 
         return (
             self._apply_mapping(value)
-            if isinstance(value, typing.Mapping)
+            if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: typing.Mapping) -> typing.Mapping:
+    def _apply_mapping(self, value: Mapping) -> Mapping:
         """Picks items out of an incoming mapping."""
         picked_keys = []
 
@@ -852,7 +861,7 @@ class Pick(BaseFilter):
 
         return selective_copy_mapping(value, picked_keys)
 
-    def _apply_sequence(self, value: typing.Sequence) -> typing.Sequence:
+    def _apply_sequence(self, value: Sequence) -> Sequence:
         """Picks items out of an incoming sequence."""
         picked_indices = []
 
