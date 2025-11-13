@@ -50,6 +50,9 @@ Tests for the [FilterName] filter.
 - **Build docs**: `uv run make clean && uv run make html` (always clean before building for accurate error reporting)
 - **View docs**: Open `docs/_build/html/index.html` in a browser after building
 - **Check for errors**: Sphinx will report warnings/errors at the end of the build output
+- **Check for warnings only**: `uv run make html 2>&1 | grep -E "(WARNING|ERROR|succeeded)"` to filter output
+
+**ReadTheDocs Configuration**: This project is configured to treat warnings as errors in `.readthedocs.yaml`. All warnings must be resolved before documentation will build successfully on ReadTheDocs.
 
 **Documentation System**: This project uses Sphinx with the Napoleon extension for Google-style docstrings. All docstrings must use Google/Napoleon format (not Sphinx `:param:` style). The Napoleon extension is configured in `docs/conf.py`.
 
@@ -87,7 +90,10 @@ def function_name(param1, param2):
 
 - **Language**: Use New Zealand English spelling and incorporate commonly-used Te Reo Māori terms where appropriate (e.g. "mahi", "kaupapa", "whānau", etc.)
 - **Docstrings**: Use "Initialises" not "Initializes"
-- **Git commits**: Add a relevant emoji to the end of the title of every git commit
+- **Git commits**:
+  - Add a relevant emoji to the end of the title of every git commit
+  - Keep commit title to maximum 50 characters including the emoji
+  - Do not include "Generated with Claude Code" line in commit body (covered by Co-Authored-By)
 
 ## Architecture Overview
 
@@ -119,9 +125,16 @@ f.Required | f.Decimal | f.Min(Decimal(-90)) | f.Max(Decimal(90))
 
 **Error Handling**: Two-tier error system distinguishing validation failures (`InvalidValue`) from code bugs (`UncaughtException`).
 
-**Type Safety**: Modern Python typing with generics throughout the codebase.
+**Type Safety**: Modern Python typing with generics throughout the codebase. Uses PEP 604/585 syntax (`X | None`, `list[X]`, `dict[K, V]`) with strategic exceptions for Sphinx compatibility.
 
 **Import Strategy**: The `__init__.py` uses explicit imports with `__all__` declarations rather than wildcard imports to satisfy static analysis tools like ruff and improve IDE support.
+
+**Type Hint Conventions**:
+- Use modern PEP 604 syntax (`X | None`) for all non-forward-reference type hints
+- Use `typing.Optional` and `typing.Union` for forward references (e.g., `Optional["BaseFilter"]`) to avoid Sphinx autodoc warnings
+- Add inline comments explaining Sphinx compatibility when using old-style syntax: `# Use Optional for Sphinx compat`
+- Import collection types from `collections.abc` (e.g., `Callable`, `Mapping`, `Iterable`)
+- Keep `Any` and `Hashable` from `typing` module (no built-in equivalents)
 
 ## Project Status
 
@@ -181,12 +194,6 @@ assert_filter_passes(f.Uuid(), "3466c56a-2ebc-449d-97d2-9b119721ff0f")  # Wrong 
 
 ### Import Issues
 
-**phx-class-registry v5 Breaking Changes**: If you encounter `ImportError: cannot import name 'EntryPointClassRegistry'`, update the import in `src/filters/extensions.py`:
-```python
-# Old (v4): from class_registry import EntryPointClassRegistry
-# New (v5): from class_registry.entry_points import EntryPointClassRegistry
-```
-
 **Ruff Linting F403 Errors**: Use explicit imports with `__all__` declarations instead of wildcard imports (`from module import *`) to satisfy static analysis tools.
 
 ### Test Issues
@@ -217,3 +224,33 @@ from .conftest import Bytesy, Unicody
 **Sphinx Warning: "Block quote ends without a blank line"**: Add a blank line before closing nested sections in Args descriptions.
 
 **Special Characters in Docstrings**: Escape backslashes in string literals (e.g., `'\\n'` instead of `'\n'`) to prevent Sphinx parsing errors.
+
+**Sphinx Forward Reference Warnings**: If you see warnings like `unsupported operand type(s) for |: 'str' and 'NoneType'`, it means Sphinx autodoc cannot parse the `|` operator with string forward references. Solution:
+- Use `typing.Optional["ClassName"]` instead of `"ClassName" | None`
+- Use `typing.Union["ClassA", "ClassB"]` instead of `"ClassA" | "ClassB"`
+- Non-forward-reference types can still use modern syntax (e.g., `str | None` is fine)
+- Add inline comment: `# Use Optional for Sphinx compat`
+
+### Type Hint Migration
+
+**Python Version Support Strategy**: When adding support for new Python versions while maintaining backward compatibility:
+
+1. **Configuration Updates**: Update all version references consistently:
+   - `pyproject.toml`: `requires-python`, classifiers, and tox `env_list`
+   - `.github/workflows/build.yml`: test matrix
+   - `README.rst` and `docs/index.rst`: compatibility lists
+   - `AGENTS.md`: package information
+
+2. **Type Hint Modernisation**:
+   - Replace deprecated types (`typing.Text` → `str`, `typing.Pattern` → `re.Pattern`)
+   - Use PEP 604 syntax (`X | None`) for non-forward-references
+   - Use PEP 585 syntax (`list[X]`, `dict[K, V]`)
+   - Move collection ABCs to `collections.abc`
+   - Preserve `Optional`/`Union` for forward references (Sphinx compatibility)
+
+3. **Testing Sequence**:
+   - `uv run pytest --collect-only` (verify test count unchanged)
+   - `uv run pytest` (all tests pass)
+   - `uv run ruff check` (linting clean)
+   - `uv run make -C docs clean && uv run make -C docs html` (docs build without warnings)
+   - `uv run tox -p` (test all Python versions)
