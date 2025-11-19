@@ -43,10 +43,11 @@ Tests for the [FilterName] filter.
 ### Pre-commit Setup
 - **Activate pre-commit hooks**: `uv run autohooks activate --mode=pythonpath`
 - Pre-commit runs: black, mypy, pytest, ruff
+- **Important**: Always use `uv run git commit` (not just `git commit`) because autohooks runs in the uv virtual environment
 
 ### Documentation
 
-**Building Documentation**:
+**Building API Documentation**:
 - **Build docs**: `uv run make clean && uv run make html` (always clean before building for accurate error reporting)
 - **View docs**: Open `docs/_build/html/index.html` in a browser after building
 - **Check for errors**: Sphinx will report warnings/errors at the end of the build output
@@ -55,6 +56,19 @@ Tests for the [FilterName] filter.
 **ReadTheDocs Configuration**: This project is configured to treat warnings as errors in `.readthedocs.yaml`. All warnings must be resolved before documentation will build successfully on ReadTheDocs.
 
 **Documentation System**: This project uses Sphinx with the Napoleon extension for Google-style docstrings. All docstrings must use Google/Napoleon format (not Sphinx `:param:` style). The Napoleon extension is configured in `docs/conf.py`.
+
+**User-Facing Documentation (README.rst)**:
+The README is the primary entry point for potential users. When updating:
+- **Target audience**: Python developers looking for schema validation, especially those familiar with Django forms, Pydantic, or Zod
+- **Key selling points**: Composability (UNIX philosophy), type safety, opinionated defaults, FilterRunner's familiar API
+- **Structure**: Philosophy → Quick Start → Practical Examples → Features → Installation
+- **Examples**: Show real-world use cases (API validation, JSON parsing) using FilterRunner, not just filter chains
+- **Tone**: Concise and scannable - developers should grasp value within 30 seconds
+- **Language**: New Zealand English throughout
+
+**GitHub Metadata**:
+- **Description**: Keep under 100 characters, highlight key differentiators (e.g., "Opinionated schema validation for Python - chain type-safe filters with | like UNIX pipes")
+- **Topics**: Use high-visibility tags for discoverability: `validation`, `schema-validation`, `type-safety`, `python`, `composable`, `pipeline`, etc.
 
 **Docstring Format Standards** (applies to all code):
 - **Line length**: Maximum 80 characters per line
