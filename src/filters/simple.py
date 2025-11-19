@@ -573,7 +573,7 @@ class MinLength(BaseFilter):
             #   - It is not clear to which end(s) we should add the
             #     padding.
             #   - It is not clear what the padding value(s) should be.
-            #   - We should keep this filter's behavior consistent with
+            #   - We should keep this filter's behaviour consistent with
             #     that of MaxLength.
             #
             return self._invalid_value(
