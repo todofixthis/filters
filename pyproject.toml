@@ -108,3 +108,6 @@ commands = [
 #    ["mypy", "src", "test"]
 ]
 runner = "uv-venv-lock-runner"
+
+[tool.uv]
+keyring-provider = "subprocess"

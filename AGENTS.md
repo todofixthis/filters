@@ -167,6 +167,32 @@ This project has undergone significant modernisation. The filters now use explic
 - Built with: hatchling build backend
 - Uses `uv` for dependency management and virtual environments
 
+## Releasing
+
+**One-time machine setup** (if not already done):
+```bash
+uv tool install keyring
+uv tool update-shell
+keyring set https://upload.pypi.org/legacy/ __token__
+# paste PyPI token when prompted
+```
+
+**Release steps**:
+```bash
+# 1. Bump version (updates pyproject.toml and re-locks uv.lock)
+uv version <version>
+
+# 2. Commit, then merge develop → main via PR
+
+# 3. Tag the release (annotated tag required)
+git tag -a <version> -m "Release <version>"
+git push origin <version>
+
+# 4. Build and publish
+uv build
+uv publish --username __token__
+```
+
 ## Best Practices
 
 ### Test Development
