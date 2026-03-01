@@ -35,7 +35,6 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 
 - NZ English; incorporate Te Reo Māori where natural (e.g. "mahi", "kaupapa")
 - Use "Initialises" not "Initializes"
-- Git commits: emoji at end of title, max 50 chars, no "Generated with Claude Code" line
 
 ## Branches
 
@@ -46,30 +45,6 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 ## Package
 
 Package name is `phx-filters` (distinct from the `filters` import name).
-
-## Releasing
-
-**One-time machine setup**:
-```bash
-uv tool install keyring && uv tool update-shell
-keyring set https://upload.pypi.org/legacy/ __token__
-# paste PyPI token when prompted
-```
-
-**Steps**:
-```bash
-uv version <version>          # bumps pyproject.toml and re-locks uv.lock
-# commit, then open PR: develop → main
-git tag -a <version> -m "Release <version>"
-git push origin <version>
-uv build && uv publish --username __token__
-```
-
-## Adding Python Version Support
-
-Update version references in `pyproject.toml`, `.github/workflows/`, `README.rst`, `docs/`, and `AGENTS.md`.
-
-Verify in order: test count unchanged → `uv run pytest` → `uv run ruff check` → docs build clean → `uv run tox -p`.
 
 ## Troubleshooting
 
