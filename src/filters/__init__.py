@@ -132,7 +132,7 @@ from .string import (
 )
 
 # Additional filters are loaded into a separate namespace, so that IDEs
-# don't go insane.
+# don't get overwhelmed.
 from filters.extensions import FilterExtensionRegistry
 
 ext = FilterExtensionRegistry()
