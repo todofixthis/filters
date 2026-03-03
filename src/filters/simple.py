@@ -293,7 +293,7 @@ class Datetime(BaseFilter):
             else:
                 # Assume that we got an int/float instead.
                 timezone = tzoffset(
-                    name="UTC{offset:+}".format(offset=timezone),
+                    name=f"UTC{timezone:+}",
                     offset=float(timezone) * 3600.0,
                 )
 
@@ -301,10 +301,8 @@ class Datetime(BaseFilter):
         self.naive = naive
 
     def __str__(self):
-        return "{type}(timezone={timezone!r}, naive={naive!r})".format(
-            type=type(self).__name__,
-            timezone=self.timezone,
-            naive=self.naive,
+        return (
+            f"{type(self).__name__}(timezone={self.timezone!r}, naive={self.naive!r})"
         )
 
     def _apply(self, value):
@@ -406,9 +404,8 @@ class Item(BaseFilter):
         self.target = key
 
     def __str__(self):
-        return "{type}({key})".format(
-            type=type(self).__name__,
-            key="" if self.target is None else repr(self.target),
+        return (
+            f"{type(self).__name__}({'' if self.target is None else repr(self.target)})"
         )
 
     def _apply(self, value):
@@ -470,10 +467,7 @@ class Length(BaseFilter):
         self.length = length
 
     def __str__(self):
-        return "{type}(length={length!r})".format(
-            type=type(self).__name__,
-            length=self.length,
-        )
+        return f"{type(self).__name__}(length={self.length!r})"
 
     def _apply(self, value):
         value = self._filter(value, Type(Sized))
@@ -524,10 +518,7 @@ class MaxLength(BaseFilter):
         self.truncate = truncate
 
     def __str__(self):
-        return "{type}({max_length!r})".format(
-            type=type(self).__name__,
-            max_length=self.max_length,
-        )
+        return f"{type(self).__name__}({self.max_length!r})"
 
     def _apply(self, value):
         if len(value) > self.max_length:
@@ -561,10 +552,7 @@ class MinLength(BaseFilter):
         self.min_length = min_length
 
     def __str__(self):
-        return "{type}({min_length!r})".format(
-            type=type(self).__name__,
-            min_length=self.min_length,
-        )
+        return f"{type(self).__name__}({self.min_length!r})"
 
     def _apply(self, value):
         if len(value) < self.min_length:
@@ -626,10 +614,7 @@ class NotEmpty(BaseFilter):
         self.allow_none = allow_none
 
     def __str__(self):
-        return "{type}(allow_none={allow_none!r})".format(
-            type=type(self).__name__,
-            allow_none=self.allow_none,
-        )
+        return f"{type(self).__name__}(allow_none={self.allow_none!r})"
 
     def _apply(self, value):
         try:
@@ -665,10 +650,7 @@ class Omit(BaseFilter):
         self.keys = set(keys)
 
     def __str__(self):
-        return "{type}({keys})".format(
-            type=type(self).__name__,
-            keys=sorted(self.keys),
-        )
+        return f"{type(self).__name__}({sorted(self.keys)})"
 
     def _apply(self, value):
         value = self._filter(value, Type((Mapping, Sequence)))
@@ -755,10 +737,7 @@ class Optional(BaseFilter):
         )
 
     def __str__(self):
-        return "{type}(default={default!r})".format(
-            type=type(self).__name__,
-            default=self.actual_default,
-        )
+        return f"{type(self).__name__}(default={self.actual_default!r})"
 
     def _apply(self, value):
         try:
@@ -828,10 +807,7 @@ class Pick(BaseFilter):
         )
 
     def __str__(self):
-        return "{type}({keys})".format(
-            type=type(self).__name__,
-            keys=self.keys,
-        )
+        return f"{type(self).__name__}({self.keys})"
 
     def _apply(self, value):
         value = self._filter(value, Type((Mapping, Sequence)))

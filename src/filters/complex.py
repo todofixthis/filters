@@ -59,10 +59,7 @@ class FilterRepeater(BaseFilter):
         self.restrict_keys = None if restrict_keys is None else set(restrict_keys)
 
     def __str__(self):
-        return "{type}({filter_chain})".format(
-            type=type(self).__name__,
-            filter_chain=self._filter_chain,
-        )
+        return f"{type(self).__name__}({self._filter_chain})"
 
     @classmethod
     def __copy__(cls, the_filter: "FilterRepeater") -> "FilterRepeater":
@@ -239,12 +236,12 @@ class FilterMapper(BaseFilter):
                 )
 
     def __str__(self):
-        return "{type}({filters})".format(
-            type=type(self).__name__,
-            filters=", ".join(
-                "{key}={filter}".format(key=key, filter=filter_chain)
-                for key, filter_chain in self._filters.items()
-            ),
+        return (
+            f"{type(self).__name__}("
+            + ", ".join(
+                f"{key}={filter_chain}" for key, filter_chain in self._filters.items()
+            )
+            + ")"
         )
 
     def _apply(self, value):

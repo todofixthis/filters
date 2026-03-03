@@ -86,11 +86,8 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
 
                 if ift_result is True:
                     logger.debug(
-                        "Registering extension filter "
-                        "{cls.__module__}.{cls.__name__} as {name}.".format(
-                            cls=filter_,
-                            name=target.name,
-                        ),
+                        f"Registering extension filter "
+                        f"{filter_.__module__}.{filter_.__name__} as {target.name}.",
                     )
 
                     self._cache[target.name] = filter_
@@ -142,10 +139,7 @@ def iter_filters_in(
 
     if ift_result is True:
         logger.debug(
-            "Registering extension filter "
-            "{cls.__module__}.{cls.__name__}.".format(
-                cls=target,
-            ),
+            f"Registering extension filter " f"{target.__module__}.{target.__name__}.",
         )
 
         yield target.__name__, target
@@ -155,32 +149,20 @@ def iter_filters_in(
 
             if member_ift_result is True:
                 logger.debug(
-                    "Registering extension filter "
-                    "{cls.__module__}.{cls.__name__}.".format(
-                        cls=member,
-                    ),
+                    f"Registering extension filter "
+                    f"{member.__module__}.{member.__name__}.",
                 )
 
                 yield member.__name__, member
             else:
                 logger.debug(
-                    "Ignoring {module}.{name} ({reason})".format(
-                        module=target.__name__,
-                        name=member_name,
-                        reason=member_ift_result,
-                    ),
+                    f"Ignoring {target.__name__}.{member_name} ({member_ift_result})",
                 )
     elif is_class(target):
         logger.debug(
-            "Ignoring {cls.__module__}.{cls.__name__} ({reason}).".format(
-                cls=target,
-                reason=ift_result,
-            ),
+            f"Ignoring {target.__module__}.{target.__name__} ({ift_result}).",
         )
     else:
         logger.debug(
-            "Ignoring {target!r} ({reason}).".format(
-                reason=ift_result,
-                target=target,
-            ),
+            f"Ignoring {target!r} ({ift_result}).",
         )

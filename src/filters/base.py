@@ -132,9 +132,7 @@ class BaseFilter(metaclass=FilterMeta):
             purpose is to provide a snapshot of critical parts of the
             Filter's configuration for e.g., troubleshooting purposes.
         """
-        return "{type}()".format(
-            type=type(self).__name__,
-        )
+        return f"{type(self).__name__}()"
 
     @property
     def parent(self) -> Optional["BaseFilter"]:  # Use Optional for Sphinx compat
@@ -243,7 +241,7 @@ class BaseFilter(metaclass=FilterMeta):
             this method is invoked.
         """
         raise NotImplementedError(
-            "Not implemented in {cls}.".format(cls=type(self).__name__),
+            f"Not implemented in {type(self).__name__}.",
         )
 
     def _apply_none(self):
@@ -343,10 +341,8 @@ class BaseFilter(metaclass=FilterMeta):
             # Store exception details in the context so that they are
             # accessible to devs but hidden from end users.
             # Note that the traceback gets processed separately,
-            context["exc"] = "[{mod}.{cls}] {msg}".format(
-                mod=type(reason).__module__,
-                cls=type(reason).__name__,
-                msg=str(reason),
+            context["exc"] = (
+                f"[{type(reason).__module__}.{type(reason).__name__}] {reason}"
             )
 
             # Add the context to the exception object so that loggers
@@ -399,12 +395,8 @@ class BaseFilter(metaclass=FilterMeta):
             # Uhh... hm.
             else:
                 raise TypeError(
-                    "{type} {value!r} is not "
-                    "compatible with {target}.".format(
-                        type=type(the_filter).__name__,
-                        value=the_filter,
-                        target=cls.__name__,
-                    ),
+                    f"{type(the_filter).__name__} {the_filter!r} is not "
+                    f"compatible with {cls.__name__}.",
                 )
 
             if parent:
@@ -434,10 +426,7 @@ class FilterChain(BaseFilter):
         self._add(start_filter)
 
     def __str__(self):
-        return "{type}({filters})".format(
-            type=type(self).__name__,
-            filters=" | ".join(map(str, self._filters)),
-        )
+        return f"{type(self).__name__}({' | '.join(map(str, self._filters))})"
 
     def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
         """Chains a filter with this one.
@@ -506,7 +495,7 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
             context: Additional context values for the error.
         """
         raise NotImplementedError(
-            "Not implemented in {cls}.".format(cls=type(self).__name__),
+            f"Not implemented in {type(self).__name__}.",
         )
 
     def handle_exception(self, message: str, exc: Exception) -> Any:
@@ -591,10 +580,9 @@ class Type(BaseFilter):
         self.aliases = aliases or {}
 
     def __str__(self):
-        return "{type}({allowed_types}, " "allow_subclass={allow_subclass!r})".format(
-            type=type(self).__name__,
-            allowed_types=self.get_allowed_type_names(aliased=False),
-            allow_subclass=self.allow_subclass,
+        return (
+            f"{type(self).__name__}({self.get_allowed_type_names(aliased=False)}, "
+            f"allow_subclass={self.allow_subclass!r})"
         )
 
     def _apply(self, value):

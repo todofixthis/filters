@@ -57,10 +57,7 @@ class Decimal(BaseFilter):
         self.allow_tuples = allow_tuples
 
     def __str__(self):
-        return "{type}(max_precision={max_precision!r})".format(
-            type=type(self).__name__,
-            max_precision=self.max_precision,
-        )
+        return f"{type(self).__name__}(max_precision={self.max_precision!r})"
 
     def _apply(self, value):
         allowed_types = (
@@ -173,10 +170,8 @@ class Max(BaseFilter):
         self.exclusive = exclusive
 
     def __str__(self):
-        return "{type}({max_value!r}, exclusive={exclusive!r})".format(
-            type=type(self).__name__,
-            max_value=self.max_value,
-            exclusive=self.exclusive,
+        return (
+            f"{type(self).__name__}({self.max_value!r}, exclusive={self.exclusive!r})"
         )
 
     def _apply(self, value):
@@ -234,10 +229,8 @@ class Min(BaseFilter):
         self.exclusive = exclusive
 
     def __str__(self):
-        return "{type}({min_value!r}, exclusive={exclusive!r})".format(
-            type=type(self).__name__,
-            min_value=self.min_value,
-            exclusive=self.exclusive,
+        return (
+            f"{type(self).__name__}({self.min_value!r}, exclusive={self.exclusive!r})"
         )
 
     def _apply(self, value):

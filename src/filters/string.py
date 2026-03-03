@@ -169,10 +169,7 @@ class Choice(BaseFilter):
                 self.choice_map[CaseFold().apply(choice)] = choice
 
     def __str__(self):
-        return "{type}({choices!r})".format(
-            type=type(self).__name__,
-            choices=sorted(map(str, self.choice_map.values())),
-        )
+        return f"{type(self).__name__}({sorted(map(str, self.choice_map.values()))!r})"
 
     def _apply(self, value):
         if (not self.case_sensitive) and isinstance(value, str):
@@ -216,11 +213,7 @@ class IpAddress(BaseFilter):
         self.ipv6 = ipv6
 
     def __str__(self):
-        return "{type}(ipv4={ipv4!r}, ipv6={ipv6!r})".format(
-            type=type(self).__name__,
-            ipv4=self.ipv4,
-            ipv6=self.ipv6,
-        )
+        return f"{type(self).__name__}(ipv4={self.ipv4!r}, ipv6={self.ipv6!r})"
 
     @property
     def ip_type(self) -> str:
@@ -366,11 +359,7 @@ class MaxBytes(BaseFilter):
         self.encoding = encoding
 
     def __str__(self):
-        return "{type}({max_bytes!r}, encoding={encoding!r})".format(
-            type=type(self).__name__,
-            max_bytes=self.max_bytes,
-            encoding=self.encoding,
-        )
+        return f"{type(self).__name__}({self.max_bytes!r}, encoding={self.encoding!r})"
 
     def _apply(self, value):
         """Applies the MaxBytes filter.
@@ -523,12 +512,8 @@ class MaxBytes(BaseFilter):
                 # accepts negative values).
                 if trim >= target_bytes:
                     raise ValueError(
-                        "Unable to truncate {bytes_value!r} to {target_bytes} "
-                        "bytes when encoded using {encoding}.".format(
-                            bytes_value=bytes_value,
-                            target_bytes=target_bytes,
-                            encoding=self.encoding,
-                        ),
+                        f"Unable to truncate {bytes_value!r} to {target_bytes} "
+                        f"bytes when encoded using {self.encoding}.",
                     )
 
 
@@ -661,10 +646,7 @@ class Regex(BaseFilter):
         )
 
     def __str__(self):
-        return "{type}({pattern!r})".format(
-            type=type(self).__name__,
-            pattern=self.regex.pattern,
-        )
+        return f"{type(self).__name__}({self.regex.pattern!r})"
 
     def _apply(self, value):
         value: str = self._filter(value, Type(str))
@@ -723,11 +705,7 @@ class Split(BaseFilter):
         self.keys = keys
 
     def __str__(self):
-        return "{type}({pattern!r}, keys={keys!r}".format(
-            type=type(self).__name__,
-            pattern=self.regex.pattern,
-            keys=self.keys,
-        )
+        return f"{type(self).__name__}({self.regex.pattern!r}, keys={self.keys!r})"
 
     def _apply(self, value):
         value: str = self._filter(value, Type(str))
@@ -776,7 +754,7 @@ class Strip(BaseFilter):
 
         if leading:
             self.leading = regex.compile(
-                r"^{pattern}".format(pattern=leading),
+                rf"^{leading}",
                 regex.UNICODE,
             )
         else:
@@ -784,18 +762,14 @@ class Strip(BaseFilter):
 
         if trailing:
             self.trailing = regex.compile(
-                r"{pattern}$".format(pattern=trailing),
+                rf"{trailing}$",
                 regex.UNICODE,
             )
         else:
             self.trailing = None
 
     def __str__(self):
-        return "{type}(leading={leading!r}, trailing={trailing!r})".format(
-            type=type(self).__name__,
-            leading=self.leading.pattern,
-            trailing=self.trailing.pattern,
-        )
+        return f"{type(self).__name__}(leading={self.leading.pattern!r}, trailing={self.trailing.pattern!r})"
 
     def _apply(self, value):
         value: str = self._filter(value, Type(str))
@@ -864,10 +838,7 @@ class Unicode(BaseFilter):
             self.npr = regex.compile(r"[^\P{C}\s]+", regex.UNICODE)
 
     def __str__(self):
-        return "{type}(encoding={encoding!r})".format(
-            type=type(self).__name__,
-            encoding=self.encoding,
-        )
+        return f"{type(self).__name__}(encoding={self.encoding!r})"
 
     def _apply(self, value):
         try:
@@ -1014,10 +985,7 @@ class Uuid(BaseFilter):
         self.version = version
 
     def __str__(self):
-        return "{type}(version={version!r})".format(
-            type=type(self).__name__,
-            version=self.version,
-        )
+        return f"{type(self).__name__}(version={self.version!r})"
 
     def _apply(self, value):
         value: str | UUID = self._filter(

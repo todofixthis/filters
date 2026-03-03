@@ -122,14 +122,10 @@ class BaseFilterTestCase(TestCase):
         if runner.has_exceptions:
             # noinspection PyTypeChecker
             self.fail(
-                "Unhandled exceptions occurred while filtering the "
-                "request payload:\n\n{tracebacks}\n\n"
-                "Filter Messages:\n\n{messages}".format(
-                    messages=pformat(dict(runner.filter_messages)),
-                    tracebacks=pformat(
-                        list(starmap(format_exception, runner.exc_info))
-                    ),
-                )
+                f"Unhandled exceptions occurred while filtering the "
+                f"request payload:\n\n"
+                f"{pformat(list(starmap(format_exception, runner.exc_info)))}\n\n"
+                f"Filter Messages:\n\n{pformat(dict(runner.filter_messages))}"
             )
 
         if isinstance(expected_codes, list):
@@ -137,11 +133,9 @@ class BaseFilterTestCase(TestCase):
 
         if runner.error_codes != expected_codes:
             self.fail(
-                "Filter generated unexpected error codes (expected "
-                "{expected}):\n\n{messages}".format(
-                    expected=json.dumps(sorted_dict(expected_codes)),
-                    messages=pformat(dict(runner.filter_messages)),
-                ),
+                f"Filter generated unexpected error codes (expected "
+                f"{json.dumps(sorted_dict(expected_codes))}):\n\n"
+                f"{pformat(dict(runner.filter_messages))}",
             )
 
         check_value = (self.skip_value_check is not True) and (
@@ -184,18 +178,12 @@ class BaseFilterTestCase(TestCase):
             FilterRunner instance with the filter applied to the value.
         """
         if not callable(self.filter_type):
-            self.fail(
-                "{cls}.filter_type is not callable.".format(
-                    cls=type(self).__name__,
-                )
-            )
+            self.fail(f"{type(self).__name__}.filter_type is not callable.")
 
         if not args:
             self.fail(
-                "First argument to {cls}._filter "
-                "must be the filtered value.".format(
-                    cls=type(self).__name__,
-                ),
+                f"First argument to {type(self).__name__}._filter "
+                "must be the filtered value.",
             )
 
         return FilterRunner(

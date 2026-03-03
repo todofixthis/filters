@@ -69,11 +69,7 @@ class FilterMessage(object):
         self.exc_info = exc_info
 
     def __repr__(self):
-        return "{type}({message}, {context})".format(
-            type=type(self).__name__,
-            message=repr(self.message),
-            context=repr(self.context),
-        )
+        return f"{type(self).__name__}({self.message!r}, {self.context!r})"
 
     def __str__(self):
         return self.message
