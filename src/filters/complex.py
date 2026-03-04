@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Generator, Iterable, Mapping
 from typing import Any, Hashable
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
@@ -91,7 +91,7 @@ class FilterRepeater(BaseFilter):
 
         return result_type(self.iter(value))
 
-    def iter(self, value: Iterable):
+    def iter(self, value: Iterable) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             if isinstance(value, Mapping):
@@ -252,7 +252,7 @@ class FilterMapper(BaseFilter):
 
         return dict(self.iter(value))
 
-    def iter(self, value: Mapping):
+    def iter(self, value: Mapping) -> Generator[tuple[str, Any], None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             # Apply filtered values first.
