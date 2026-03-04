@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from importlib.metadata import entry_points
 from inspect import (
     getmembers as get_members,
@@ -116,7 +117,7 @@ def is_filter_type(target: Any) -> bool | str:
 
 def iter_filters_in(
     target: Any,
-):
+) -> Generator[tuple[str, type[BaseFilter]], None, None]:
     """Iterates over all filters in the specified module/class.
 
     Args:
