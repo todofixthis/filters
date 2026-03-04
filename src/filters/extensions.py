@@ -18,23 +18,13 @@ __all__ = [
 ]
 
 GROUP_NAME = "filters.extensions"
-"""The key to use when declaring entry points.
-
-The key to use when declaring entry points in your library's
-``setup.py`` file.
+"""The key to use when declaring entry points in ``pyproject.toml``.
 
 Example::
 
-   setup(
-     ...
-     entry_points = {
-       'filters.extensions': [
-         # Declare each filter with its own entry point.
-         'Country=filters_iso:Country',
-         'Currency=filters_iso:Currency',
-       ],
-     },
-   )
+   [project.entry-points."filters.extensions"]
+   Country = "filters_iso:Country"
+   Currency = "filters_iso:Currency"
 
 Filters that are loaded this way are accessible from
 :py:data:`filters.ext` (not imported into the global namespace

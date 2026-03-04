@@ -67,7 +67,7 @@ example,
 Prerequisites
 =============
 In order to register your filters with the Extensions framework, your project
-must use `setuptools`_ and have a valid ``pyproject.toml`` or ``setup.py`` file.
+must have a valid ``pyproject.toml`` file.
 
 Registering Your Filters
 ========================
@@ -83,24 +83,7 @@ Here's an example using ``pyproject.toml``:
    Currency = "filters_iso:Currency"
    Locale = "filters_iso:Locale"
 
-If your project is using ``setup.py``, it looks like this instead:
-
-.. code-block:: python
-
-   from setuptools import setup
-
-   setup(
-     ...
-     entry_points = {
-       'filters.extensions': [
-         'Country = filters_iso:Country',
-         'Currency = filters_iso:Currency',
-         'Locale = filters_iso:Locale',
-       ],
-     },
-   )
-
-Note in the examples above that you can register as many filters as you want.
+Note that you can register as many filters as you want.
 
 .. tip::
    The name that you assign to each entry point is used as the attribute name
@@ -133,9 +116,9 @@ defined, so it is not predictable which filter will "win".
 
 Troubleshooting
 ---------------
-Remember to ``pip install -e .`` each time you modify your entry points; this is
-required in order to install the new entry points into your project's
-``egg-info`` directory.
+Remember to reinstall your package (e.g. ``pip install -e .``) each time you
+modify your entry points; this is required in order to register the updated
+entry points with your Python environment.
 
 If your filter is still not showing up in ``f.ext``, try turning on debug
 logging.  You will see log messages as the Filters library searches for
@@ -156,4 +139,3 @@ extension filters to load:
    Out[4]: ['Country', 'Currency', 'Locale']
 
 .. _PyCharm's debugger can be configured to collect type information at runtime: https://blog.jetbrains.com/pycharm/2013/02/dynamic-runtime-type-inference-in-pycharm-2-7/
-.. _setuptools: https://setuptools.readthedocs.io/en/latest/
