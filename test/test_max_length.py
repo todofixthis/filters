@@ -2,6 +2,8 @@
 Tests for the MaxLength filter.
 """
 
+import pytest
+
 import filters as f
 from .conftest import Lengthy
 
@@ -83,50 +85,37 @@ def test_max_length_multi_byte_characters(assert_filter_passes, assert_filter_er
     )
 
 
-def test_max_length_pass_short_collection(assert_filter_passes):
+@pytest.mark.parametrize(
+    "max_length,value",
+    [
+        (4, ["foo", "bar", "baz", "luhrmann"]),
+        (3, {"foo": "bar", "baz": "luhrmann"}),
+        (4, Lengthy(4)),
+        # etc.
+    ],
+)
+def test_max_length_pass_short_collection(assert_filter_passes, max_length, value):
     """
     The incoming value is a collection with length less than or equal to
     the max length.
     """
-    assert_filter_passes(
-        f.MaxLength(max_length=4),
-        ["foo", "bar", "baz", "luhrmann"],
-    )
-
-    assert_filter_passes(
-        f.MaxLength(max_length=3),
-        {"foo": "bar", "baz": "luhrmann"},
-    )
-
-    assert_filter_passes(
-        f.MaxLength(max_length=4),
-        Lengthy(4),
-    )
-
-    # etc.
+    assert_filter_passes(f.MaxLength(max_length=max_length), value)
 
 
-def test_max_length_fail_long_collection(assert_filter_errors):
+@pytest.mark.parametrize(
+    "max_length,value",
+    [
+        (3, ["foo", "bar", "baz", "luhrmann"]),
+        (1, {"foo": "bar", "baz": "luhrmann"}),
+        (3, Lengthy(4)),
+        # etc.
+    ],
+)
+def test_max_length_fail_long_collection(assert_filter_errors, max_length, value):
     """
     The incoming value is a collection with length greater than the max
     length.
     """
     assert_filter_errors(
-        f.MaxLength(max_length=3),
-        ["foo", "bar", "baz", "luhrmann"],
-        [f.MaxLength.CODE_TOO_LONG],
+        f.MaxLength(max_length=max_length), value, [f.MaxLength.CODE_TOO_LONG]
     )
-
-    assert_filter_errors(
-        f.MaxLength(max_length=1),
-        {"foo": "bar", "baz": "luhrmann"},
-        [f.MaxLength.CODE_TOO_LONG],
-    )
-
-    assert_filter_errors(
-        f.MaxLength(max_length=3),
-        Lengthy(4),
-        [f.MaxLength.CODE_TOO_LONG],
-    )
-
-    # etc.

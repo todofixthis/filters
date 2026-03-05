@@ -2,6 +2,8 @@
 Tests for the CaseFold filter.
 """
 
+import pytest
+
 import filters as f
 
 
@@ -21,18 +23,22 @@ def test_case_fold_pass_ascii(assert_filter_passes):
     assert_filter_passes(f.CaseFold(), "FOO bar BAZ", "foo bar baz")
 
 
-def test_case_fold_pass_unicode(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        # For some reason, the internet really loves to use ß to test case folding functionality.
+        # noinspection SpellCheckingInspection
+        ("Weißkopfseeadler", "weisskopfseeadler"),
+        # Note that case-folded does not necessarily mean ASCII-compatible!
+        # noinspection SpellCheckingInspection
+        ("İstanbul", "i\u0307stanbul"),
+    ],
+)
+def test_case_fold_pass_unicode(assert_filter_passes, value, expected):
     """
     The incoming value is not ASCII.
     """
-    # For some reason, the internet really loves to use ß to test case
-    # folding functionality.
-    # noinspection SpellCheckingInspection
-    assert_filter_passes(f.CaseFold(), "Weißkopfseeadler", "weisskopfseeadler")
-
-    # Note that case-folded does not necessarily mean ASCII-compatible!
-    # noinspection SpellCheckingInspection
-    assert_filter_passes(f.CaseFold(), "İstanbul", "i\u0307stanbul")
+    assert_filter_passes(f.CaseFold(), value, expected)
 
 
 def test_case_fold_pass_unfoldable(assert_filter_passes):

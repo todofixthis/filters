@@ -4,6 +4,8 @@ Tests for the Optional filter.
 
 from functools import partial
 
+import pytest
+
 import filters as f
 from .conftest import Lengthy
 
@@ -39,15 +41,21 @@ def test_optional_pass_replace_empty_string(assert_filter_passes):
     )
 
 
-def test_optional_replace_empty_collection(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value",
+    [
+        [],
+        {},
+        Lengthy(0),
+        # etc.
+    ],
+)
+def test_optional_replace_empty_collection(assert_filter_passes, value):
     """
     The incoming value is a collection with length < 1.
     """
     # By default, the filter will replace empty values with `None`.
-    assert_filter_passes(f.Optional(), [], None)
-    assert_filter_passes(f.Optional(), {}, None)
-    assert_filter_passes(f.Optional(), Lengthy(0), None)
-    # etc.
+    assert_filter_passes(f.Optional(), value, None)
 
 
 def test_optional_pass_non_empty_string(assert_filter_passes):
@@ -57,16 +65,22 @@ def test_optional_pass_non_empty_string(assert_filter_passes):
     assert_filter_passes(f.Optional(default="fail"), "Goodbye, world!")
 
 
-def test_optional_pass_non_empty_collection(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value",
+    [
+        # The values inside the collection may be empty, but the collection
+        # itself is not.
+        ["", "", ""],
+        {"": ""},
+        Lengthy(12),
+        # etc.
+    ],
+)
+def test_optional_pass_non_empty_collection(assert_filter_passes, value):
     """
     The incoming value is a collection with length > 0.
     """
-    # The values inside the collection may be empty, but the collection
-    # itself is not.
-    assert_filter_passes(f.Optional(), ["", "", ""])
-    assert_filter_passes(f.Optional(), {"": ""})
-    assert_filter_passes(f.Optional(), Lengthy(12))
-    # etc.
+    assert_filter_passes(f.Optional(), value)
 
 
 def test_optional_pass_non_collection(assert_filter_passes):

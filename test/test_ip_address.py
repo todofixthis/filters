@@ -2,6 +2,8 @@
 Tests for the IpAddress filter.
 """
 
+import pytest
+
 import filters as f
 
 
@@ -21,13 +23,12 @@ def test_ip_address_ipv4_success_happy_path(assert_filter_passes):
     assert_filter_passes(f.IpAddress(), "127.0.0.1")
 
 
-def test_ip_address_ipv4_error_invalid(assert_filter_errors):
+@pytest.mark.parametrize("value", ["127.0.0.1/32", "256.0.0.1", "-1.0.0.1"])
+def test_ip_address_ipv4_error_invalid(assert_filter_errors, value):
     """
     The incoming value is not a valid IPv4 address.
     """
-    assert_filter_errors(f.IpAddress(), "127.0.0.1/32", [f.IpAddress.CODE_INVALID])
-    assert_filter_errors(f.IpAddress(), "256.0.0.1", [f.IpAddress.CODE_INVALID])
-    assert_filter_errors(f.IpAddress(), "-1.0.0.1", [f.IpAddress.CODE_INVALID])
+    assert_filter_errors(f.IpAddress(), value, [f.IpAddress.CODE_INVALID])
 
 
 def test_ip_address_ipv4_error_too_short(assert_filter_errors):
@@ -167,22 +168,23 @@ def test_ip_address_ipv6_error_ipv4(assert_filter_errors):
     )
 
 
-def test_ip_address_pass_allow_ipv4_and_ipv6(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("127.0.0.1", "127.0.0.1"),
+        # Note that the resulting value is automatically abbreviated, if possible.
+        # https://en.wikipedia.org/wiki/IPv6_address#Presentation
+        ("2001:0db8:85a3:0000:0000:8a2e:0370:7334", "2001:db8:85a3::8a2e:370:7334"),
+    ],
+)
+def test_ip_address_pass_allow_ipv4_and_ipv6(assert_filter_passes, value, expected):
     """
     You can configure the filter to accept both IPv4 and IPv6 addresses.
     """
     assert_filter_passes(
         f.IpAddress(ipv4=True, ipv6=True),
-        "127.0.0.1",
-    )
-
-    assert_filter_passes(
-        f.IpAddress(
-            ipv4=True,
-            ipv6=True,
-        ),
-        "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-        "2001:db8:85a3::8a2e:370:7334",
+        value,
+        expected,
     )
 
 

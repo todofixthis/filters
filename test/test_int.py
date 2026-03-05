@@ -2,6 +2,8 @@
 Tests for the Int filter.
 """
 
+import pytest
+
 import filters as f
 
 
@@ -89,15 +91,20 @@ def test_int_pass_scientific_notation(assert_filter_passes):
     assert_filter_passes(f.Int(), "2.6E4", 26000)
 
 
-def test_int_fail_non_finite_value(assert_filter_errors):
+@pytest.mark.parametrize(
+    "value",
+    [
+        "NaN",
+        "+Inf",
+        "-Inf",
+        # There are a few other possible non-finite values out there, but you get the idea.
+    ],
+)
+def test_int_fail_non_finite_value(assert_filter_errors, value):
     """
     The incoming value is a non-finite value.
     """
-    assert_filter_errors(f.Int(), "NaN", [f.Decimal.CODE_NON_FINITE])
-    assert_filter_errors(f.Int(), "+Inf", [f.Decimal.CODE_NON_FINITE])
-    assert_filter_errors(f.Int(), "-Inf", [f.Decimal.CODE_NON_FINITE])
-    # There are a few other possible non-finite values out there,
-    # but you get the idea.
+    assert_filter_errors(f.Int(), value, [f.Decimal.CODE_NON_FINITE])
 
 
 def test_int_pass_int(assert_filter_passes):

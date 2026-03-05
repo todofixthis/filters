@@ -4,6 +4,8 @@ Tests for the Decimal filter.
 
 from decimal import Decimal
 
+import pytest
+
 import filters as f
 
 
@@ -82,16 +84,21 @@ def test_decimal_fail_invalid_value(assert_filter_errors):
     )
 
 
-def test_decimal_fail_non_finite_value(assert_filter_errors):
+@pytest.mark.parametrize(
+    "value",
+    [
+        "NaN",
+        "+Inf",
+        "-Inf",
+        # There are a few other possible non-finite values out there, but you get the idea.
+    ],
+)
+def test_decimal_fail_non_finite_value(assert_filter_errors, value):
     """
     Non-finite values like 'NaN' and 'Inf' are considered invalid,
     even though they are technically parseable.
     """
-    assert_filter_errors(f.Decimal(), "NaN", [f.Decimal.CODE_NON_FINITE])
-    assert_filter_errors(f.Decimal(), "+Inf", [f.Decimal.CODE_NON_FINITE])
-    assert_filter_errors(f.Decimal(), "-Inf", [f.Decimal.CODE_NON_FINITE])
-    # There are a few other possible non-finite values out there,
-    # but you get the idea.
+    assert_filter_errors(f.Decimal(), value, [f.Decimal.CODE_NON_FINITE])
 
 
 def test_decimal_pass_tuple(assert_filter_passes):
