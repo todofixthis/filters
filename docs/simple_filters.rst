@@ -332,7 +332,7 @@ configured via the filter initialiser).
 
    Like :ref:`date`, :py:class:`filters.Datetime` assumes that
    incoming naive timestamps are UTC; you can change this by providing a
-   ``timezone`` argument to the filter initializer.  The filter will use this
+   ``timezone`` argument to the filter initialiser.  The filter will use this
    value when converting naive timestamps to UTC.
 
    This is really important (and potentially confusing 😇): the filter

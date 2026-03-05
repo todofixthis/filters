@@ -126,9 +126,9 @@ def test_byte_string_pass_xml_element(assert_filter_passes):
     )
 
 
-def test_byte_string_unicode_normalization_off_by_default(assert_filter_passes):
+def test_byte_string_unicode_normalisation_off_by_default(assert_filter_passes):
     """
-    By default, the filter does not apply normalization before encoding.
+    By default, the filter does not apply normalisation before encoding.
 
     References:
       - https://en.wikipedia.org/wiki/Unicode_equivalence
@@ -145,9 +145,9 @@ def test_byte_string_unicode_normalization_off_by_default(assert_filter_passes):
     )
 
 
-def test_byte_string_unicode_normalization_forced(assert_filter_passes):
+def test_byte_string_unicode_normalisation_forced(assert_filter_passes):
     """
-    You can force the filter to apply normalization before encoding.
+    You can force the filter to apply normalisation before encoding.
 
     References:
       - https://en.wikipedia.org/wiki/Unicode_equivalence
@@ -156,7 +156,7 @@ def test_byte_string_unicode_normalization_forced(assert_filter_passes):
     assert_filter_passes(
         f.ByteString(
             # Same decomposed sequence from previous test...
-            # ... but this time we tell the filter to normalize the value
+            # ... but this time we tell the filter to normalise the value
             # before encoding it.
             normalize=True,
         ),
@@ -196,9 +196,9 @@ def test_byte_string_remove_non_printables_forced(assert_filter_passes):
     )
 
 
-def test_byte_string_newline_normalization_off_by_default(assert_filter_passes):
+def test_byte_string_newline_normalisation_off_by_default(assert_filter_passes):
     """
-    By default, the filter does not normalize line endings.
+    By default, the filter does not normalise line endings.
     """
     assert_filter_passes(
         f.ByteString(),
@@ -207,9 +207,9 @@ def test_byte_string_newline_normalization_off_by_default(assert_filter_passes):
     )
 
 
-def test_byte_string_newline_normalization_forced(assert_filter_passes):
+def test_byte_string_newline_normalisation_forced(assert_filter_passes):
     """
-    You can force the filter to normalize line endings.
+    You can force the filter to normalise line endings.
     """
     assert_filter_passes(
         f.ByteString(normalize=True),

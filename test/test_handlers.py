@@ -201,7 +201,7 @@ def test_log_handler_invalid_value(log_handler_setup):
     assert logs[0].msg == message
     assert getattr(logs[0], "context") == context
 
-    # The log message level is set in the handler's initializer.
+    # The log message level is set in the handler's initialiser.
     assert logs[0].levelname == getLevelName(WARNING)
 
     # No exception info for invalid values (by default).
@@ -237,7 +237,7 @@ def test_log_handler_exception(log_handler_setup):
         assert getattr(logs[0], "context") == context
 
         # The log message level is set in the handler's
-        # initializer.
+        # initialiser.
         # Note that both invalid values and exceptions have the
         # same log level.
         assert logs[0].levelname == getLevelName(WARNING)
