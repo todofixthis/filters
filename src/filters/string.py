@@ -2,11 +2,11 @@ import json
 import re
 import socket
 import unicodedata
-from collections.abc import Callable, Iterable, Sequence
-from typing import Hashable
 from base64 import standard_b64decode, urlsafe_b64decode
+from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
+from typing import Hashable
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
@@ -372,15 +372,7 @@ class MaxBytes(BaseFilter):
         """
         value: str = self._filter(
             value=value,
-            filter_chain=(
-                Type(
-                    (
-                        bytes,
-                        str,
-                    )
-                )
-                | Unicode(encoding=self.encoding)
-            ),
+            filter_chain=(Type((bytes, str)) | Unicode(encoding=self.encoding)),
         )
 
         if self._has_errors:
