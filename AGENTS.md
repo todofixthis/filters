@@ -31,6 +31,10 @@ Test functions: `test_{filter_name}_{scenario}`. Each test file needs a module-l
 
 Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` style. Max 80 chars per line. Escape backslashes (e.g. `'\\n'` not `'\n'`). Blank line before lists inside `Args:` sections to avoid Sphinx indentation warnings. ReadTheDocs treats all Sphinx warnings as errors — resolve them before pushing.
 
+## Code Comments
+
+Place comments on the line preceding the code they document, not as trailing comments.
+
 ## Language and Style
 
 - NZ English; incorporate Te Reo Māori where natural (e.g. "mahi", "kaupapa")

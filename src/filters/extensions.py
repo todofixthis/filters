@@ -7,7 +7,7 @@ from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
-from typing import Any
+from typing import Any, Hashable
 
 from class_registry.entry_points import EntryPointClassRegistry
 
@@ -35,7 +35,7 @@ because it gives IDEs a heart attack).
 logger = getLogger(__name__)
 
 
-class FilterExtensionRegistry(EntryPointClassRegistry):
+class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
     """Creates a registry that can be used to dynamically load 3rd-party
     filters into the (nearly) top-level namespace.
     """
@@ -61,12 +61,14 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
         Returns:
             The filter class.
         """
-        return self[item]
+        # create_instance returns the class itself (not an instance) when called
+        # without args, so the runtime type is type[BaseFilter], not BaseFilter.
+        return self[item]  # type: ignore[return-value]
 
     def __repr__(self):
         return repr(self._get_cache())
 
-    def _get_cache(self) -> dict[str, type[BaseFilter]]:
+    def _get_cache(self) -> dict[Hashable, type[BaseFilter]]:
         if self._cache is None:
             self._cache = {}
 
@@ -87,6 +89,22 @@ class FilterExtensionRegistry(EntryPointClassRegistry):
 
     @staticmethod
     def create_instance(class_: type, *args, **kwargs) -> Any:
+        """Returns the class itself when called with no arguments.
+
+        Overrides the default behaviour (which would instantiate the class)
+        so that extension filters behave consistently with
+        :py:meth:`filters.base.FilterMeta.__or__`, which chains uninstantiated
+        filter classes directly (e.g. ``filters.ext.MyFilter | OtherFilter``).
+
+        Args:
+            class_: The filter class to return or instantiate.
+            *args: Positional arguments forwarded to the class constructor.
+            **kwargs: Keyword arguments forwarded to the class constructor.
+
+        Returns:
+            The class itself if no arguments are provided; otherwise a new
+            instance of the class.
+        """
         if args or kwargs:
             return class_(*args, **kwargs)
 
