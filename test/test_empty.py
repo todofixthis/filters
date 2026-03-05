@@ -2,6 +2,8 @@
 Tests for the Empty filter.
 """
 
+import pytest
+
 import filters as f
 from .conftest import Lengthy
 
@@ -24,14 +26,20 @@ def test_empty_pass_empty_string(assert_filter_passes):
     assert_filter_passes(f.Empty(), "")
 
 
-def test_empty_pass_empty_collection(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value",
+    [
+        [],
+        {},
+        Lengthy(0),
+        # etc.
+    ],
+)
+def test_empty_pass_empty_collection(assert_filter_passes, value):
     """
     The incoming value is a collection with length < 1.
     """
-    assert_filter_passes(f.Empty(), [])
-    assert_filter_passes(f.Empty(), {})
-    assert_filter_passes(f.Empty(), Lengthy(0))
-    # etc.
+    assert_filter_passes(f.Empty(), value)
 
 
 def test_empty_fail_non_empty_string(assert_filter_errors):
@@ -45,16 +53,22 @@ def test_empty_fail_non_empty_string(assert_filter_errors):
     )
 
 
-def test_empty_fail_non_empty_collection(assert_filter_errors):
+@pytest.mark.parametrize(
+    "value",
+    [
+        # The values inside the collection may be empty, but the collection
+        # itself is not.
+        ["", "", ""],
+        {"": ""},
+        Lengthy(1),
+        # etc.
+    ],
+)
+def test_empty_fail_non_empty_collection(assert_filter_errors, value):
     """
     The incoming value is a collection with length > 0.
     """
-    # The values inside the collection may be empty, but the collection
-    # itself is not.
-    assert_filter_errors(f.Empty(), ["", "", ""], [f.Empty.CODE_NOT_EMPTY])
-    assert_filter_errors(f.Empty(), {"": ""}, [f.Empty.CODE_NOT_EMPTY])
-    assert_filter_errors(f.Empty(), Lengthy(1), [f.Empty.CODE_NOT_EMPTY])
-    # etc.
+    assert_filter_errors(f.Empty(), value, [f.Empty.CODE_NOT_EMPTY])
 
 
 def test_empty_fail_non_collection(assert_filter_errors):
