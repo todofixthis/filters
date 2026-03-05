@@ -223,7 +223,7 @@ class FilterMapper(BaseFilter):
         if filter_map:
             for key, filter_chain in filter_map.items():
                 #
-                # Note that the normalized Filter could be `None`.
+                # Note that the normalised Filter could be `None`.
                 #
                 # This has the effect of making a key "required"
                 # (depending on `allow_missing_keys`) without

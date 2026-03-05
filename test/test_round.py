@@ -104,7 +104,7 @@ def test_round_pass_round_negative_value(assert_filter_passes):
 def test_round_pass_modify_rounding(assert_filter_passes):
     """
     By default, the filter will round up any value that is halfway
-    to the nearest `to_nearest` value, but this behavior can be
+    to the nearest `to_nearest` value, but this behaviour can be
     customized.
     """
     assert_filter_passes(

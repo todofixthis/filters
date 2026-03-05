@@ -11,7 +11,7 @@ class.  This class provides an interface very similar to a Django form.
    # Incoming data.
    data = u'1879-03-14'
 
-   # Initialize the FilterRunner.
+   # Initialise the FilterRunner.
    runner = f.FilterRunner(f.Date, data)
 
    if runner.is_valid():

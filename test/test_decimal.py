@@ -37,7 +37,7 @@ def test_decimal_pass_max_precision(assert_filter_passes):
     assert_filter_passes(f.Decimal(max_precision=3), "3.1415926", Decimal("3.142"))
 
 
-def test_decimal_max_precision_quantized(assert_filter_passes):
+def test_decimal_max_precision_quantised(assert_filter_passes):
     """
     ``max_precision`` can also be specified as a Decimal object.
     """

@@ -880,7 +880,7 @@ class Unicode(BaseFilter):
                     # Remove non-printables.
                     self.npr.sub("", decoded),
                 )
-                # Normalize line endings.
+                # Normalise line endings.
                 # http://stackoverflow.com/a/1749887
                 .replace("\r\n", "\n").replace("\r", "\n")
             )

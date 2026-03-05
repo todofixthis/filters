@@ -130,7 +130,7 @@ def test_unicode_pass_xml_element(assert_filter_passes):
     )
 
 
-def test_unicode_unicode_normalization(assert_filter_passes):
+def test_unicode_unicode_normalisation(assert_filter_passes):
     """
     The filter always returns the NFC form of the unicode string.
 
@@ -151,9 +151,9 @@ def test_unicode_unicode_normalization(assert_filter_passes):
     assert_filter_passes(f.Unicode(), decomposed, composed)
 
 
-def test_unicode_unicode_normalization_disabled(assert_filter_passes):
+def test_unicode_unicode_normalisation_disabled(assert_filter_passes):
     """
-    You can force the filter not to perform normalization.
+    You can force the filter not to perform normalisation.
     """
     decomposed = "Ame\u0301lie"
 
@@ -194,7 +194,7 @@ def test_unicode_remove_non_printables_disabled(assert_filter_passes):
     )
 
 
-def test_unicode_newline_normalization(assert_filter_passes):
+def test_unicode_newline_normalisation(assert_filter_passes):
     """
     By default, any newlines in the string are automatically converted to
     unix-style ('\n').
@@ -206,9 +206,9 @@ def test_unicode_newline_normalization(assert_filter_passes):
     )
 
 
-def test_unicode_newline_normalization_disabled(assert_filter_passes):
+def test_unicode_newline_normalisation_disabled(assert_filter_passes):
     """
-    You can force the filter not to normalize line endings.
+    You can force the filter not to normalise line endings.
     """
     assert_filter_passes(
         f.Unicode(

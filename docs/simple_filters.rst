@@ -1049,7 +1049,7 @@ NamedTuple
 ----------
 Converts the incoming value into a named tuple
 
-Initialize this filter with the type of named tuple that you want to use for
+Initialise this filter with the type of named tuple that you want to use for
 conversions.
 
 .. code-block:: python
