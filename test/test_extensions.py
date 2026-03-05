@@ -41,7 +41,7 @@ def test_filter_extension_registry_happy_path():
     assert isinstance(bravo, FilterBravo)
     assert bravo.name == "Batman"
 
-    # I couldn't find any Batman characters whose name begins with
+    # I couldn't find any Batman protagonists whose name begins with
     # C... and "Commissioner Gordon" doesn't count!
     charlie = registry.Catwoman
     # Note that :py:data:`test.TestFilterCharlie` is a filter
