@@ -4,6 +4,8 @@ Tests for the Array filter.
 
 import typing
 
+import pytest
+
 import filters as f
 
 
@@ -43,12 +45,12 @@ def test_array_pass_custom_sequence_type(assert_filter_passes):
     assert_filter_passes(f.Array(), CustomSequence())
 
 
-def test_array_fail_string(assert_filter_errors):
+@pytest.mark.parametrize("value", [bytes(), str()])
+def test_array_fail_string(assert_filter_errors, value):
     """
     The incoming value is a string.
     """
-    assert_filter_errors(f.Array(), bytes(), [f.Array.CODE_WRONG_TYPE])
-    assert_filter_errors(f.Array(), str(), [f.Array.CODE_WRONG_TYPE])
+    assert_filter_errors(f.Array(), value, [f.Array.CODE_WRONG_TYPE])
 
 
 def test_array_fail_mapping(assert_filter_errors):
