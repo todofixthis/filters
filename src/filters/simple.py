@@ -196,16 +196,13 @@ class ByteArray(BaseFilter):
             FilterRepeater(
                 # Only allow ints and booleans.
                 Type(int)
-                |
                 # Convert booleans to int (Min and Max require an
                 # exact type match).
-                Int
-                |
+                | Int
                 # Min value for each byte is 2^0-1.
-                Min(0)
-                |
+                | Min(0)
                 # Max value for each byte is 2^8-1.
-                Max(255)
+                | Max(255)
             ),
         )
 
