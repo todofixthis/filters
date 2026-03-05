@@ -18,12 +18,12 @@ def test_array_pass_none(assert_filter_passes):
     assert_filter_passes(f.Array(), None)
 
 
-def test_array_pass_sequence(assert_filter_passes):
+@pytest.mark.parametrize("value", [tuple(), list()])
+def test_array_pass_sequence(assert_filter_passes, value):
     """
     The incoming value is a sequence.
     """
-    assert_filter_passes(f.Array(), tuple())
-    assert_filter_passes(f.Array(), list())
+    assert_filter_passes(f.Array(), value)
 
 
 def test_array_pass_custom_sequence_type(assert_filter_passes):
