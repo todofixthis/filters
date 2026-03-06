@@ -2,6 +2,8 @@
 Tests for the Required filter.
 """
 
+import pytest
+
 import filters as f
 from .conftest import Lengthy
 
@@ -21,16 +23,22 @@ def test_required_pass_non_empty_string(assert_filter_passes):
     assert_filter_passes(f.Required(), "Hello, world!")
 
 
-def test_required_pass_non_empty_collection(assert_filter_passes):
+@pytest.mark.parametrize(
+    "value",
+    [
+        # The values in the collection may be empty, but the collection itself
+        # is not.
+        ["", "", ""],
+        {"": ""},
+        Lengthy(1),
+        # etc.
+    ],
+)
+def test_required_pass_non_empty_collection(assert_filter_passes, value):
     """
     The incoming value is a collection with length > 0.
     """
-    # The values in the collection may be empty, but the collection itself
-    # is not.
-    assert_filter_passes(f.Required(), ["", "", ""])
-    assert_filter_passes(f.Required(), {"": ""})
-    assert_filter_passes(f.Required(), Lengthy(1))
-    # etc.
+    assert_filter_passes(f.Required(), value)
 
 
 def test_required_pass_non_collection(assert_filter_passes):
@@ -47,14 +55,20 @@ def test_required_fail_empty_string(assert_filter_errors):
     assert_filter_errors(f.Required(), "", [f.Required.CODE_EMPTY])
 
 
-def test_required_fail_empty_collection(assert_filter_errors):
+@pytest.mark.parametrize(
+    "value",
+    [
+        [],
+        {},
+        Lengthy(0),
+        # etc.
+    ],
+)
+def test_required_fail_empty_collection(assert_filter_errors, value):
     """
     The incoming value is a collection with length < 1.
     """
-    assert_filter_errors(f.Required(), [], [f.Required.CODE_EMPTY])
-    assert_filter_errors(f.Required(), {}, [f.Required.CODE_EMPTY])
-    assert_filter_errors(f.Required(), Lengthy(0), [f.Required.CODE_EMPTY])
-    # etc.
+    assert_filter_errors(f.Required(), value, [f.Required.CODE_EMPTY])
 
 
 def test_required_zero_is_not_empty(assert_filter_passes):
