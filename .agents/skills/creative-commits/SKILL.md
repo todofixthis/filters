@@ -24,17 +24,18 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ## Emoji Selection
 Emphasise the **human story** behind each change — why someone made it, who it serves, what it enables — not just what changed mechanically.
 ### Process
-1. Read full diff — grasp the high-level change
-2. Ask: what **human intent or impact** does this change represent?
-3. Translate that intent into a **concrete, everyday human scene** — a specific moment, action, or feeling a person might recognise (e.g. "someone quietly rearranging furniture before guests arrive", "a chef tasting and adjusting just before serving"). The more vivid and grounded the scene, the better.
-4. Brainstorm 5–8 emoji that capture *that scene* rather than the commit directly — favour oblique, lateral choices; if candidates feel obvious, reframe the scene itself
-5. Run each candidate through the three-stage filter:
+1. Run `git log --oneline -25 | rg -oP '(\p{Emoji_Presentation}|\p{Emoji}\x{FE0F})' | tr '\n' ' '` — note which emoji are off-limits
+2. Read full diff — grasp the high-level change
+3. Ask: what **human intent or impact** does this change represent?
+4. Translate that intent into a **concrete, everyday human scene** — a specific moment, action, or feeling a person might recognise (e.g. "someone quietly rearranging furniture before guests arrive", "a chef tasting and adjusting just before serving"). The more vivid and grounded the scene, the better.
+5. Brainstorm 5–8 emoji that capture *that scene* rather than the commit directly — favour oblique, lateral choices; if candidates feel obvious, reframe the scene itself
+6. Run each candidate through the three-stage filter:
 | Stage | Verdict | Action |
 |-------|---------|--------|
 | **Too safe** — predictable, cliché, category-label (🐛 for bug, 📝 for docs, ✨ for feature), or literal echo of a word already in the message (🪧 for "signpost", 🗺️ for "roadmap") | Drop | Always discard |
 | **Just right** — novel yet tells a clear story linking back to the commit's theme | Accept | Keep |
 | **Too weird** — abstract, opaque, requires explanation to connect to the change | Drop | Always discard |
-6. From accepted candidates, pick the one with the strongest narrative link to the commit
+7. From accepted candidates, pick the one with the strongest narrative link to the commit
 - **Never** reuse an emoji from the last 25 commits
 - Avoid building a personal repertoire; each commit should feel like a fresh creative act
 ### Examples
