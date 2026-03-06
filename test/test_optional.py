@@ -87,10 +87,9 @@ def test_optional_pass_non_collection(assert_filter_passes):
     """
     Any value that doesn't have a length is left alone.
     """
-    test_obj = object()
     assert_filter_passes(
         f.Optional(default="fail"),
-        test_obj,
+        object(),
     )
 
 
