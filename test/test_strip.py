@@ -74,7 +74,7 @@ def test_strip_pass_custom_regexes(assert_filter_passes):
             leading=r"\d",
             trailing=r"['a-z ]+",
         ),
-        "54321 Hello, world! " "i think you ought to know i'm feeling very depressed ",
+        "54321 Hello, world! i think you ought to know i'm feeling very depressed ",
         "4321 Hello, world!",
     )
 
