@@ -35,8 +35,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-django = []
-iso = []
+django = ["phx-filters-django"]
+iso = ["phx-filters-iso"]
 
 [project.urls]
 Repository = "https://github.com/todofixthis/filters"
