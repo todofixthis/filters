@@ -4,14 +4,13 @@ Unit tests for :py:func:`filter_macro`.
 
 from datetime import datetime
 
-import pytest
 from pytz import utc
 
 import filters as f
 from filters.macros import FilterMacroType, filter_macro
 
 
-def test_filter_macro_decorator():
+def test_filter_macro_decorator(assert_filter_passes, assert_filter_errors):
     """
     A common use case for Filter macros is to use them as
     decorators for functions.
@@ -32,13 +31,11 @@ def test_filter_macro_decorator():
     assert not isinstance(the_filter, FilterMacroType)
     assert isinstance(the_filter, f.FilterChain)
 
-    assert the_filter.apply("  Hello, world!  ") == "Hello, world!"
-
-    with pytest.raises(f.FilterError):
-        the_filter.apply("Hi there!")
+    assert_filter_passes(the_filter, "  Hello, world!  ", "Hello, world!")
+    assert_filter_errors(the_filter, "Hi there!", [f.MinLength.CODE_TOO_SHORT])
 
 
-def test_filter_macro_chain():
+def test_filter_macro_chain(assert_filter_passes, assert_filter_errors):
     """
     You can chain Filter macros with other Filters, the same as you
     would with any other Filter.
@@ -54,13 +51,11 @@ def test_filter_macro_chain():
     # ``MyFilter``, and watch this test explode.
     filter_chain = MyFilter | f.Split(r"\s+")
 
-    assert filter_chain.apply("Hello, world!") == ["Hello,", "world!"]
-
-    with pytest.raises(f.FilterError):
-        filter_chain.apply("Hi there!")
+    assert_filter_passes(filter_chain, "Hello, world!", ["Hello,", "world!"])
+    assert_filter_errors(filter_chain, "Hi there!", [f.MinLength.CODE_TOO_SHORT])
 
 
-def test_filter_macro_chain_macros():
+def test_filter_macro_chain_macros(assert_filter_passes, assert_filter_errors):
     """
     Yup, you can chain Filter macros together, too.
     """
@@ -75,13 +70,11 @@ def test_filter_macro_chain_macros():
 
     filter_chain = Filter1 | Filter2
 
-    assert filter_chain.apply("  Hello, world!  ") == ["Hello,", "world!"]
-
-    with pytest.raises(f.FilterError):
-        filter_chain.apply("whazzup!")
+    assert_filter_passes(filter_chain, "  Hello, world!  ", ["Hello,", "world!"])
+    assert_filter_errors(filter_chain, "whazzup!", [f.MinLength.CODE_TOO_SHORT])
 
 
-def test_filter_macro_optional_parameters():
+def test_filter_macro_optional_parameters(assert_filter_passes, assert_filter_errors):
     """
     A filter macro may accept optional parameters.
     """
@@ -93,23 +86,27 @@ def test_filter_macro_optional_parameters():
     # `MyFilter` is configured to require 12 chars by default.
     filter_chain = f.Required | MyFilter
 
-    assert filter_chain.apply("Hello, world!") == "Hello, world!"
-
-    with pytest.raises(f.FilterError):
-        filter_chain.apply("Hi there!")
+    assert_filter_passes(filter_chain, "Hello, world!", "Hello, world!")
+    assert_filter_errors(filter_chain, "Hi there!", [f.MinLength.CODE_TOO_SHORT])
 
 
-def test_filter_macro_partial():
+def test_filter_macro_partial(assert_filter_passes):
     """
     You can use Filter macros to create partials from other Filter
     types.
     """
     MyDatetime = filter_macro(f.Datetime, timezone=12)
 
-    assert MyDatetime().apply("2015-10-13 15:22:18") == datetime(
-        2015, 10, 13, 3, 22, 18, tzinfo=utc
-    )  # By default, MyDatetime assumes a timezone of UTC+12...
-
-    assert MyDatetime(timezone=6).apply("2015-10-13 15:22:18") == datetime(
-        2015, 10, 13, 9, 22, 18, tzinfo=utc
-    )  # ... however, we can override it.
+    # By default, MyDatetime assumes a timezone of UTC+12...
+    assert_filter_passes(
+        MyDatetime(),
+        "2015-10-13 15:22:18",
+        datetime(2015, 10, 13, 3, 22, 18, tzinfo=utc),
+    )
+    # ... however, we can override it — note the hour is 09:00 UTC
+    # (not 03:00), reflecting the smaller UTC+6 offset.
+    assert_filter_passes(
+        MyDatetime(timezone=6),
+        "2015-10-13 15:22:18",
+        datetime(2015, 10, 13, 9, 22, 18, tzinfo=utc),
+    )
