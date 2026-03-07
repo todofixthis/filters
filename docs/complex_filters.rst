@@ -229,9 +229,9 @@ Conditionally invokes a filter based on the output of a function.
 * ``getter: Callable[[Any], Hashable]`` - a function that extracts the
   comparison value from the incoming value.  Whatever this function returns
   will be matched against the keys in ``cases``.
-* ``cases: Mapping[Hashable, FilterCompatible]`` - a mapping of possible return
+* ``cases: Mapping[Hashable, BaseFilter]`` - a mapping of possible return
   values from ``getter`` and the corresponding filter chains.
-* ``default: Optional[FilterCompatible]`` - Filter chain that will be used if
+* ``default: Optional[BaseFilter]`` - Filter chain that will be used if
   the return value from ``getter`` doesn't match any keys in ``cases``.
 
 When a ``FilterSwitch`` is applied to an incoming ``value``:

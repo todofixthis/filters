@@ -1,110 +1,108 @@
+"""
+Tests for the error handlers.
+"""
+
 import logging
 import sys
 import typing
 from logging import WARNING, getLevelName
 from traceback import format_exc, format_exception
-from unittest import TestCase
+
+import pytest
 
 import filters as f
 from filters.base import ExceptionHandler
 
 
-class FilterRunnerTestCase(TestCase):
-    def test_apply(self):
-        """
-        Calling a FilterRunner's ``apply()`` method reruns its filter chain
-        against the specified input.
-        """
-        runner = f.FilterRunner(f.Int)
-        self.assertTrue(runner.is_valid())
-        self.assertDictEqual(runner.error_codes, {})
-        self.assertIsNone(runner.cleaned_data)
+def test_filter_runner_apply():
+    """
+    Calling a FilterRunner's ``apply()`` method reruns its filter chain
+    against the specified input.
+    """
+    runner = f.FilterRunner(f.Int)
+    assert runner.is_valid()
+    assert runner.error_codes == {}
+    assert runner.cleaned_data is None
 
-        runner.apply('42')
-        self.assertTrue(runner.is_valid())
-        self.assertDictEqual(runner.error_codes, {})
-        self.assertEqual(runner.cleaned_data, 42)
+    runner.apply("42")
+    assert runner.is_valid()
+    assert runner.error_codes == {}
+    assert runner.cleaned_data == 42
 
-        runner.apply('Not an int')
-        self.assertFalse(runner.is_valid())
-        self.assertDictEqual(
-            runner.error_codes,
-            {'': [f.Decimal.CODE_INVALID]},
-        )
+    runner.apply("Not an int")
+    assert not runner.is_valid()
+    assert runner.error_codes == {"": [f.Decimal.CODE_INVALID]}
 
-        # One more; make sure that the error messages from the invalid value
-        # also get cleared out.
-        runner.apply(86.0)
-        self.assertTrue(runner.is_valid())
-        self.assertDictEqual(runner.error_codes, {})
-        self.assertEqual(runner.cleaned_data, 86)
+    # One more; make sure that the error messages from the invalid value
+    # also get cleared out.
+    runner.apply(86.0)
+    assert runner.is_valid()
+    assert runner.error_codes == {}
+    assert runner.cleaned_data == 86
 
 
-class ExceptionHandlerTestCase(TestCase):
-    def setUp(self):
-        super().setUp()
+def test_exception_handler_invalid_value():
+    """
+    Sends an invalid value to the handler.
+    """
+    handler = ExceptionHandler()
+    message = "Needs more cowbell."
+    context = {
+        "key": "test",
+        "value": "(Don't Fear) The Reaper",
+    }
 
-        self.handler = ExceptionHandler()
+    # When ExceptionHandler encounters an invalid value, it raises
+    # an exception.
+    # The exception always has the same type (FilterError) so that
+    # the caller can capture it.
+    with pytest.raises(f.FilterError) as exc:
+        handler.handle_invalid_value(message, False, context)
 
-    def test_invalid_value(self):
-        """
-        Sends an invalid value to the handler.
-        """
-        message = 'Needs more cowbell.'
-        context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
-        }
+    assert str(exc.value) == message
+    assert exc.value.context == context
 
-        # When ExceptionHandler encounters an invalid value, it raises
-        # an exception.
-        # The exception always has the same type (FilterError) so that
-        # the caller can capture it.
-        with self.assertRaises(f.FilterError) as exc:
-            self.handler.handle_invalid_value(message, False, context)
 
-        self.assertEqual(str(exc.exception), message)
-        self.assertEqual(exc.exception.context, context)
+def test_exception_handler_exception():
+    """
+    Sends an exception to the handler.
+    """
+    handler = ExceptionHandler()
+    message = "An exception occurred!"
+    context = {
+        "key": "test",
+        "value": "(Don't Fear) The Reaper",
+    }
 
-    def test_exception(self):
-        """
-        Sends an exception to the handler.
-        """
-        message = 'An exception occurred!'
-        context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
-        }
+    #
+    # ExceptionHandler converts any exception it encounters into a
+    # FilterError.
+    # The exception always has the same type (FilterError) so that
+    # the caller can capture it.
+    #
+    # Note that the FilterError completely replaces the original
+    # exception, but it leaves the traceback intact.
+    # To make things more convenient, Filters add the exception
+    # info to the context dict, but you can still use
+    # `sys.exc_info()[2]` to inspect the original exception's
+    # stack.
+    #
+    # :see: importer.core.f.BaseFilter._invalid_value
+    #
+    try:
+        # Raise an exception so that the handler has a traceback to
+        # work with.
+        # Note that the ValueError's message will get replaced (but
+        # it can still be accessed via the traceback).
+        exc = ValueError("Needs more cowbell.")
+        exc.context = context
+        raise exc
+    except ValueError as e:
+        with pytest.raises(f.FilterError) as ar_context:
+            handler.handle_exception(message, e)
 
-        #
-        # ExceptionHandler converts any exception it encounters into a
-        # FilterError.
-        # The exception always has the same type (FilterError) so that
-        # the caller can capture it.
-        #
-        # Note that the FilterError completely replaces the original
-        # exception, but it leaves the traceback intact.
-        # To make things more convenient, Filters add the exception
-        # info to the context dict, but you can still use
-        # `sys.exc_info()[2]` to inspect the original exception's
-        # stack.
-        #
-        # :see: importer.core.f.BaseFilter._invalid_value
-        #
-        try:
-            # Raise an exception so that the handler has a traceback to
-            # work with.
-            # Note that the ValueError's message will get replaced (but
-            # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
-            exc.context = context
-            raise exc
-        except ValueError as e:
-            with self.assertRaises(f.FilterError) as ar_context:
-                self.handler.handle_exception(message, e)
-
-            self.assertEqual(str(ar_context.exception), message)
-            self.assertEqual(ar_context.exception.context, context)
+        assert str(ar_context.value) == message
+        assert ar_context.value.context == context
 
 
 class MemoryLogHandler(logging.Handler):
@@ -163,7 +161,7 @@ class MemoryLogHandler(logging.Handler):
         # Remove `exc_info` to reclaim memory.
         if record.exc_info:
             if not record.exc_text:
-                record.exc_text = ''.join(format_exception(*record.exc_info))
+                record.exc_text = "".join(format_exception(*record.exc_info))
 
             record.exc_info = None
 
@@ -171,205 +169,208 @@ class MemoryLogHandler(logging.Handler):
         self.max_level_emitted = max(self.max_level_emitted, record.levelno)
 
 
-class LogHandlerTestCase(TestCase):
-    def setUp(self):
-        super().setUp()
+@pytest.fixture
+def log_handler_setup():
+    """Set up logger and handler for LogHandler tests."""
+    logs = MemoryLogHandler()
+    logger = logging.getLogger(__name__)
+    logger.addHandler(logs)
+    logger.setLevel(logging.DEBUG)
+    handler = f.LogHandler(logger, WARNING)
 
-        self.logs = MemoryLogHandler()
+    yield logs, handler
 
-        logger = logging.getLogger(__name__)
-        logger.addHandler(self.logs)
-        logger.setLevel(logging.DEBUG)
-
-        self.handler = f.LogHandler(logger, WARNING)
-
-    def test_invalid_value(self):
-        """
-        Sends an invalid value to the handler.
-        """
-        message = 'Needs more cowbell.'
-        context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
-        }
-
-        self.handler.handle_invalid_value(message, False, context)
-
-        self.assertEqual(len(self.logs.records), 1)
-        self.assertEqual(self.logs[0].msg, message)
-        self.assertEqual(getattr(self.logs[0], 'context'), context)
-
-        # The log message level is set in the handler's initializer.
-        self.assertEqual(self.logs[0].levelname, getLevelName(WARNING))
-
-        # No exception info for invalid values (by default).
-        self.assertIsNone(self.logs[0].exc_text)
-
-    def test_exception(self):
-        """
-        Sends an exception to the handler.
-        """
-        message = 'An exception occurred!'
-        context = {
-            'key': 'test',
-            'value': "(Don't Fear) The Reaper",
-        }
-
-        try:
-            # Raise an exception so that the handler has a traceback to
-            # work with.
-            # Note that the ValueError's message will get replaced (but
-            # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
-            exc.context = context
-            raise exc
-        except ValueError as e:
-            original_traceback = format_exc()
-
-            self.handler.handle_exception(message, e)
-
-            self.assertEqual(len(self.logs.records), 1)
-
-            self.assertEqual(len(self.logs.records), 1)
-            self.assertEqual(self.logs[0].msg, message)
-            self.assertEqual(getattr(self.logs[0], 'context'), context)
-
-            # The log message level is set in the handler's
-            # initializer.
-            # Note that both invalid values and exceptions have the
-            # same log level.
-            self.assertEqual(self.logs[0].levelname, getLevelName(WARNING))
-
-            # Traceback is captured for exceptions.
-            self.assertEqual(self.logs[0].exc_text, original_traceback)
+    # Cleanup
+    logger.removeHandler(logs)
 
 
-class MemoryHandlerTestCase(TestCase):
-    def setUp(self):
-        super().setUp()
+def test_log_handler_invalid_value(log_handler_setup):
+    """
+    Sends an invalid value to the handler.
+    """
+    logs, handler = log_handler_setup
+    message = "Needs more cowbell."
+    context = {
+        "key": "test",
+        "value": "(Don't Fear) The Reaper",
+    }
 
-        self.handler = f.MemoryHandler()
+    handler.handle_invalid_value(message, False, context)
 
-    def test_invalid_value(self):
-        """
-        Sends an invalid value to the handler.
-        """
-        code = 'foo'
-        key = 'test'
-        message = 'Needs more cowbell.'
-        context = {
-            'code': code,
-            'key': key,
-            'value': "(Don't Fear) The Reaper",
-        }
+    assert len(logs.records) == 1
+    assert logs[0].msg == message
+    assert getattr(logs[0], "context") == context
 
-        self.handler.handle_invalid_value(message, False, context)
+    # The log message level is set in the handler's initialiser.
+    assert logs[0].levelname == getLevelName(WARNING)
 
-        # Add a couple of additional messages, just to make sure the
-        # handler stores them correctly.
-        self.handler.handle_invalid_value(
-            message='Test message 1',
-            exc_info=False,
-            context={'key': key},
-        )
-        self.handler.handle_invalid_value('Test message 2', False, {})
+    # No exception info for invalid values (by default).
+    assert logs[0].exc_text is None
 
-        # As filter messages are captured, they are sorted according to
-        # their contexts' ``key`` values.
-        # If a message doesn't have a ``key`` value, an empty string is
-        # used.
-        self.assertListEqual(sorted(self.handler.messages.keys()), ['', key])
 
-        filter_message_0 = self.handler.messages[key][0]
-        self.assertIsInstance(filter_message_0, f.FilterMessage)
-        self.assertEqual(filter_message_0.code, code)
-        self.assertEqual(filter_message_0.message, message)
-        self.assertEqual(filter_message_0.context, context)
-        self.assertIsNone(filter_message_0.exc_info)
+def test_log_handler_exception(log_handler_setup):
+    """
+    Sends an exception to the handler.
+    """
+    logs, handler = log_handler_setup
+    message = "An exception occurred!"
+    context = {
+        "key": "test",
+        "value": "(Don't Fear) The Reaper",
+    }
 
-        filter_message_1 = self.handler.messages[key][1]
-        self.assertIsInstance(filter_message_1, f.FilterMessage)
-        self.assertEqual(filter_message_1.code, 'Test message 1')
-        self.assertEqual(filter_message_1.message, 'Test message 1')
-        self.assertEqual(filter_message_1.context, {'key': key})
-        self.assertIsNone(filter_message_1.exc_info)
+    try:
+        # Raise an exception so that the handler has a traceback to
+        # work with.
+        # Note that the ValueError's message will get replaced (but
+        # it can still be accessed via the traceback).
+        exc = ValueError("Needs more cowbell.")
+        exc.context = context
+        raise exc
+    except ValueError as e:
+        original_traceback = format_exc()
 
-        filter_message_blank = self.handler.messages[''][0]
-        self.assertIsInstance(filter_message_blank, f.FilterMessage)
-        self.assertEqual(filter_message_blank.code, 'Test message 2')
-        self.assertEqual(filter_message_blank.message, 'Test message 2')
-        self.assertEqual(filter_message_blank.context, {})
-        self.assertIsNone(filter_message_blank.exc_info)
+        handler.handle_exception(message, e)
 
-        self.assertFalse(self.handler.has_exceptions)
-        self.assertListEqual(self.handler.exc_info, [])
+        assert len(logs.records) == 1
+        assert logs[0].msg == message
+        assert getattr(logs[0], "context") == context
 
-    def test_exception(self):
-        """
-        Sends an exception to the handler.
-        """
-        code = 'error'
-        key = 'test'
-        message = 'An exception occurred!'
-        context = {
-            'code': code,
-            'key': key,
-            'value': "(Don't Fear) The Reaper",
-        }
+        # The log message level is set in the handler's
+        # initialiser.
+        # Note that both invalid values and exceptions have the
+        # same log level.
+        assert logs[0].levelname == getLevelName(WARNING)
 
-        try:
-            # Raise an exception so that the handler has a traceback to
-            # work with.
-            # Note that the ValueError's message will get replaced (but
-            # it can still be accessed via the traceback).
-            exc = ValueError('Needs more cowbell.')
-            exc.context = context
-            raise exc
-        except ValueError as e:
-            original_traceback = format_exc()
+        # Traceback is captured for exceptions.
+        assert logs[0].exc_text == original_traceback
 
-            self.handler.handle_exception(message, e)
 
-            self.assertListEqual(list(self.handler.messages.keys()), [key])
+def test_memory_handler_invalid_value():
+    """
+    Sends an invalid value to the handler.
+    """
+    handler = f.MemoryHandler()
+    code = "foo"
+    key = "test"
+    message = "Needs more cowbell."
+    context = {
+        "code": code,
+        "key": key,
+        "value": "(Don't Fear) The Reaper",
+    }
 
-            filter_message_0 = self.handler.messages[key][0]
-            self.assertIsInstance(filter_message_0, f.FilterMessage)
-            self.assertEqual(filter_message_0.code, code)
-            self.assertEqual(filter_message_0.message, message)
-            self.assertEqual(filter_message_0.context, context)
+    handler.handle_invalid_value(message, False, context)
 
-            # Exception traceback is captured automatically.
-            self.assertEqual(filter_message_0.exc_info, original_traceback)
+    # Add a couple of additional messages, just to make sure the
+    # handler stores them correctly.
+    handler.handle_invalid_value(
+        message="Test message 1",
+        exc_info=False,
+        context={"key": key},
+    )
+    handler.handle_invalid_value("Test message 2", False, {})
 
-            self.assertTrue(self.handler.has_exceptions)
+    # As filter messages are captured, they are sorted according to
+    # their contexts' ``key`` values.
+    # If a message doesn't have a ``key`` value, an empty string is
+    # used.
+    assert sorted(handler.messages.keys()) == ["", key]
 
-            # By default, the handler does NOT keep the traceback
-            # object.
-            # :see: test_capture_exc_info
-            self.assertListEqual(self.handler.exc_info, [])
+    filter_message_0 = handler.messages[key][0]
+    assert isinstance(filter_message_0, f.FilterMessage)
+    assert filter_message_0.code == code
+    assert filter_message_0.message == message
+    assert filter_message_0.context == context
+    assert filter_message_0.exc_info is None
 
-    def test_capture_exc_info(self):
-        """
-        The handler is configured to capture :py:func:`sys.exc_info` in
-        the event of an exception.
+    filter_message_1 = handler.messages[key][1]
+    assert isinstance(filter_message_1, f.FilterMessage)
+    assert filter_message_1.code == "Test message 1"
+    assert filter_message_1.message == "Test message 1"
+    assert filter_message_1.context == {"key": key}
+    assert filter_message_1.exc_info is None
 
-        This is generally turned off because the filter already
-        captures a formatted traceback in the event of an
-        exception, so there is no need to store the raw traceback
-        object.
+    filter_message_blank = handler.messages[""][0]
+    assert isinstance(filter_message_blank, f.FilterMessage)
+    assert filter_message_blank.code == "Test message 2"
+    assert filter_message_blank.message == "Test message 2"
+    assert filter_message_blank.context == {}
+    assert filter_message_blank.exc_info is None
 
-        However, there are a few cases where it is useful to collect
-        this, such as when you want to send exceptions to a logger
-        that expects `sys.exc_info()`.
-        """
-        self.handler.capture_exc_info = True
+    assert not handler.has_exceptions
+    assert handler.exc_info == []
 
-        try:
-            # Raise an exception so that the handler has a traceback to
-            # work with.
-            raise ValueError('I gotta have more cowbell, baby!')
-        except ValueError as e:
-            self.handler.handle_exception('An exception occurred!', e)
 
-            self.assertTrue(self.handler.has_exceptions)
-            self.assertListEqual(self.handler.exc_info, [sys.exc_info()])
+def test_memory_handler_exception():
+    """
+    Sends an exception to the handler.
+    """
+    handler = f.MemoryHandler()
+    code = "error"
+    key = "test"
+    message = "An exception occurred!"
+    context = {
+        "code": code,
+        "key": key,
+        "value": "(Don't Fear) The Reaper",
+    }
+
+    try:
+        # Raise an exception so that the handler has a traceback to
+        # work with.
+        # Note that the ValueError's message will get replaced (but
+        # it can still be accessed via the traceback).
+        exc = ValueError("Needs more cowbell.")
+        exc.context = context
+        raise exc
+    except ValueError as e:
+        original_traceback = format_exc()
+
+        handler.handle_exception(message, e)
+
+        assert list(handler.messages.keys()) == [key]
+
+        filter_message_0 = handler.messages[key][0]
+        assert isinstance(filter_message_0, f.FilterMessage)
+        assert filter_message_0.code == code
+        assert filter_message_0.message == message
+        assert filter_message_0.context == context
+
+        # Exception traceback is captured automatically.
+        assert filter_message_0.exc_info == original_traceback
+
+        assert handler.has_exceptions
+
+        # By default, the handler does NOT keep the traceback
+        # object.
+        # :see: test_capture_exc_info
+        assert handler.exc_info == []
+
+
+def test_memory_handler_capture_exc_info():
+    """
+    The handler is configured to capture :py:func:`sys.exc_info` in
+    the event of an exception.
+
+    This is generally turned off because the filter already
+    captures a formatted traceback in the event of an
+    exception, so there is no need to store the raw traceback
+    object.
+
+    However, there are a few cases where it is useful to collect
+    this, such as when you want to send exceptions to a logger
+    that expects `sys.exc_info()`.
+    """
+    handler = f.MemoryHandler()
+    handler.capture_exc_info = True
+
+    try:
+        # Raise an exception so that the handler has a traceback to
+        # work with.
+        raise ValueError("I gotta have more cowbell, baby!")
+    except ValueError as e:
+        handler.handle_exception("An exception occurred!", e)
+
+        assert handler.has_exceptions
+        assert handler.exc_info == [sys.exc_info()]

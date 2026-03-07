@@ -3,7 +3,7 @@ import typing
 import filters as f
 
 
-class TestFilterAlpha(f.BaseFilter):
+class FilterAlpha(f.BaseFilter):
     """
     A filter that can be used for testing.
     """
@@ -12,7 +12,7 @@ class TestFilterAlpha(f.BaseFilter):
         return value
 
 
-class TestFilterBravo(f.BaseFilter):
+class FilterBravo(f.BaseFilter):
     """
     A filter that will can be used for testing.
     """
@@ -27,7 +27,7 @@ class TestFilterBravo(f.BaseFilter):
 
 
 @f.filter_macro
-def TestFilterCharlie():
+def FilterCharlie():
     """
     A filter macro that can be used for testing.
     """

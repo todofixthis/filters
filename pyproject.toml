@@ -1,55 +1,113 @@
-# :see: https://peps.python.org/pep-0621/
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "phx-filters"
-version = "3.4.0"
+version = "3.5.0"
 description = "Validation and data pipelines made easy!"
+authors = [{ name = "Phoenix Zerin", email = "phx@phx.nz" }]
+requires-python = ">=3.12, <4"
 readme = "README.rst"
-requires-python = ">= 3.10"
-license = { file = "LICENCE.txt" }
-authors = [
-    { email = "Phoenix Zerin <phx@phx.nz>" }
-]
-
+license = "MIT"
 keywords = [
     "data processing",
     "pipeline",
     "transformation",
     "validation",
 ]
-
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    'Topic :: Text Processing :: Filters',
+    "Topic :: Text Processing :: Filters",
 ]
-
 dependencies = [
-    "phx-class-registry >= 4.1.0",
-    "python-dateutil",
-    "pytz",
-    "regex >= 2018.8.17",
+    "phx-class-registry>=5,<6",
+    "python-dateutil>=2,<3",
+    "pytz>=2025",
+    "regex>=2024",
 ]
 
 [project.optional-dependencies]
-# Extensions
-"django" = ["phx-filters-django"]
-"iso" = ["phx-filters-iso"]
-
-# Utilities for Project Maintainers
-"build-system" = ["build", "twine"]
-"docs-builder" = ["sphinx", "sphinx_rtd_theme"]
-"test-runner" = ["tox"]
+django = ["phx-filters-django"]
+iso = ["phx-filters-iso"]
 
 [project.urls]
+Repository = "https://github.com/todofixthis/filters"
 Documentation = "https://filters.readthedocs.io/"
 Changelog = "https://github.com/todofixthis/filters/releases"
 Issues = "https://github.com/todofixthis/filters/issues"
-Repository = "https://github.com/todofixthis/filters"
+
+[dependency-groups]
+dev = [
+    "autohooks>=26,<27",
+    "autohooks-plugin-black>=23,<24",
+#    "autohooks-plugin-mypy>=23,<24",
+    "autohooks-plugin-pytest>=23,<24",
+    "autohooks-plugin-ruff>=25,<26",
+    "black>=26,<27",
+#    "mypy>=1,<2",
+    "pytest>=9,<10",
+    "sphinx>=8,<9",
+    "sphinx_rtd_theme>=3,<4",
+    "tox>=4,<5",
+    "tox-uv>=1.23.0,<2",
+    "types-python-dateutil>=2,<3",
+    "types-pytz>=2025",
+]
+ci = [
+#    "mypy>=1,<2",
+    "pytest>=9,<10",
+    "sphinx>=8,<9",
+    "sphinx_rtd_theme>=3,<4",
+]
+
+[tool.autohooks]
+mode = "pythonpath"
+pre-commit = [
+    "autohooks.plugins.black",
+#    "autohooks.plugins.mypy",
+    "autohooks.plugins.pytest",
+    "autohooks.plugins.ruff",
+]
+
+#[tool.mypy]
+#strict = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/filters",
+    "LICENCE.txt",
+    "docs",
+    "test",
+]
+exclude = ["docs/_build"]
+
+[tool.hatch.build.targets.wheel]
+include = ["src/filters"]
+exclude = ["docs/_build"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/filters" = "filters"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+
+[tool.tox]
+env_list = ["py314", "py313", "py312"]
+
+[tool.tox.env_run_base]
+commands = [
+    ["pytest"],
+#    ["mypy", "src", "test"]
+]
+runner = "uv-venv-lock-runner"
+
+[tool.uv]
+keyring-provider = "subprocess"
