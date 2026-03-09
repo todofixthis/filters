@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.entry-points."pytest11"]
-filters = "filters.pytest_plugin"
+filters = "filters.pytest"
 
 [project.optional-dependencies]
 django = ["phx-filters-django"]

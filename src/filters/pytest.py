@@ -6,7 +6,7 @@ automatically via the ``pytest11`` entry point — no configuration required.
 
 Import sentinels directly::
 
-    from filters.pytest_plugin import unmodified, skip_value_check
+    from filters.pytest import unmodified, skip_value_check
 
 Fixtures (``assert_filter_passes``, ``assert_filter_errors``) are injected by
 pytest automatically.
