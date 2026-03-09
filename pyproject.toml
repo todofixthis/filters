@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phx-filters"
-version = "3.5.0"
+version = "3.5.1"
 description = "Validation and data pipelines made easy!"
 authors = [{ name = "Phoenix Zerin", email = "phx@phx.nz" }]
 requires-python = ">=3.12, <4"
@@ -33,6 +33,9 @@ dependencies = [
     "pytz>=2025",
     "regex>=2024",
 ]
+
+[project.entry-points."pytest11"]
+filters = "filters.pytest"
 
 [project.optional-dependencies]
 django = ["phx-filters-django"]

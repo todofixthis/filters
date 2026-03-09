@@ -10,6 +10,9 @@ dist
 # dotenv
 .env
 
+# Git worktrees
+.worktrees
+
 # Sphinx documentation
 docs/_build/
 
