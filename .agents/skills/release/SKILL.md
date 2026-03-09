@@ -74,6 +74,7 @@ git push origin <version>
 
 **a. Append checksums to the release notes file:**
 ```bash
+echo -e "\n# SHA256 Checksums" >> release-<version>.md
 sha256sum dist/phx_filters-* >> release-<version>.md
 ```
 
