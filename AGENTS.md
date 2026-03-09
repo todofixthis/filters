@@ -46,6 +46,10 @@ Place comments on the line preceding the code they document, not as trailing com
 - `develop` — main development branch
 - Feature branches off `develop` for all new work
 
+## Git Worktrees
+
+Use `.worktrees/` for isolated workspaces (project-local, gitignored).
+
 ## Package
 
 Package name is `phx-filters` (distinct from the `filters` import name).
