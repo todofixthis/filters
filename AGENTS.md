@@ -2,7 +2,7 @@
 
 - **Test (current Python)**: `uv run pytest`
 - **Test (all versions)**: `uv run tox -p`
-- **Verify test count**: `uv run pytest --collect-only` (expect 401)
+- **Verify test count**: `uv run pytest --collect-only` — note count at start of mahi; verify it increases appropriately when done
 - **Lint**: `uv run ruff check`
 - **Build docs**: `uv run make -C docs clean && uv run make -C docs html`
 - **Sync deps**: `uv sync --group=dev` (run after pulling)
@@ -49,6 +49,8 @@ Place comments on the line preceding the code they document, not as trailing com
 ## Git Worktrees
 
 Use `.worktrees/` for isolated workspaces (project-local, gitignored).
+
+After switching to a worktree, run `uv run autohooks activate --mode=pythonpath` to install the pre-commit hook for that worktree.
 
 ## Package
 
