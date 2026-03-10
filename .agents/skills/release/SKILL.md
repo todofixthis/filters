@@ -78,14 +78,11 @@ echo -e "\n# SHA256 Checksums" >> release-<version>.md
 sha256sum dist/phx_filters-* >> release-<version>.md
 ```
 
-**b. GPG-sign the document:**
+**b. GPG-sign the document and each build artefact:**
 ```bash
-gpg --clearsign release-<version>.md   # → release-<version>.md.asc
-```
-
-**c. Sign each build artefact:**
-```bash
-for f in dist/phx_filters-*; do gpg --detach-sign "$f"; done
+GPG_KEY=$(git config user.email)
+gpg --local-user "$GPG_KEY" --clearsign release-<version>.md   # → release-<version>.md.asc
+for f in dist/phx_filters-*; do gpg --local-user "$GPG_KEY" --detach-sign "$f"; done
 # Creates dist/phx_filters-*.sig alongside each artefact
 ```
 
