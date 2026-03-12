@@ -12,10 +12,14 @@ ADRs record _why_ things are the way they are, so future contributors don't reli
 File: `docs/adr/NNN-<slug>.md` (zero-padded, kebab-case)
 
 ```markdown
-# NNN: Title (Imperative Mood)
+---
+status: Accepted
+date: YYYY-MM-DD
+tags: [tag1, tag2, tag3]
+summary: One sentence describing what was decided (not why).
+---
 
-**Status:** Accepted | Superseded by [NNN] | Deprecated
-**Date:** YYYY-MM-DD
+# NNN: Title (Imperative Mood)
 
 ## Context
 
@@ -52,6 +56,14 @@ State the decision and summarise the key reasons.
 What follows — positive and negative.
 ```
 
+## Frontmatter Fields
+
+- **`status`** — `Accepted`, `Deprecated`, or `Superseded`. Superseded ADRs are excluded from `docs/adr/INDEX.md` but remain in the repo for history.
+- **`date`** — ISO date the ADR was written.
+- **`tags`** — lowercase keywords an agent would use to locate this ADR (e.g. `[database, migrations, schema]`). Think: "what would I search for to find this decision?"
+- **`summary`** — one sentence: what was decided, not why. This appears verbatim in the index.
+- **`superseded-by`** — integer ADR number; omit unless status is `Superseded`.
+
 ## Conventions
 
 - **Option 1 is always "Do nothing"** — sets the stakes
@@ -62,3 +74,13 @@ What follows — positive and negative.
 - **Number sequentially** — never reuse or renumber
 - **Supersede, don't edit** — new ADR for changed decisions; mark the old one superseded
 - **Keep it concise** — enough to reconstruct the reasoning, not a thesis
+
+## Supersession Workflow
+
+When a new ADR overrides an existing one:
+
+1. Write the new ADR referencing the old one in the Context section
+2. In the **old** ADR, set `status: Superseded` and `superseded-by: NNN` (new ADR number)
+3. Commit both files together
+
+The index generator excludes superseded ADRs automatically — no manual index update needed.

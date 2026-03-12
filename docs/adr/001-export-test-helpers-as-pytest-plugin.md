@@ -1,7 +1,11 @@
-# 001: Export Test Helpers as a pytest Plugin
+---
+status: Accepted
+date: 2026-03-10
+tags: [pytest, testing, fixtures, plugin]
+summary: Test helper fixtures are exported as an auto-registered pytest plugin via the `pytest11` entry point.
+---
 
-**Status:** Accepted
-**Date:** 2026-03-10
+# 001: Export Test Helpers as a pytest Plugin
 
 ## Context
 

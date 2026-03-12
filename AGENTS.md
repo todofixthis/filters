@@ -1,3 +1,17 @@
+## Getting Started
+
+Before writing code, check:
+
+- `docs/plans/` — current implementation plan
+- `docs/adr/INDEX.md` — prior decisions (don't re-litigate)
+- `docs/future/` — deferred features (don't re-discuss)
+
+## Architecture Decision Records
+
+When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `writing-adrs` skill for the format and conventions. ADRs live in `docs/adr/`. Before writing, run `ls docs/adr/` to find the highest existing number and increment it.
+
+If you find yourself about to establish a new cross-cutting pattern (something that will affect multiple domains or files, e.g. a testing convention, a shared utility, an error-handling approach), stop and write an ADR first even if the immediate task feels local. A pattern adopted once becomes the template for everything that follows.
+
 ## Commands
 
 - **Test (current Python)**: `uv run pytest`
