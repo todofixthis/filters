@@ -14,13 +14,18 @@ If you find yourself about to establish a new cross-cutting pattern (something t
 
 ## Commands
 
-- **Test (current Python)**: `uv run pytest`
-- **Test (all versions)**: `uv run tox -p`
-- **Verify test count**: `uv run pytest --collect-only` — note count at start of mahi; verify it increases appropriately when done
-- **Lint**: `uv run ruff check`
-- **Build docs**: `uv run make -C docs clean && uv run make -C docs html`
-- **Sync deps**: `uv sync --group=dev` (run after pulling)
-- **Commit**: always `uv run git commit` — autohooks requires the uv venv
+```bash
+uv run autohooks activate --mode=pythonpath  # install pre-commit hook (once per clone)
+uv run git commit                      # always use instead of git commit (runs autohooks)
+uv add <package>                       # add a runtime dependency
+uv add --group dev <package>           # add a dev dependency
+uv sync --group=dev                    # sync deps after pulling
+uv run pytest                          # run tests (current Python)
+uv run tox -p                          # run tests (all supported versions)
+uv run pytest --collect-only           # verify test count (note at start of mahi; confirm it increases when done)
+uv run ruff check                      # lint
+uv run make -C docs clean && uv run make -C docs html  # build docs
+```
 
 ## Architecture
 
@@ -64,7 +69,7 @@ Place comments on the line preceding the code they document, not as trailing com
 
 Use `.worktrees/` for isolated workspaces (project-local, gitignored).
 
-After switching to a worktree, run `uv run autohooks activate --mode=pythonpath` to install the pre-commit hook for that worktree.
+After switching to a worktree, run the autohooks activate command (see Commands) to install the pre-commit hook for that worktree.
 
 ## Package
 
