@@ -15,15 +15,15 @@ If you find yourself about to establish a new cross-cutting pattern (something t
 ## Commands
 
 ```bash
-uv run autohooks activate --mode=pythonpath  # install pre-commit hook (once per clone)
-uv run git commit                      # always use instead of git commit (runs autohooks)
-uv add <package>                       # add a runtime dependency
-uv add --group dev <package>           # add a dev dependency
-uv sync --group=dev                    # sync deps after pulling
-uv run pytest                          # run tests (current Python)
-uv run tox -p                          # run tests (all supported versions)
-uv run pytest --collect-only           # verify test count (note at start of mahi; confirm it increases when done)
-uv run ruff check                      # lint
+uv run autohooks activate --mode=pythonpath            # install pre-commit hook (once per clone)
+uv run git commit                                      # always use instead of git commit (runs autohooks)
+uv add --bounds major <package>                        # add a runtime dependency at latest version
+uv add --bounds major --group dev <package>            # add a dev dependency at latest version
+uv sync --group=dev                                    # sync deps after pulling
+uv run pytest                                          # run tests (current Python)
+uv run tox -p                                          # run tests (all supported versions)
+uv run pytest --collect-only                           # verify test count (note at start of mahi; confirm it increases when done)
+uv run ruff check                                      # lint
 uv run make -C docs clean && uv run make -C docs html  # build docs
 ```
 
@@ -58,6 +58,12 @@ Place comments on the line preceding the code they document, not as trailing com
 
 - NZ English; incorporate Te Reo Māori where natural (e.g. "mahi", "kaupapa")
 - Use "Initialises" not "Initializes"
+
+### Writing for coding agents
+
+- Do not document information that already exists in the coding agent's training data or could be easily discovered by reading the code.
+- Do not list individual files; list high-level directories so the agent knows where to look.
+- Aim for concise style that optimises token count without sacrificing clarity.
 
 ## Branches
 
