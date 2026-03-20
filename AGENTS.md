@@ -1,3 +1,5 @@
+> `CLAUDE.md` is a symlink to this file — edit `AGENTS.md` only.
+
 ## Getting Started
 
 Before writing code, check:
@@ -32,7 +34,7 @@ uv run make -C docs clean && uv run make -C docs html  # build docs
 Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
 
 - Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) to avoid Sphinx autodoc failures — add `# Use Optional for Sphinx compat` inline
+- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use Optional for Sphinx compat` inline
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
 
 ## Tests
@@ -85,4 +87,4 @@ Package name is `phx-filters` (distinct from the `filters` import name).
 
 **conftest import errors**: use relative imports (`from .conftest import Bytesy`).
 
-**Sphinx forward reference warnings** (`unsupported operand type(s) for |`): use `typing.Optional["ClassName"]` not `"ClassName" | None` — see Architecture above.
+**Sphinx forward reference errors** (`TypeError: unsupported operand type(s) for |`): `"ClassName" | None` fails at Python runtime because `str.__or__` is not supported — not a Sphinx bug, and not fixed in Sphinx 9. Use `typing.Optional["ClassName"]` — see Architecture above.
