@@ -118,7 +118,13 @@ rm release-<version>.md release-<version>.md.asc release-<version>-body.md
 git checkout develop && git pull
 ```
 
-### 13. Rebase `develop` onto `main`
+### 13. Close related GitHub issues
+For every issue referenced in the release notes, close it with a comment:
+```bash
+gh issue close <number> --comment "Implemented in [v<version>](https://github.com/todofixthis/filters/releases/tag/<version>)."
+```
+
+### 14. Rebase `develop` onto `main`
 ```bash
 git rebase origin/main
 git push
