@@ -119,4 +119,4 @@ runner = "uv-venv-lock-runner"
 [tool.uv]
 keyring-provider = "subprocess"
 # Fix SSL errors when running in Leash containers
-native-tls = true
+system-certs = true
