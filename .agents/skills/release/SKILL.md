@@ -117,6 +117,13 @@ rm release-<version>.md release-<version>.md.asc release-<version>-body.md
 git checkout develop && git pull
 ```
 
+### 13. Rebase `develop` onto `main`
+```bash
+git rebase origin/main
+git push
+```
+Because `develop` now contains all of `main`'s commits, the histories no longer diverge and a regular (non-force) push succeeds.
+
 ---
 
 ## Writing Release Notes
