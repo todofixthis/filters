@@ -25,7 +25,7 @@ gh issue view <number> --json title,body,labels
 ```
 
 ### 3. Draft release notes
-Using the commit list, PR descriptions, and issue context, draft the release notes following the _Writing Release Notes_ guide below. Run the `nz-english` skill on the draft, then present it to the developer for review and incorporate feedback before proceeding.
+Using the commit list, PR descriptions, and issue context, draft the release notes following the _Writing Release Notes_ guide below. When a bullet relates to a GitHub issue, prefix it with `[#number]`. Run the `nz-english` skill on the draft, then present it to the developer for review and incorporate feedback before proceeding.
 
 ### 4. Recommend version number
 Based on the changes, recommend a semver bump:
