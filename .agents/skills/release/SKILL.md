@@ -25,7 +25,7 @@ gh issue view <number> --json title,body,labels
 ```
 
 ### 3. Draft release notes
-Using the commit list, PR descriptions, and issue context, draft the release notes following the _Writing Release Notes_ guide below. Present the draft to the developer for review and incorporate feedback before proceeding.
+Using the commit list, PR descriptions, and issue context, draft the release notes following the _Writing Release Notes_ guide below. When a bullet relates to a GitHub issue, prefix it with `[#number]`. Run the `nz-english` skill on the draft, then present it to the developer for review and incorporate feedback before proceeding.
 
 ### 4. Recommend version number
 Based on the changes, recommend a semver bump:
@@ -74,17 +74,15 @@ git push origin <version>
 
 **a. Append checksums to the release notes file:**
 ```bash
+echo -e "\n# SHA256 Checksums" >> release-<version>.md
 sha256sum dist/phx_filters-* >> release-<version>.md
 ```
 
-**b. GPG-sign the document:**
+**b. GPG-sign the document and each build artefact:**
 ```bash
-gpg --clearsign release-<version>.md   # → release-<version>.md.asc
-```
-
-**c. Sign each build artefact:**
-```bash
-for f in dist/phx_filters-*; do gpg --detach-sign "$f"; done
+GPG_KEY=$(git config user.email)
+gpg --local-user "$GPG_KEY" --clearsign release-<version>.md   # → release-<version>.md.asc
+for f in dist/phx_filters-*; do gpg --local-user "$GPG_KEY" --detach-sign "$f"; done
 # Creates dist/phx_filters-*.sig alongside each artefact
 ```
 

@@ -157,17 +157,68 @@ the :py:class:`filters.ByteString` filter:
 
 Unit Tests
 ^^^^^^^^^^
-To help you unit test your custom filters, the Filters library provides a helper
-class called :py:class:`filters.test.BaseFilterTestCase`.
+The Filters library ships test helpers for both pytest and unittest.
 
-This class defines two methods that you can use to test your filter:
+pytest (recommended)
+""""""""""""""""""""
+When ``phx-filters`` is installed, pytest automatically registers a plugin that
+injects two fixtures into your test suite — no imports or configuration
+required:
 
-* ``assertFilterPasses``: Given an input value, asserts that the filter returns
-  an expected value when applied.
-* ``assertFilterErrors``: Given an input value, asserts that the filter
-  generates the expected filter error messages when applied.
+* ``assert_filter_passes(filter_instance, test_value, expected_value=unmodified)``:
+  Asserts that the filter returns the expected value without errors.
+* ``assert_filter_errors(filter_instance, test_value, expected_codes, expected_value=None)``:
+  Asserts that the filter generates the expected error codes.
 
-Here's a starter test case for ``Pkcs7Pad``:
+Here's how to test ``Pkcs7Pad`` with pytest:
+
+.. code-block:: python
+
+   import filters as f
+
+   def test_pass_none(assert_filter_passes):
+       """``None`` always passes this filter."""
+       assert_filter_passes(f.Pkcs7Pad(), None)
+
+   def test_pass_padding(assert_filter_passes):
+       """Padding a value to the correct length."""
+       assert_filter_passes(
+           f.Pkcs7Pad(),
+           b'Hello, world!',
+           b'Hello, world!\x03\x03\x03',
+       )
+
+   def test_fail_wrong_type(assert_filter_errors):
+       """The incoming value is not a byte string."""
+       assert_filter_errors(
+           f.Pkcs7Pad(),
+           'Hello, world!',
+           [f.Type.CODE_WRONG_TYPE],
+       )
+
+The fixtures return the :py:class:`~filters.FilterRunner` instance, so you can
+make further assertions on ``runner.cleaned_data`` if needed.
+
+Two sentinel classes are available for advanced cases — import them explicitly:
+
+.. code-block:: python
+
+   from filters.pytest import skip_value_check, unmodified
+
+* ``unmodified``: Pass as ``expected_value`` to assert the value passes through
+  unchanged (the default behaviour of ``assert_filter_passes``).
+* ``skip_value_check``: Pass as ``expected_value`` to skip the value assertion
+  entirely and add your own checks instead.
+
+unittest
+""""""""
+For projects using unittest, the :py:class:`filters.test.BaseFilterTestCase`
+helper class is still fully supported.  Set ``filter_type`` on the class and
+use the provided methods:
+
+* ``assertFilterPasses``: Asserts the filter returns an expected value without
+  errors.
+* ``assertFilterErrors``: Asserts the filter generates the expected error codes.
 
 .. code-block:: python
 

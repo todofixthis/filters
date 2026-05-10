@@ -25,7 +25,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 Emphasise the **human story** behind each change — why someone made it, who it serves, what it enables — not just what changed mechanically.
 ### Process
 1. Run `git log --oneline -25 | rg -oP '(\p{Emoji_Presentation}|\p{Emoji}\x{FE0F})' | tr '\n' ' '` — note which emoji are off-limits
-2. Read full diff — grasp the high-level change
+2. Stage the files to commit with `git add`, then run `git diff --staged` — grasp the high-level change
 3. Ask: what **human intent or impact** does this change represent?
 4. Translate that intent into a **concrete, everyday human scene** — a specific moment, action, or feeling a person might recognise (e.g. "someone quietly rearranging furniture before guests arrive", "a chef tasting and adjusting just before serving"). The more vivid and grounded the scene, the better.
 5. Brainstorm 5–8 emoji that capture *that scene* rather than the commit directly — favour oblique, lateral choices; if candidates feel obvious, reframe the scene itself

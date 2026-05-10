@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phx-filters"
-version = "3.5.1"
+version = "3.6.0"
 description = "Validation and data pipelines made easy!"
 authors = [{ name = "Phoenix Zerin", email = "phx@phx.nz" }]
 requires-python = ">=3.12, <4"
@@ -51,14 +51,17 @@ Issues = "https://github.com/todofixthis/filters/issues"
 dev = [
     "autohooks>=26,<27",
     "autohooks-plugin-black>=23,<24",
-#    "autohooks-plugin-mypy>=23,<24",
+    #    "autohooks-plugin-mypy>=23,<24",
     "autohooks-plugin-pytest>=23,<24",
     "autohooks-plugin-ruff>=25,<26",
     "black>=26,<27",
-#    "mypy>=1,<2",
+    # >=3.29 fixes an OSError on Docker/macOS volume mounts (fcntl file locking)
+    "filelock>=3.29",
+    #    "mypy>=1,<2",
     "pytest>=9,<10",
-    "sphinx>=8,<9",
-    "sphinx_rtd_theme>=3,<4",
+    "pyyaml>=6.0.3",
+    "sphinx>=9,<10",
+    "sphinx_rtd_theme>=3.1,<4",
     "tox>=4,<5",
     "tox-uv>=1.23.0,<2",
     "types-python-dateutil>=2,<3",
@@ -67,8 +70,8 @@ dev = [
 ci = [
 #    "mypy>=1,<2",
     "pytest>=9,<10",
-    "sphinx>=8,<9",
-    "sphinx_rtd_theme>=3,<4",
+    "sphinx>=9,<10",
+    "sphinx_rtd_theme>=3.1,<4",
 ]
 
 [tool.autohooks]
@@ -78,6 +81,7 @@ pre-commit = [
 #    "autohooks.plugins.mypy",
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
+    "adr_index",
 ]
 
 #[tool.mypy]
@@ -114,3 +118,5 @@ runner = "uv-venv-lock-runner"
 
 [tool.uv]
 keyring-provider = "subprocess"
+# Fix SSL errors when running in Leash containers
+system-certs = true

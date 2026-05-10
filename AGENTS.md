@@ -1,19 +1,40 @@
+> `CLAUDE.md` is a symlink to this file — edit `AGENTS.md` only.
+
+## Getting Started
+
+Before writing code, check:
+
+- `docs/plans/` — current implementation plan
+- `docs/adr/INDEX.md` — prior decisions (don't re-litigate)
+- `docs/future/` — deferred features (don't re-discuss)
+
+## Architecture Decision Records
+
+When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `writing-adrs` skill for the format and conventions. ADRs live in `docs/adr/`. Before writing, run `ls docs/adr/` to find the highest existing number and increment it.
+
+If you find yourself about to establish a new cross-cutting pattern (something that will affect multiple domains or files, e.g. a testing convention, a shared utility, an error-handling approach), stop and write an ADR first even if the immediate task feels local. A pattern adopted once becomes the template for everything that follows.
+
 ## Commands
 
-- **Test (current Python)**: `uv run pytest`
-- **Test (all versions)**: `uv run tox -p`
-- **Verify test count**: `uv run pytest --collect-only` — note count at start of mahi; verify it increases appropriately when done
-- **Lint**: `uv run ruff check`
-- **Build docs**: `uv run make -C docs clean && uv run make -C docs html`
-- **Sync deps**: `uv sync --group=dev` (run after pulling)
-- **Commit**: always `uv run git commit` — autohooks requires the uv venv
+```bash
+uv run autohooks activate --mode=pythonpath            # install pre-commit hook (once per clone)
+uv run git commit                                      # always use instead of git commit (runs autohooks)
+uv add --bounds major <package>                        # add a runtime dependency at latest version
+uv add --bounds major --group dev <package>            # add a dev dependency at latest version
+uv sync --group=dev                                    # sync deps after pulling
+uv run pytest                                          # run tests (current Python)
+uv run tox -p                                          # run tests (all supported versions)
+uv run pytest --collect-only                           # verify test count (note at start of mahi; confirm it increases when done)
+uv run ruff check                                      # lint
+uv run make -C docs clean && uv run make -C docs html  # build docs
+```
 
 ## Architecture
 
 Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
 
 - Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) to avoid Sphinx autodoc failures — add `# Use Optional for Sphinx compat` inline
+- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use Optional for Sphinx compat` inline
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
 
 ## Tests
@@ -40,6 +61,12 @@ Place comments on the line preceding the code they document, not as trailing com
 - NZ English; incorporate Te Reo Māori where natural (e.g. "mahi", "kaupapa")
 - Use "Initialises" not "Initializes"
 
+### Writing for coding agents
+
+- Do not document information that already exists in the coding agent's training data or could be easily discovered by reading the code.
+- Do not list individual files; list high-level directories so the agent knows where to look.
+- Aim for concise style that optimises token count without sacrificing clarity.
+
 ## Branches
 
 - `main` — releases only; merge from `develop` via PR
@@ -50,7 +77,7 @@ Place comments on the line preceding the code they document, not as trailing com
 
 Use `.worktrees/` for isolated workspaces (project-local, gitignored).
 
-After switching to a worktree, run `uv run autohooks activate --mode=pythonpath` to install the pre-commit hook for that worktree.
+After switching to a worktree, run the autohooks activate command (see Commands) to install the pre-commit hook for that worktree.
 
 ## Package
 
@@ -60,4 +87,4 @@ Package name is `phx-filters` (distinct from the `filters` import name).
 
 **conftest import errors**: use relative imports (`from .conftest import Bytesy`).
 
-**Sphinx forward reference warnings** (`unsupported operand type(s) for |`): use `typing.Optional["ClassName"]` not `"ClassName" | None` — see Architecture above.
+**Sphinx forward reference errors** (`TypeError: unsupported operand type(s) for |`): `"ClassName" | None` fails at Python runtime because `str.__or__` is not supported — not a Sphinx bug, and not fixed in Sphinx 9. Use `typing.Optional["ClassName"]` — see Architecture above.
