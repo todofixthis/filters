@@ -235,15 +235,23 @@ use the provided methods:
 
        def test_pass_padding(self):
            """Padding a value to the correct length."""
+           # Use ``self.assertFilterPasses`` to check the result of filtering a
+           # valid value.
            self.assertFilterPasses(
+               # If this is the input...
                b'Hello, world!',
-               b'Hello, world!\x03\x03\x03',
+               # ... this is the expected result.
+               b'Hello, world!\x03\x03\x03'
            )
 
        def test_fail_wrong_type(self):
            """The incoming value is not a byte string."""
+           # Use ``self.assertFilterErrors`` to check the errors from filtering
+           # an invalid value.
            self.assertFilterErrors(
+               # If this is the input...
                'Hello, world!',
+               # ... these are the expected filter errors.
                [f.Type.CODE_WRONG_TYPE],
            )
 
