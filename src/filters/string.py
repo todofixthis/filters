@@ -1,6 +1,7 @@
 import json
 import re
 import socket
+import tomllib
 import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
 from collections.abc import Callable, Iterable, Sequence
@@ -28,6 +29,7 @@ __all__ = [
     "Regex",
     "Split",
     "Strip",
+    "TomlDecode",
     "Unicode",
     "Uuid",
 ]
@@ -776,6 +778,27 @@ class Strip(BaseFilter):
             value = self.trailing.sub("", value)
 
         return value
+
+
+class TomlDecode(BaseFilter):
+    """Interprets the value as TOML."""
+
+    CODE_INVALID = "not_toml"
+
+    templates = {
+        CODE_INVALID: "This value is not valid TOML.",
+    }
+
+    def _apply(self, value):
+        value: str = self._filter(value, Type(str))
+
+        if self._has_errors:
+            return None
+
+        try:
+            return tomllib.loads(value)
+        except tomllib.TOMLDecodeError:
+            return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
 class Unicode(BaseFilter):

@@ -1631,6 +1631,33 @@ from incoming values:
   assert runner.is_valid() is True
   assert runner.cleaned_data == '4321 A long time ago...'
 
+TomlDecode
+----------
+Decodes a string that is TOML-encoded.
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(f.TomlDecode, '[server]\nhost = "localhost"\nport = 8080\n')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == {'server': {'host': 'localhost', 'port': 8080}}
+
+Like :py:class:`filters.JsonDecode`, it can be chained with
+:py:class:`filters.FilterMapper` to validate the decoded structure:
+
+.. code-block:: python
+
+   import filters as f
+
+   runner = f.FilterRunner(
+       f.TomlDecode |
+       f.FilterMapper({
+           'image': f.Required | f.Unicode | f.NotEmpty,
+       }),
+       '[image]\nname = "ubuntu:24.04"\n',
+   )
+
 Type
 ----
 Requires that the incoming value have the type(s) specified in the filter

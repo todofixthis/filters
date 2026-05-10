@@ -59,6 +59,7 @@ __all__ = [
     "Regex",
     "Split",
     "Strip",
+    "TomlDecode",
     "Unicode",
     "Uuid",
     # extensions
@@ -127,6 +128,7 @@ from .string import (
     Regex,
     Split,
     Strip,
+    TomlDecode,
     Unicode,
     Uuid,
 )
