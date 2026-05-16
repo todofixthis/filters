@@ -611,6 +611,55 @@ dict:
 
 Check out :ref:`filterception` for more fun examples 😺
 
+.. _len:
+
+Len
+---
+A unified length-constraint filter that replaces :ref:`length`,
+:ref:`min-length`, and :ref:`max-length`.
+
+.. code-block:: python
+
+   import filters as f
+
+   # Exact length — equivalent to Length(3)
+   runner = f.FilterRunner(f.Len(3), ['foo', 'bar', 'baz'])
+   assert runner.is_valid() is True
+
+   runner = f.FilterRunner(f.Len(3), ['foo', 'bar'])
+   assert runner.is_valid() is False
+
+   # Minimum length only — equivalent to MinLength(3)
+   runner = f.FilterRunner(f.Len(min=3), 'Hello')
+   assert runner.is_valid() is True
+
+   # Maximum length only — equivalent to MaxLength(5)
+   runner = f.FilterRunner(f.Len(max=5), 'Hi')
+   assert runner.is_valid() is True
+
+   # Length within a range — equivalent to MinLength(2) | MaxLength(5)
+   runner = f.FilterRunner(f.Len(min=2, max=5), 'kia')
+   assert runner.is_valid() is True
+
+   runner = f.FilterRunner(f.Len(min=2, max=5), 'x')
+   assert runner.is_valid() is False
+
+The filter accepts any ``Sized`` value (strings, lists, dicts, bytes, etc.).
+
+.. note::
+
+   ``Len(n)`` requires *exactly* the specified length.
+   ``Len(min=m, max=n)`` with ``m == n`` is equivalent to ``Len(m)``.
+
+.. caution::
+
+   You cannot mix the positional ``exact`` argument with ``min`` or ``max``
+   keyword arguments — ``Len(4, min=2)`` raises ``ValueError`` at
+   initialisation time.
+
+   All length values must be ``>= 0``, and when using range mode,
+   ``min`` must not exceed ``max``.
+
 .. _length:
 
 Length
@@ -651,7 +700,7 @@ length (i.e., whose type implements ``typing.Sized``):
    :py:class:`filters.Length` requires the incoming value to have *exactly*
    the specified length; if you want to check that the incoming value has a
    minimum or maximum length, use :ref:`min-length` or :ref:`max-length`,
-   respectively.
+   respectively — or use the unified :ref:`len` filter.
 
 Max
 ---
