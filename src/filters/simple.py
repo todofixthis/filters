@@ -25,6 +25,7 @@ __all__ = [
     "Datetime",
     "Empty",
     "Item",
+    "Len",
     "Length",
     "MaxLength",
     "MinLength",
@@ -445,6 +446,110 @@ class Item(BaseFilter):
                 reason=self.CODE_MISSING_KEY,
                 sub_key=str(self.target),
             )
+
+
+class Len(BaseFilter):
+    """Validates that a value's length satisfies the configured constraint.
+
+    Modes (mutually exclusive):
+
+    - ``Len(n)`` — exact length (equivalent to ``Length(n)``)
+    - ``Len(min=n)`` — minimum length only (equivalent to ``MinLength(n)``)
+    - ``Len(max=n)`` — maximum length only (equivalent to ``MaxLength(n)``)
+    - ``Len(min=m, max=n)`` — length within a range
+
+    Args:
+        exact: Required length. Mutually exclusive with ``min`` and ``max``.
+        min: Minimum allowed length.
+        max: Maximum allowed length.
+
+    Raises:
+        ValueError: If ``exact`` is combined with ``min`` or ``max``, if any
+            value is negative, or if ``min`` > ``max``.
+    """
+
+    CODE_TOO_LONG = "too_long"
+    CODE_TOO_SHORT = "too_short"
+
+    templates = {
+        CODE_TOO_LONG: "Value is too long (length must be {constraint}).",
+        CODE_TOO_SHORT: "Value is too short (length must be {constraint}).",
+    }
+
+    def __init__(
+        self,
+        exact: int | None = None,
+        *,
+        min: int | None = None,
+        max: int | None = None,
+    ) -> None:
+        super().__init__()
+
+        if exact is not None and (min is not None or max is not None):
+            raise ValueError(
+                "Cannot specify both exact length and min/max constraints."
+            )
+
+        if exact is None and min is None and max is None:
+            raise ValueError("Must specify exact, min, or max.")
+
+        for name, val in [("exact", exact), ("min", min), ("max", max)]:
+            if val is not None and val < 0:
+                raise ValueError(f"{name} must be >= 0, got {val!r}.")
+
+        if min is not None and max is not None and min > max:
+            raise ValueError(f"min ({min!r}) must be <= max ({max!r}).")
+
+        self.exact = exact
+        self.min = min
+        self.max = max
+
+    def __str__(self) -> str:
+        if self.exact is not None:
+            return f"{type(self).__name__}({self.exact!r})"
+        parts = []
+        if self.min is not None:
+            parts.append(f"min={self.min!r}")
+        if self.max is not None:
+            parts.append(f"max={self.max!r}")
+        return f"{type(self).__name__}({', '.join(parts)})"
+
+    def _apply(self, value):
+        value = self._filter(value, Type(Sized))
+
+        if self._has_errors:
+            return None
+
+        length = len(value)
+
+        if self.exact is not None:
+            if length > self.exact:
+                return self._invalid_value(
+                    value=value,
+                    reason=self.CODE_TOO_LONG,
+                    template_vars={"constraint": f"exactly {self.exact}"},
+                )
+            if length < self.exact:
+                return self._invalid_value(
+                    value=value,
+                    reason=self.CODE_TOO_SHORT,
+                    template_vars={"constraint": f"exactly {self.exact}"},
+                )
+        else:
+            if self.max is not None and length > self.max:
+                return self._invalid_value(
+                    value=value,
+                    reason=self.CODE_TOO_LONG,
+                    template_vars={"constraint": f"at most {self.max}"},
+                )
+            if self.min is not None and length < self.min:
+                return self._invalid_value(
+                    value=value,
+                    reason=self.CODE_TOO_SHORT,
+                    template_vars={"constraint": f"at least {self.min}"},
+                )
+
+        return value
 
 
 class Length(BaseFilter):
