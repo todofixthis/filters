@@ -615,8 +615,8 @@ Check out :ref:`filterception` for more fun examples 😺
 
 Len
 ---
-A unified length-constraint filter that replaces :ref:`length`,
-:ref:`min-length`, and :ref:`max-length`.
+A unified length-constraint filter combining the functionality of
+:ref:`length`, :ref:`min-length`, and :ref:`max-length` in a single interface.
 
 .. code-block:: python
 
@@ -1281,7 +1281,7 @@ omitting the keys specified when the filter is initialised.
    If you want to validate the shape of an incoming value, then you may prefer:
 
    - For mappings: :ref:`filter-mapper`.
-   - For sequences: :ref:`length`, :ref:`max-length`, :ref:`min-length`.
+   - For sequences: :ref:`len`, :ref:`length`, :ref:`max-length`, :ref:`min-length`.
 
 Optional
 --------
