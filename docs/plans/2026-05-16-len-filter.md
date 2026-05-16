@@ -35,49 +35,9 @@ A `Len` section was inserted into `docs/simple_filters.rst` alphabetically befor
 
 ---
 
-## Task 3: GitHub deprecation issue
+## Task 3: GitHub deprecation issue ✅
 
-**Files:** none (GitHub only)
-
-- [ ] **Step 1: Create the GitHub issue**
-
-Run:
-
-```bash
-gh issue create \
-  --title "Deprecate Length, MinLength, MaxLength in favour of Len" \
-  --label "enhancement" \
-  --body "$(cat <<'EOF'
-## Context
-
-PR #NNN introduced the unified `Len` filter as a drop-in replacement for
-`Length`, `MinLength`, and `MaxLength`.
-
-## Tasks for next major release
-
-- [ ] Deprecate `Length` — emit `DeprecationWarning` and point users to `Len(n)`
-- [ ] Deprecate `MinLength` — emit `DeprecationWarning` and point users to `Len(min=n)`
-- [ ] Deprecate `MaxLength` — emit `DeprecationWarning` and point users to `Len(max=n)`
-- [ ] Update docs to mark the three filters as deprecated
-- [ ] Remove the three deprecated filters in the release after that
-
-## Notes
-
-- `MaxLength` has a `truncate` option that `Len` does not support — decide
-  whether to add truncation to `Len` or keep `MaxLength` for that use case.
-EOF
-)"
-```
-
-Replace `#NNN` with the actual PR number before running.
-
-- [ ] **Step 2: Note the issue number**
-
-Copy the issue URL from the output and note the number for future reference.
-
-- [ ] **Step 3: Compress this task in the plan**
-
-Use the `compress-plan-task` skill.
+GitHub issue #88 created with deprecation tasks for `Length`, `MinLength`, and `MaxLength` in the next major release. The issue includes guidance for converting each deprecated filter to its `Len` equivalent, and flags the `MaxLength.truncate` option as a decision point for whether truncation should be added to `Len` or kept as a separate feature.
 
 ---
 
