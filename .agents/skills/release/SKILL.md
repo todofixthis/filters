@@ -58,10 +58,11 @@ git checkout main && git pull
 
 ### 8. Build
 ```bash
+uv sync --group=dev
 rm -f dist/*
 uv build
 ```
-Artefacts land in `dist/`.
+Sync first — pulling `main` may have brought in dependency changes. Artefacts land in `dist/`.
 
 ### 9. Tag and push
 ```bash
@@ -117,6 +118,19 @@ rm release-<version>.md release-<version>.md.asc release-<version>-body.md
 git checkout develop && git pull
 ```
 
+### 13. Close related GitHub issues
+For every issue referenced in the release notes, close it with a comment:
+```bash
+gh issue close <number> --comment "Implemented in [v<version>](https://github.com/todofixthis/filters/releases/tag/<version>)."
+```
+
+### 14. Rebase `develop` onto `main`
+```bash
+git rebase origin/main
+git push
+```
+Because `develop` now contains all of `main`'s commits, the histories no longer diverge and a regular (non-force) push succeeds.
+
 ---
 
 ## Writing Release Notes
@@ -135,6 +149,14 @@ git checkout develop && git pull
 ## New features
 ## Enhancements
 ## Bug fixes
+
+> [!NOTE]
+> **Verifying release artefacts**
+> 1. Import the signing key: `curl https://github.com/todofixthis.gpg | gpg --import`
+> 2. Download the `.whl` or `.tar.gz` and its matching `.sig` file from the release assets
+> 3. Verify: `gpg --verify phx_filters-<version>-py3-none-any.whl.sig phx_filters-<version>-py3-none-any.whl`
+>
+> Key fingerprint: `457997A2A506270F918D7BD1925CC6E316680401`
 
 # SHA256 Checksums
 ```

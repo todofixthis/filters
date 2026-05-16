@@ -18,7 +18,7 @@ If you find yourself about to establish a new cross-cutting pattern (something t
 
 ```bash
 uv run autohooks activate --mode=pythonpath            # install pre-commit hook (once per clone)
-uv run git commit                                      # always use instead of git commit (runs autohooks)
+uv run git commit                                      # ALWAYS use this — never bare `git commit` (autohooks won't run without `uv run`)
 uv add --bounds major <package>                        # add a runtime dependency at latest version
 uv add --bounds major --group dev <package>            # add a dev dependency at latest version
 uv sync --group=dev                                    # sync deps after pulling

@@ -4,6 +4,10 @@ Internal test helpers for the phx-filters test suite.
 Fixtures (``assert_filter_passes``, ``assert_filter_errors``) and sentinels
 (``unmodified``, ``skip_value_check``) are provided by the ``filters``
 pytest plugin — no import needed.
+
+For ``assert_filter_passes``: when a filter passes a value through unchanged,
+the third argument (``expected``) can be omitted — the fixture uses the input
+``value`` as the expected output.
 """
 
 import typing
