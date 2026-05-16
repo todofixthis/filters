@@ -217,3 +217,28 @@ def test_len_invalid_no_args():
     """Calling Len() with no arguments is not allowed."""
     with pytest.raises(ValueError):
         f.Len()
+
+
+# ---------------------------------------------------------------------------
+# __str__
+# ---------------------------------------------------------------------------
+
+
+def test_len_str_exact():
+    """__str__ renders exact mode."""
+    assert str(f.Len(3)) == "Len(3)"
+
+
+def test_len_str_min_only():
+    """__str__ renders min-only mode."""
+    assert str(f.Len(min=2)) == "Len(min=2)"
+
+
+def test_len_str_max_only():
+    """__str__ renders max-only mode."""
+    assert str(f.Len(max=5)) == "Len(max=5)"
+
+
+def test_len_str_range():
+    """__str__ renders range mode."""
+    assert str(f.Len(min=2, max=5)) == "Len(min=2, max=5)"

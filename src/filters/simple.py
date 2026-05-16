@@ -504,7 +504,7 @@ class Len(BaseFilter):
         self.min = min
         self.max = max
 
-    def __str__(self) -> str:
+    def __str__(self):
         if self.exact is not None:
             return f"{type(self).__name__}({self.exact!r})"
         parts = []
