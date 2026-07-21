@@ -7,7 +7,8 @@ __pycache__/
 dist/
 
 # Git worktrees
-.worktrees/
+.agents/worktrees/
+.claude/worktrees/
 
 # Release artefacts (local working files)
 release-*-body.md
