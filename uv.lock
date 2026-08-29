@@ -639,6 +639,7 @@ iso = [
 [package.dev-dependencies]
 ci = [
     { name = "pytest" },
+    { name = "pyyaml" },
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
 ]
@@ -673,6 +674,7 @@ provides-extras = ["django", "iso"]
 [package.metadata.requires-dev]
 ci = [
     { name = "pytest", specifier = ">=9,<10" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "sphinx", specifier = ">=9,<10" },
     { name = "sphinx-rtd-theme", specifier = ">=3.1,<4" },
 ]
