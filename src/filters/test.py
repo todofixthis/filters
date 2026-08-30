@@ -48,7 +48,7 @@ class BaseFilterTestCase(TestCase):
     cases.
     """
 
-    filter_type: Callable[..., BaseFilter] = None
+    filter_type: Callable[..., BaseFilter[Any]] = None
 
     class unmodified(object):
         """Used by assertFilterPasses to omit expected_value parameter.

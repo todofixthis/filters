@@ -1,7 +1,9 @@
 from abc import ABCMeta
+from collections.abc import Callable
 from functools import WRAPPER_ASSIGNMENTS, partial
+from typing import Any
 
-from filters.base import BaseFilter, FilterMeta
+from filters.base import BaseFilter, FilterCompatible, FilterMeta
 
 __all__ = [
     "FilterMacroType",
@@ -33,7 +35,11 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
     pass
 
 
-def filter_macro(func, *args, **kwargs):
+def filter_macro(
+    func: Callable[..., FilterCompatible],
+    *args: Any,
+    **kwargs: Any,
+) -> type[FilterMacroType]:
     """Promotes a function returning a filter into its own filter type.
 
     Example::
