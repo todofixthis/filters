@@ -143,10 +143,10 @@ pair siblings. Both subclasses call `super()._apply`, and `Date` reuses
 being duplicated.
 
 `Unicode.register(ByteString)` would keep `issubclass` and `isinstance` `True`
-(verified — `FilterMeta` already subclasses `ABCMeta`), but **we are not doing
-that**: the two filters are conceptually related and not hierarchical, and
-registering would reassert exactly the hierarchy the split exists to deny. That
-is what makes this a breaking change, and it is the main reason for v4.0.0.
+(verified — `FilterMeta` already subclasses `ABCMeta`), and we are deliberately
+**not** doing it: the two filters are conceptually related and not hierarchical,
+so registering would reassert exactly the hierarchy the split exists to deny.
+That is what makes this a breaking change, and the main reason for v4.0.0.
 
 ## Strictness
 
@@ -303,10 +303,11 @@ Answered in review; recorded here so they are not relitigated.
    strictness. Phases 1 and 2 can be separate commits regardless. Phase 0
    records a baseline; Phase 6 clears it.
 2. **Split `ByteString` and `Date`** — "originally subclassed as a convenience;
-   conceptually related but not hierarchical". Taken as an argument against
-   `register()`, so `issubclass(f.ByteString, f.Unicode)` becomes `False`.
-3. **`apply()` and `_filter()` return `T_out | None`.** The `Optional`
-   narrowing overload is *deferred*, not adopted — read from "#34 is pretty big
+   conceptually related but not hierarchical". Confirmed: **no**
+   `Unicode.register(ByteString)`, so `issubclass(f.ByteString, f.Unicode)`
+   becomes `False`.
+3. **`apply()` and `_filter()` return `T_out | None`**, confirmed. The
+   `Optional` narrowing overload is *deferred*, not adopted — "#34 is pretty big
    as it is". Recorded for later: filters should eventually
    `raise FilterError(...)` directly instead of calling `_invalid_value` and
    having callers guard `_has_errors`, which would let `apply()` drop the
