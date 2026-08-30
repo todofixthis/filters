@@ -1154,9 +1154,9 @@ instance, even in cases where no filtering is needed.
    assert runner.is_valid() is True
    assert runner.cleaned_data == 'literally anything'
 
-Every operand of ``|`` must be a filter, so :py:class:`filters.NoOp` is what a
-chain uses for a step that does nothing.  ``None`` is not a substitute —
-``some_filter | None`` raises :py:class:`TypeError`.
+Every operand of ``|`` must be filter-compatible, so :py:class:`filters.NoOp`
+is what a chain uses for a step that does nothing.  ``None`` is not a
+substitute — ``some_filter | None`` raises :py:class:`TypeError`.
 
 .. code-block:: python
 

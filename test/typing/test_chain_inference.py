@@ -87,18 +87,36 @@ def test_chain_inference_rejects_none() -> None:
     """Negative case: ``None`` on the right of ``|`` is rejected by both
     checkers and raises at runtime.
 
+    One form per overload set — ``FilterMeta.__or__`` for the class form,
+    ``BaseFilter.__or__`` for the instance form and ``FilterChain.__or__``
+    for the chain form — so re-adding the arm to any one of the three
+    fails here.
+
     ``FilterCompatible`` still admits ``None`` — ``FilterMapper`` and
     ``FilterSwitch`` depend on it — so only the overload sets dropped the
     arm. See
     docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
 
-    Both suppressions are load-bearing, for the reason
+    Every suppression is load-bearing, for the reason
     ``test_chain_inference_rejects_a_non_filter_operand`` gives below:
-    remove either and the checker it speaks for reports the mismatch.
+    remove any one and the checker it speaks for reports the mismatch.
     """
     with pytest.raises(TypeError):
         assert_type(  # type: ignore[assert-type]
+            _StubTransform | None,  # pyright: ignore[reportAssertTypeFailure]
+            f.FilterChain[str],
+        )
+
+    with pytest.raises(TypeError):
+        assert_type(  # type: ignore[assert-type]
             _StubTransform() | None,  # pyright: ignore[reportAssertTypeFailure]
+            f.FilterChain[str],
+        )
+
+    chain = _StubTransform() | _StubPassThrough()
+    with pytest.raises(TypeError):
+        assert_type(  # type: ignore[assert-type]
+            chain | None,  # pyright: ignore[reportAssertTypeFailure]
             f.FilterChain[str],
         )
 
