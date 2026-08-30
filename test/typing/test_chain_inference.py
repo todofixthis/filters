@@ -83,19 +83,24 @@ def test_chain_inference_survives_three_filters() -> None:
     )
 
 
-def test_chain_inference_none_leaves_the_chain_alone() -> None:
-    """``None`` on the right of ``|`` is a no-op, as it is at runtime.
+def test_chain_inference_rejects_none() -> None:
+    """Negative case: ``None`` on the right of ``|`` is rejected by both
+    checkers and raises at runtime.
 
-    Dropping this arm is a breaking change that #34 schedules for phase 5;
-    until then ``resolve_filter`` no-ops on ``None`` and the type has to
-    say so.
+    ``FilterCompatible`` still admits ``None`` — ``FilterMapper`` and
+    ``FilterSwitch`` depend on it — so only the overload sets dropped the
+    arm. See
+    docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
+
+    Both suppressions are load-bearing, for the reason
+    ``test_chain_inference_rejects_a_non_filter_operand`` gives below:
+    remove either and the checker it speaks for reports the mismatch.
     """
-    assert_type(_StubTransform | None, f.FilterChain[str])
-    assert_type(_StubTransform() | None, f.FilterChain[str])
-    assert_type((_StubTransform | _StubPassThrough) | None, f.FilterChain[str])
-
-    # The runtime half of the same claim: nothing was appended.
-    assert len((_StubTransform | None)._filters) == 1
+    with pytest.raises(TypeError):
+        assert_type(  # type: ignore[assert-type]
+            _StubTransform() | None,  # pyright: ignore[reportAssertTypeFailure]
+            f.FilterChain[str],
+        )
 
 
 def test_chain_inference_callable_reports_what_it_returns() -> None:

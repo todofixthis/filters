@@ -106,12 +106,10 @@ class FilterMeta(ABCMeta):
     # overload above it.
     # See docs/adr/006-distinguish-filter-categories-by-marker-base-class.md.
     #
-    @overload
-    def __or__(  # type: ignore[misc]
-        cls: "type[BaseFilter[T_out]]",
-        next_filter: None,
-    ) -> "FilterChain[T_out]": ...
-
+    # There is deliberately no ``None`` arm: ``FilterCompatible`` still
+    # admits ``None``, but ``|`` does not — see
+    # docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
+    #
     @overload
     def __or__(  # type: ignore[misc]
         cls: "type[BaseFilter[T_out]]",
@@ -203,12 +201,9 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
         return new_filter
 
-    # The same seven overloads as FilterMeta.__or__, in the same order, so
+    # The same six overloads as FilterMeta.__or__, in the same order, so
     # that chaining behaves identically whether the left operand is a
     # filter class or a filter instance.
-    @overload
-    def __or__(self, next_filter: None) -> "FilterChain[T_out]": ...
-
     @overload
     def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
@@ -237,23 +232,31 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     ) -> "FilterChain[T_next]": ...
 
     def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
-        """Chains another filter with this one."""
-        normalised = self.resolve_filter(next_filter)
+        """Chains another filter with this one.
 
-        if normalised:
-            #
-            # Officially, we should do this:
-            # return ``FilterChain(self) | next_filter``
-            #
-            # But that wastes some CPU cycles by creating an extra
-            # FilterChain instance that gets thrown away almost
-            # immediately. It's a bit faster just to create a single
-            # FilterChain instance and modify it in-place.
-            #
-            # noinspection PyProtectedMember
-            return FilterChain(self)._add(next_filter)
-        else:
-            return self if isinstance(self, FilterChain) else FilterChain(self)
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
+        """
+        # ``resolve_filter`` returns ``None`` only for a ``None`` operand,
+        # directly or via a zero-argument callable that returns one. That
+        # used to be a silent no-op.
+        if self.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {type(self).__name__} in a "
+                f"filter chain; use NoOp instead.",
+            )
+
+        #
+        # Officially, we should do this:
+        # return ``FilterChain(self) | next_filter``
+        #
+        # But that wastes some CPU cycles by creating an extra
+        # FilterChain instance that gets thrown away almost
+        # immediately. It's a bit faster just to create a single
+        # FilterChain instance and modify it in-place.
+        #
+        # noinspection PyProtectedMember
+        return FilterChain(self)._add(next_filter)
 
     def __str__(self):
         """Returns a string representation of the Filter.
@@ -614,11 +617,9 @@ class FilterChain(BaseFilter[T_out]):
     # dispatches here, and an override without them collapses a
     # three-filter chain to ``FilterChain[Any]`` on both checkers.
     #
-    # Same order as the other two sets: markers first, callable last.
+    # Same order as the other two sets: markers first, callable last, and
+    # no ``None`` arm.
     #
-    @overload
-    def __or__(self, next_filter: None) -> "FilterChain[T_out]": ...
-
     @overload
     def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
@@ -651,15 +652,19 @@ class FilterChain(BaseFilter[T_out]):
 
         This method creates a new FilterChain object without modifying
         the current one.
-        """
-        resolved = self.resolve_filter(next_filter)
 
-        if resolved:
-            new_chain: FilterChain[Any] = copy(self)
-            new_chain._add(next_filter)
-            return new_chain
-        else:
-            return self
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
+        """
+        if self.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {type(self).__name__} in a "
+                f"filter chain; use NoOp instead.",
+            )
+
+        new_chain: FilterChain[Any] = copy(self)
+        new_chain._add(next_filter)
+        return new_chain
 
     @classmethod
     def __copy__(cls, the_filter: TFC) -> TFC:
