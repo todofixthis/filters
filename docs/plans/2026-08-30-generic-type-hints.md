@@ -16,18 +16,18 @@ resets cached state. The inference targets are `FilterRunner.cleaned_data` and
 
 ## Headline
 
-**Nothing has to break.** Both breaking changes proposed on the issue turned out
-to be avoidable, and so did the two Liskov repairs that replaced them:
+Both breaking changes proposed on the issue turned out to be avoidable, as did
+the two Liskov repairs that replaced them:
 
 - `f.Unicode | f.Strip` survives and infers, via an overloaded metaclass
   operator.
 - `f.Type(bool)` survives, via overloads with bare-`type` fallbacks.
 - `__copy__` keeps its classmethod shape, parameterised with a bound `TypeVar`.
-- `issubclass(f.ByteString, f.Unicode)` survives a hierarchy split, via
-  `Unicode.register(ByteString)` — `FilterMeta` already subclasses `ABCMeta`.
 
-This can ship as **v3.8.0**. The remaining question is how strict the checkers
-run, not what to break.
+Two small breaks remain, both chosen deliberately in review rather than forced
+by the typing (see **Decisions taken**): splitting `ByteString`/`Date` without
+re-registering them, and dropping `filter | None`. **Target: v4.0.0**, with a
+breaking surface of one `issubclass` result and one no-op operator.
 
 ## Evidence
 
@@ -130,30 +130,28 @@ because reading it after the documented gate is the whole point of the issue.
   resolved `BaseFilter` — mypy flags it today. Its corrected type propagates to
   `FilterRunner.filter_chain`.
 
-## Optional changes
-
-Neither is required; both are soundness fixes.
-
-### Split `ByteString` from `Unicode`, `Date` from `Datetime`
+## Splitting `ByteString` and `Date`
 
 `Unicode` outputs `str` but `ByteString` outputs `bytes`; `Datetime` outputs
-`datetime` but `Date` outputs `date`. Each subclass contradicts its parent.
-Today `def f(x: Unicode) -> str: return x.apply(v)` silently returns `bytes` for
+`datetime` but `Date` outputs `date`. Each subclass contradicts its parent, so
+today `def f(x: Unicode) -> str: return x.apply(v)` silently returns `bytes` for
 a `ByteString`.
 
-| Option | Pros | Cons |
-|---|---|---|
-| **A. Extract a shared private base** (`_BaseDecoder`, `_BaseDatetime`) | Fixes the unsoundness. `issubclass`/`isinstance` are restorable with `Unicode.register(ByteString)`, verified | Real refactor: both subclasses call `super()._apply`, and `Date` reuses `Datetime.__init__` |
-| **B. Override `apply` with `# type: ignore[override]`** | One line, no refactor | Keeps a deliberate Liskov violation in the model this exercise exists to make trustworthy |
+Extract a shared private base (`_BaseDecoder`, `_BaseDatetime`) and make each
+pair siblings. Both subclasses call `super()._apply`, and `Date` reuses
+`Datetime.__init__`, so the shared core moves down into the new base rather than
+being duplicated.
 
-**Recommendation: A**, but B is defensible if v3.8.0's non-breaking shape is the
-priority. With `register()` the `issubclass` objection dissolves, so A is no
-longer a breaking change — only a larger one.
+`Unicode.register(ByteString)` would keep `issubclass` and `isinstance` `True`
+(verified — `FilterMeta` already subclasses `ABCMeta`), but **we are not doing
+that**: the two filters are conceptually related and not hierarchical, and
+registering would reassert exactly the hierarchy the split exists to deny. That
+is what makes this a breaking change, and it is the main reason for v4.0.0.
 
-### Strictness
+## Strictness
 
-This is the decision that actually shapes the work. Measured on `a872e72` with
-fresh caches:
+The largest single cost in the plan, and deferred to its own phase so it cannot
+hold up the rest. Measured on `a872e72` with fresh caches:
 
 | check | errors |
 |---|---|
@@ -163,10 +161,10 @@ fresh caches:
 | `pyright src/filters` (standard) | 73 |
 | `pyright src/filters` (strict) | 686 |
 
-Both checkers are ~10× worse at full strictness, and the choice is not cosmetic:
-`default=Any`'s justification only bites at strict, and the
-`reportUnnecessaryTypeIgnoreComment` requirement below presumes a mode. Phase 0
-must pick, per checker: fix everything, baseline and ratchet, or stage the flags.
+Phase 0 installs both checkers at a bar the tree already clears, with a recorded
+baseline; Phase 6 ratchets. Note this is *only* about the error budget — the
+phase-atomicity problem it used to also cause is solved separately by
+`default=Any` (see **Decisions taken**).
 
 ## Prerequisites
 
@@ -221,32 +219,35 @@ Per `AGENTS.md`, written before the change each governs.
 1. Type parameter model — one parameter, `default=Any`, classic `TypeVar` over
    PEP 695, with the variance rationale.
 2. Filter categories and the marker base classes.
-3. Type checking in CI — mypy plus pyright, the strictness stance per checker,
+3. Type checking in CI — mypy plus pyright, the baseline-then-ratchet stance,
    and the `assert_type` harness.
+4. Splitting `ByteString` from `Unicode` and `Date` from `Datetime`, recording
+   that the pairs are conceptually related but not hierarchical, and why they
+   are deliberately not re-registered.
 
 ## Phases
 
 | Phase | Scope | Size |
 |---|---|---|
-| **0** | `py.typed`; mypy and pyright in CI plus the strictness decision; `typing_extensions`; the `AGENTS.md` carve-out; `test/typing/` harness; fix `test.py:51`'s invalid `Callable[[...], ...]` and `resolve_filter`'s return type. | L |
+| **0** | `py.typed`; both checkers in CI at a baseline bar; `typing_extensions`; the `AGENTS.md` carve-out; `test/typing/` harness; fix `test.py:51`'s invalid `Callable[[...], ...]` and `resolve_filter`'s return type. | M |
 | **1** | `base.py`: generic `BaseFilter`/`FilterChain`, category markers, **three** `__or__` overload sets, `Type`'s overloads, `FilterCompatible[T]`, `_filter`, `apply`, parameterised `__copy__`. | L |
 | **2** | `number.py`, `string.py`, `simple.py`, `complex.py` — annotate every filter into its category. | L |
 | **3** | `handlers.py` — generic `FilterRunner`. **Closes the issue.** | S |
 | **4** | `macros.py`, `extensions.py`, `test.py`, `pytest.py`. | S |
-| **5** | Optional: split `ByteString`/`Date` with `register()` to preserve `issubclass`. | S |
-| **6** | Docs and README. | M |
-| **7** | Downstream: paddock and `filters-pydantic` — code and skills. | M |
+| **5** | Breaking: split `ByteString`/`Date`; drop `filter \| None`. | S |
+| **6** | Ratchet both checkers to full strictness and clear the backlog. | L |
+| **7** | Docs and README. | M |
+| **8** | Downstream: paddock and `filters-pydantic` — code and skills. | M |
 
-Two phase-boundary traps, both of which will otherwise red-line CI:
+Phases 1 and 2 are separable, because `default=Any` lets Phase 2's
+not-yet-annotated filters compile against Phase 1's generic base — verified
+clean on both checkers at full strictness, so the split holds even after the
+Phase 6 ratchet.
 
-1. **Phases 1 and 2 are atomic under full strictness.** Once `BaseFilter` is
-   generic, `disallow_any_generics` / `reportMissingTypeArgument` reject every
-   unparameterised subclass in the package. Either they land in one commit, or
-   Phase 0's strictness decision defers those flags.
-2. **If Phase 5 is taken, phases 1–4 need interim suppressions that Phase 5
-   deletes.** `ByteString` and `Date` fail the checkers as soon as the base is
-   generic. Under `--warn-unused-ignores` the ignores must be added and removed
-   in the right commits or the build breaks either side.
+One boundary still needs care: `ByteString` and `Date` fail the checkers from
+Phase 1 until Phase 5 fixes them. Under `--warn-unused-ignores` the interim
+suppressions must be added in Phase 1 or 2 and removed in the same commit as
+Phase 5, or the build breaks on one side or the other.
 
 ## Consumer impact
 
@@ -265,6 +266,11 @@ generic typing"). Its documented example
 unparameterised `BaseFilter` subclass and neither chains a bare class in code.
 The `default=Any` typevar keeps them valid even for strict-mode consumers.
 `filters-iso`'s three ``Required | Locale`` docstrings remain correct.
+
+**The two v4 breaks reach none of them.** No source in this repo, paddock,
+`filters-pydantic` or `filters-iso` chains `filter | None` — the only usage is
+`test_filter_chain.py:24`, which goes with the behaviour — and nothing tests or
+branches on `issubclass(f.ByteString, f.Unicode)`.
 
 **`filters.ext` and `filter_macro`** — both depend on `FilterMeta.__or__`
 (`create_instance` returns the class specifically so `filters.ext.MyFilter |
@@ -286,17 +292,30 @@ limitation, not a regression.
   the arity is a "how many to write" call, not a defect.
 - **`cleaned_data: T_out`** is typed optimistically on purpose; see above.
 
-## Decisions for review
+## Decisions taken
 
-1. **Strictness, per checker** — fix everything, ratchet from a baseline, or
-   stage the flags? This gates whether phases 1 and 2 can be separate commits,
-   and it is now the largest single cost in the plan.
-2. **Split `ByteString`/`Date` (A), or suppress (B)?** No longer a breaking
-   change either way.
-3. **`apply() -> T_out | None`** — forced by `_invalid_value`'s replacement path,
-   but it makes every call site narrow. Should `Optional` get a narrowing
-   overload so `Widening` doesn't hand `None` straight back?
-4. **Does `f.Unicode | None` stay legal?** `FilterCompatible` allows it today;
-   none of the proposed overloads do.
-5. **`typing_extensions` as a runtime dependency** — the alternative, a 3.13
-   floor, is itself breaking.
+Answered in review; recorded here so they are not relitigated.
+
+1. **Strictness is deferred to Phase 6.** It does not constrain the phasing:
+   the atomicity trap came from `disallow_any_generics` /
+   `reportMissingTypeArgument` rejecting unparameterised subclasses, and the
+   PEP 696 `default=Any` already clears that on both checkers at full
+   strictness. Phases 1 and 2 can be separate commits regardless. Phase 0
+   records a baseline; Phase 6 clears it.
+2. **Split `ByteString` and `Date`** — "originally subclassed as a convenience;
+   conceptually related but not hierarchical". Taken as an argument against
+   `register()`, so `issubclass(f.ByteString, f.Unicode)` becomes `False`.
+3. **`apply()` and `_filter()` return `T_out | None`.** The `Optional`
+   narrowing overload is *deferred*, not adopted — read from "#34 is pretty big
+   as it is". Recorded for later: filters should eventually
+   `raise FilterError(...)` directly instead of calling `_invalid_value` and
+   having callers guard `_has_errors`, which would let `apply()` drop the
+   `| None` entirely. That deserves its own `docs/future/` entry.
+4. **`filter | None` is dropped.** Blast radius is one test —
+   `test_filter_chain.py:24`, `test_filter_chain_implicit_chain_null` — and no
+   usage in this repo's source, paddock, `filters-pydantic` or `filters-iso`.
+   Note `FilterCompatible` must **keep** `None`: `FilterMapper` uses a `None`
+   filter to mark a key required without filtering it (`complex.py:236`), and
+   `FilterSwitch` takes `default=None`. Only the `|` operator stops accepting it.
+5. **`typing_extensions` as a runtime dependency**, since Python 3.12 must be
+   supported until 3.15 ships. The floor stays `>=3.12`.
