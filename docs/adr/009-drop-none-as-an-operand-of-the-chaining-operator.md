@@ -1,7 +1,7 @@
 ---
 status: Accepted
 date: 2026-08-30
-scope: [docs/simple_filters.rst, src/filters/base.py]
+scope: [docs/simple_filters.rst, src/filters/base.py, test/test_filter_chain.py, test/typing/test_chain_inference.py]
 summary: Make `some_filter | None` raise `TypeError` and drop the `None` arm from all three `__or__` overload sets, while leaving `FilterCompatible`, `resolve_filter` and `FilterChain._add` accepting `None` as before.
 revisit-when: Requiring `NoOp` proves onerous in practice — a caller assembling a chain from parts that may legitimately be absent, where threading `NoOp` through each one obscures the code more than the silent no-op did.
 ---
@@ -49,8 +49,10 @@ Replace each `__or__`'s no-op branch with a `TypeError`, and remove the `None`
 arm from `FilterMeta.__or__`, `BaseFilter.__or__` and `FilterChain.__or__`.
 `FilterCompatible`, `resolve_filter` and `_add` are untouched.
 
-**Pros:** Both checkers catch the mistake statically, and at runtime it gets
-the same rejection `resolve_filter` already gives any operand it cannot use.
+**Pros:** Every form raises at runtime, getting the same rejection
+`resolve_filter` already gives any operand it cannot use, where the no-op
+absorbed the mistake silently. Statically the benefit waits on Phase 6 — see
+Consequences.
 **Cons:** Breaking, for callers relying on the no-op.
 **Risks:** None distinct from the Cons.
 
@@ -93,17 +95,46 @@ silent about `docs/`. Sweeping the paths it leaves out, `rg '\| None\b'` over
   accepted by every consumer except `|`. `resolve_filter`, `_filter` and
   `FilterChain._add` — including the `FilterChain(None)` its own initialiser
   performs — are unchanged.
+- Statically, nothing changes until Phase 6. [ADR 004][]'s baseline disables
+  mypy's `operator` code and pyright's `reportOperatorIssue`, so on this tree
+  `f.Unicode() | None` draws no diagnostic from either checker and resolves to
+  `Any` (mypy) or `Unknown` (pyright); measured with a `reveal_type` probe.
+  With both codes forced on, each checker rejects all three forms. mypy
+  reaches the class form only because
+  `FilterMeta` defines `__or__`: for a class whose metaclass does not,
+  `X | None` is a PEP 604 union expression with nothing to reject, measured
+  both ways.
 - The `.. tip::` block in `docs/simple_filters.rst` goes; the paragraph it
   contained about a filter macro needing `NoOp` stays, since a macro body
-  still cannot write `None | f.Decimal` — `None` has no `__or__`.
+  still cannot usefully write `None | f.Decimal`. That expression does not
+  raise: `None` has no applicable `__or__`, so Python falls back to the right
+  operand's `__ror__`, which `FilterMeta` inherits from `type`, and the result
+  is quietly the union `None | Decimal` rather than a chain, which goes on
+  absorbing `|` operands as a union. The failure surfaces one step later,
+  where the macro is chained: `resolve_filter` reports `Union None |
+  filters.number.Decimal is not compatible with FilterChain` — less legible
+  than the instance form, `None | f.Decimal()`, which raises `TypeError` on
+  the spot.
 - Two tests change: `test_filter_chain_implicit_chain_null` becomes
   `test_filter_chain_rejects_none` and asserts the raise, and
   `test_chain_inference_none_leaves_the_chain_alone` in `test/typing/` becomes
   a negative case, guarded per that module's own rule with a
-  `# type: ignore[assert-type]` and its `# pyright: ignore` twin. Under
-  [ADR 004][]'s `warn_unused_ignores` and
-  `reportUnnecessaryTypeIgnoreComment`, both suppressions fail the build if
-  either checker stops rejecting the operand.
+  `# type: ignore[assert-type]` and its `# pyright: ignore` twin on each
+  pinned form. Each suppression polices one checker only —
+  ADR 004's `warn_unused_ignores` the mypy comment,
+  `reportUnnecessaryTypeIgnoreComment` the pyright one — and neither
+  cross-checks the other. Both are load-bearing because a rejected operand
+  leaves the expression `Any`/`Unknown`, so each pinned `assert_type` fails.
+  That is the guard: re-adding a `None` arm returning `FilterChain[T_out]`
+  would make the assertion pass again, and each checker would then report its
+  own suppression as unused and fail the build.
+- The class form's `TypeError` names the wrong class. `f.Int | None` says
+  `None is not compatible with FilterChain in a filter chain`, not `Int`:
+  `FilterMeta.__or__` carries no guard of its own, delegating to
+  `FilterChain(cls) | next_filter`, and `FilterChain.__or__` raises using
+  `type(self).__name__`. The instance and chain forms name their own class.
+  Left as is: a third copy of the guard would buy a better noun in the message
+  at the price of a third `resolve_filter` call on the same operand.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md

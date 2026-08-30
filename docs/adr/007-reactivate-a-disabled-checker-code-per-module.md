@@ -155,8 +155,13 @@ count there may change once it does.
   silently broken — so it is worth removing when noticed, not worth a check
   of its own.
 
+[ADR 008][] removes the directive and both suppressions this section
+describes; the module-wide widening and the `base.py` coupling above no longer
+apply as of that change.
+
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md
+[ADR 008]: 008-split-bytestring-and-date-into-siblings.md
 [`ByteString`]: ../../src/filters/string.py
 [`Date`]: ../../src/filters/simple.py
 [`Datetime`]: ../../src/filters/simple.py

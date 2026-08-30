@@ -1,9 +1,9 @@
 ---
 status: Accepted
 date: 2026-08-30
-scope: [src/filters/simple.py, src/filters/string.py]
+scope: [src/filters/simple.py, src/filters/string.py, test/test_byte_string.py, test/test_date.py, test/typing/test_simple.py, test/typing/test_string.py]
 summary: Rebase `ByteString` and `Date` as siblings of `Unicode` and `Datetime` under a private generic base that holds the shared logic under a name of its own, rather than under `_apply`, and do not register the split pairs back together as virtual subclasses.
-revisit-when: A consumer turns up that depends on `issubclass(f.ByteString, f.Unicode)` or `issubclass(f.Date, f.Datetime)`; or a filter outside either pair needs the shared decode or parse logic, which would put the private base on the public surface.
+revisit-when: A filter outside either pair needs the shared decode or parse logic, which would put the private base on the public surface; or a third sibling joins either base, where `_BaseDatetime`'s unenforced `CODE_INVALID` contract (see Consequences) would have to be enforced rather than documented.
 ---
 
 # 008: Split `ByteString` and `Date` into Siblings of `Unicode` and `Datetime`
@@ -130,8 +130,12 @@ depending on `BaseFilter`'s error-reporting members.
 `Unicode.register(ByteString)` — and its `Datetime`/`Date` twin — is rejected
 rather than deferred. Registering restores the `issubclass` answer by
 asserting the exact "is-a" claim the split exists to deny, leaving the library
-to say one thing to a type checker and the opposite to `issubclass`. Nothing
-depends on that answer today. Verified by `rg` over this repository's `test/`
+to say one thing to a type checker and the opposite to `issubclass`. A
+consumer that turns up depending on that answer does not reverse this: it gets
+explicit conversion, not a restored `issubclass`. What the sweep below settles
+is the price of taking that stance now, not the stance itself — nothing in
+reach depends on the answer, so the break costs no migration. Verified by `rg`
+over this repository's `test/`
 and `src/` — the only `issubclass` calls are `FilterMacroType` and
 `extensions.py`'s registry guard — and over shallow clones of the three known
 downstream consumers at `todofixthis/paddock` (`0f91e67`),
@@ -167,8 +171,23 @@ three repositories, not a claim about every consumer.
   the wrong chain inference and pin `FilterChain[bytes]` and
   `FilterChain[date]` instead.
 - `_BaseDecoder` and `_BaseDatetime` are private and stay out of `__all__`, so
-  neither reaches the rendered API docs. A downstream filter wanting the
-  shared decode or parse logic has no supported way to get at it.
+  neither gets a page of its own in the rendered API docs. Their docstrings
+  still reach those docs: `docs/conf.py` sets `autoclass_content = "both"`,
+  which splices each base's `__init__` docstring into every public sibling's
+  page. That is why the shared docstring's summary line is "Initialises the
+  filter." rather than naming a class — confirmed in the built HTML, where
+  `Unicode`, `Datetime` and `Date` all render that line, while `ByteString`
+  renders "Initialises the ByteString filter." from the `__init__` it still
+  declares itself. A downstream filter wanting the shared decode or parse
+  logic has no supported way to get at it.
+- `_BaseDatetime` declares `CODE_INVALID: str` as a bare annotation, so
+  `_parse` can resolve it polymorphically — a contract each sibling must
+  honour with both a code and a matching `templates` entry, and one nothing
+  enforces. The base is abstract (`_apply` is not implemented), so it cannot
+  be instantiated, and both siblings set it; a third that forgot would fail
+  with an `AttributeError` from `_parse`'s exception path rather than at
+  class definition. `_BaseDecoder` needs no equivalent, its
+  `CODE_DECODE_ERROR` being one concrete value both siblings share.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md
