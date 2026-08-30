@@ -24,15 +24,15 @@ import filters as f
 
 
 def test_smoke_set_handler_return_type_is_base_filter() -> None:
-    """``BaseFilter.set_handler`` is explicitly annotated, pre-Phase-1.
+    """``BaseFilter.set_handler`` was explicitly annotated before issue
+    #34 touched anything.
 
-    Proves the harness and its CI wiring work end to end against a
-    construct where mypy and pyright already agree, before Phase 1 makes
-    the interesting cases (chain inference) possible to write.
-
-    ``Unicode`` now carries its real ``BaseFilter[str]`` type (Phase 2b),
-    so the expectation follows it rather than the ``BaseFilter[Any]`` this
-    predates.
+    The harness's own smoke test, proving the ``assert_type`` wiring
+    works end to end against a construct where mypy and pyright already
+    agreed, independently of the chain inference #34 added. ``Unicode``
+    now carries its real ``BaseFilter[str]`` type, so the expectation
+    follows that rather than the ``BaseFilter[Any]`` this assertion was
+    first written against.
     """
     assert_type(
         f.Unicode().set_handler(f.ExceptionHandler()),
@@ -43,8 +43,9 @@ def test_smoke_set_handler_return_type_is_base_filter() -> None:
 def test_smoke_resolve_filter_return_type_is_optional_base_filter() -> None:
     """``BaseFilter.resolve_filter`` returns the resolved filter, not a chain.
 
-    Regression check for the Phase 0 fix to its declared return type
-    (previously ``Optional[FilterChain]``, which mypy flagged as wrong).
+    Regression check for the fix to its declared return type made while
+    wiring up the checkers for issue #34 (previously
+    ``Optional[FilterChain]``, which mypy flagged as wrong).
     """
     assert_type(
         f.BaseFilter.resolve_filter(f.Unicode()),

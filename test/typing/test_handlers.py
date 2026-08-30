@@ -21,11 +21,23 @@ def test_handlers_filter_runner_infers_from_a_single_filter() -> None:
 
 
 def test_handlers_filter_runner_infers_from_a_chain() -> None:
-    """A chain resolves to ``FilterChain[T]`` first (Phase 1/2), and that
-    ``T`` is what ``FilterRunner`` then infers.
+    """A chain resolves to ``FilterChain[T]`` first, and that ``T`` is
+    what ``FilterRunner`` then infers.
     """
     assert_type(f.FilterRunner(f.Int() | f.Max(10)), f.FilterRunner[int])
     assert_type(f.FilterRunner(f.Int() | f.Max(10)).cleaned_data, int)
+
+
+def test_handlers_filter_runner_apply_returns_none() -> None:
+    """``FilterRunner.apply`` resets cached state rather than handing
+    back the filtered value, unlike ``BaseFilter.apply``.
+
+    Pinned because the annotation is what turns ``result =
+    runner.apply(...)``, then ``result.is_valid()``, into a checker
+    error -- the exact misuse the docs carried until issue #34
+    corrected them.
+    """
+    assert_type(f.FilterRunner(f.Int()).apply("42"), None)
 
 
 def test_handlers_filter_runner_cleaned_data_matches_the_issue() -> None:

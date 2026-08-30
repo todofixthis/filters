@@ -1,12 +1,13 @@
 """
-Pins the chain-type inference the Phase 1 generic core provides (issue #34).
+Pins the chain-type inference the generic core provides (issue #34).
 
-The concrete filters are not annotated yet, so these assertions run against
-stand-ins defined here — one per category from
-docs/adr/006-distinguish-filter-categories-by-marker-base-class.md — which
-carry the same shapes ``Unicode``, ``NotEmpty``, ``Int`` and ``Optional``
-take on once they are annotated. Every stand-in is a working filter at
-runtime, because pytest collects this module like any other.
+These assertions run against stand-ins defined here — one per category from
+docs/adr/006-distinguish-filter-categories-by-marker-base-class.md — rather
+than against the real filters, so what they pin is the ``|`` overloads
+themselves and not any one filter's annotation. The stand-ins carry the same
+shapes ``Unicode``, ``NotEmpty``, ``Int`` and ``Optional`` do; the sibling
+modules here pin those. Every stand-in is a working filter at runtime,
+because pytest collects this module like any other.
 
 Nothing here asserts the parameter ``Type`` infers for an abstract argument:
 mypy and pyright disagree on that (``Type[Any]`` versus the parameterised

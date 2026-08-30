@@ -1,18 +1,26 @@
 """
 Pins the type-checker inference for ``simple.py``'s filters (issue #34).
 
-Phase 2c annotated the real filters, including ``Optional``, the first
-``Widening`` filter to actually exist (``T_widened`` bound from its
-``default`` argument). Phase 5 then split ``Date`` off ``Datetime`` into
-siblings under a shared private base, so each reports the type it actually
-produces -- both on a direct call and through a chain. See
+This module holds ``Optional``, the package's only ``Widening`` filter
+(its class parameter bound from the ``default`` argument). ``Date`` and
+``Datetime`` are siblings under a shared private base rather than parent and
+child, so each reports the type it actually produces -- both on a direct
+call and through a chain. See
 docs/adr/008-split-bytestring-and-date-into-siblings.md.
 """
 
+from collections.abc import Callable
 from datetime import date, datetime
-from typing import Any, Optional, assert_type
+from typing import Any, Optional, Union, assert_type
 
 import filters as f
+
+
+def _list_of_str() -> list[str]:
+    """Stand-in for the ``default=list`` factory idiom, with a concrete
+    return type both checkers spell the same way.
+    """
+    return []
 
 
 def test_byte_array_apply_returns_optional_bytearray() -> None:
@@ -108,9 +116,8 @@ def test_array_is_explicitly_type_any() -> None:
 
 
 def test_optional_binds_widened_type_from_default() -> None:
-    """``Optional`` is the first real ``Widening`` filter: its
-    ``T_widened`` is bound from its ``default`` argument, defaulting to
-    ``None``.
+    """``Optional``'s class parameter is bound from its ``default``
+    argument, defaulting to ``None``.
     """
     assert_type(f.Optional(), f.Optional[None])
     assert_type(f.Optional(0), f.Optional[int])
@@ -123,3 +130,28 @@ def test_optional_widens_a_chains_output_type() -> None:
     """
     assert_type(f.Int() | f.Optional(), f.FilterChain[Optional[int]])
     assert_type(f.Int() | f.Optional(0), f.FilterChain[int])
+
+
+def test_optional_factory_default_widens_by_the_callable_type() -> None:
+    """Pins a KNOWN LIMITATION, not correct behaviour.
+
+    ``Optional``'s class parameter binds from ``default`` itself, so the
+    documented factory idiom (``default=list``) widens the chain by the
+    callable's type rather than by the type it constructs. At runtime the
+    replacement here is a ``list[str]``; statically the chain reports the
+    zero-argument callable.
+
+    Spelled with a module-level function rather than ``list`` because the
+    two checkers render a generic class object differently (mypy keeps
+    the overloaded constructor signature, pyright reduces it to
+    ``type[list[_T]]``), and ``assert_type`` needs one spelling both
+    accept. The imprecision is identical either way.
+
+    Delete this test if ``Optional`` ever learns to bind the constructed
+    type -- see the class docstring for why that is not free.
+    """
+    assert_type(f.Optional(_list_of_str), f.Optional[Callable[[], list[str]]])
+    assert_type(
+        f.Unicode() | f.Optional(_list_of_str),
+        f.FilterChain[Union[str, Callable[[], list[str]]]],
+    )

@@ -1,10 +1,9 @@
 """
 Pins the type-checker inference for ``complex.py``'s filters (issue #34).
 
-Phase 2d annotates the real filters, closing out Phase 2. Three of the four
-stay untyped -- their result type depends on the runtime shape of the
-incoming value, not on anything visible to a type checker -- leaving
-``NamedTuple`` as this module's only ctor-typed case.
+Three of this module's four filters stay untyped -- their result type
+depends on the runtime shape of the incoming value, not on anything visible
+to a type checker -- leaving ``NamedTuple`` as its only ctor-typed case.
 """
 
 from collections import namedtuple

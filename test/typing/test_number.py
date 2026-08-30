@@ -1,9 +1,9 @@
 """
 Pins the type-checker inference for ``number.py``'s filters (issue #34).
 
-Phase 2a annotates the real filters, replacing the Phase 1 stand-ins in
-``test_chain_inference.py`` for the transforming/pass-through cases, and
-adds the ctor-typed case (``Round``) that Phase 1 had no stand-in for.
+Covers the transforming and pass-through cases against the real filters
+rather than ``test_chain_inference.py``'s stand-ins, plus the ctor-typed
+case (``Round``) that has no stand-in there.
 """
 
 from decimal import Decimal as DecimalType
@@ -45,6 +45,6 @@ def test_round_binds_result_type_from_ctor() -> None:
 
 def test_chain_with_real_transform_and_pass_through() -> None:
     """A real transforming filter chained onto a real pass-through filter,
-    now that ``number.py`` supplies both instead of Phase 1's stand-ins.
+    rather than ``test_chain_inference.py``'s stand-ins for both.
     """
     assert_type(f.Int() | f.Max(10), f.FilterChain[int])

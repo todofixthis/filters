@@ -1,9 +1,9 @@
 """
 Pins the type-checker inference for ``string.py``'s filters (issue #34).
 
-Phase 2b annotated the real filters; Phase 5 then split ``ByteString`` off
-``Unicode`` into siblings under a shared private base, so each reports the
-type it actually produces -- both on a direct call and through a chain. See
+``ByteString`` and ``Unicode`` are siblings under a shared private base
+rather than parent and child, so each reports the type it actually produces
+-- both on a direct call and through a chain. See
 docs/adr/008-split-bytestring-and-date-into-siblings.md.
 """
 
@@ -75,6 +75,20 @@ def test_json_decode_stays_untyped() -> None:
 
 def test_chain_with_real_string_filters() -> None:
     """A real transforming filter from this module chained onto another,
-    now that ``string.py`` supplies both instead of Phase 1's stand-ins.
+    rather than ``test_chain_inference.py``'s stand-ins for both.
     """
     assert_type(f.Unicode() | f.MaxChars(10), f.FilterChain[str])
+
+
+def test_max_bytes_is_transforming_not_pass_through() -> None:
+    """``MaxBytes`` reads like a length check but encodes its input, so
+    it is categorised as transforming (``BaseFilter[bytes]``).
+
+    The live mis-categorisation risk named in
+    docs/adr/006-distinguish-filter-categories-by-marker-base-class.md:
+    refiled as ``PassThrough``, it would report ``FilterChain[str]`` for a
+    chain returning ``bytes``, and nothing else in the suite would
+    notice.
+    """
+    assert_type(f.MaxBytes(10).apply("hello"), Optional[bytes])
+    assert_type(f.Unicode() | f.MaxBytes(10), f.FilterChain[bytes])
