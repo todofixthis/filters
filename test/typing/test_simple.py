@@ -1,12 +1,12 @@
 """
 Pins the type-checker inference for ``simple.py``'s filters (issue #34).
 
-Phase 2c annotates the real filters, including two cases this plan has not
-hit before -- ``Optional``, the first ``Widening`` filter to actually exist
-(``T_widened`` bound from its ``default`` argument), and ``Date``, which
-hits the same interim-suppression shape Phase 2b found with ``ByteString``/
-``Unicode``, but in the opposite direction: ``datetime`` is a *subclass* of
-``date`` here, rather than an unrelated type.
+Phase 2c annotated the real filters, including ``Optional``, the first
+``Widening`` filter to actually exist (``T_widened`` bound from its
+``default`` argument). Phase 5 then split ``Date`` off ``Datetime`` into
+siblings under a shared private base, so each reports the type it actually
+produces -- both on a direct call and through a chain. See
+docs/adr/008-split-bytestring-and-date-into-siblings.md.
 """
 
 from datetime import date, datetime
@@ -37,28 +37,22 @@ def test_datetime_apply_returns_optional_datetime() -> None:
 
 
 def test_date_apply_returns_optional_date_not_datetime() -> None:
-    """``Date`` still subclasses ``Datetime`` at runtime (Phase 5's job to
-    split), but its ``apply``/``_apply`` overrides report ``date`` -- the
-    interim suppression this phase adds (see the comment on
-    ``Date.apply``) keeps this accurate rather than falling back to
-    ``Datetime``'s ``datetime``.
+    """``Date`` is transforming: its class parameter is fixed to
+    ``datetime.date``, which it now carries in its own right rather than
+    inheriting ``Datetime``'s ``datetime``.
     """
     assert_type(f.Date().apply("2000-01-01"), Optional[date])
 
 
-def test_date_chain_still_reports_the_parent_type() -> None:
-    """Pins a known-wrong inference, not correct behaviour.
+def test_date_chain_reports_date() -> None:
+    """The payoff of the split: ``|`` dispatches on ``Date``'s own class
+    parameter, so a chain through it reports what it returns.
 
-    ``Date.apply``'s override fixes the direct call, but the ``|``
-    overloads dispatch on the class parameter ``Date`` inherits from
-    ``Datetime``, so a chain through ``Date`` reports ``datetime`` for a
-    chain that returns ``date`` at runtime -- ``.hour`` on that output
-    type-checks and then raises. Phase 5's split of the two filters is what
-    fixes this; these assertions exist so that split has to update them
-    deliberately rather than silently changing the answer.
+    Before the split both assertions read ``FilterChain[datetime]``, so
+    ``.hour`` on a chain's output type-checked and then raised.
     """
-    assert_type(f.Date() | f.NoOp(), f.FilterChain[datetime])
-    assert_type(f.Unicode() | f.Date(), f.FilterChain[datetime])
+    assert_type(f.Date() | f.NoOp(), f.FilterChain[date])
+    assert_type(f.Unicode() | f.Date(), f.FilterChain[date])
 
 
 def test_empty_not_empty_and_length_filters_are_pass_through() -> None:

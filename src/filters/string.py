@@ -1,12 +1,3 @@
-# ``override`` is disabled project-wide in pyproject.toml's baseline (see
-# docs/adr/004-type-checking-in-ci.md); this per-module override switches
-# it back on just here, so the `ByteString._apply` suppression below stays
-# checked against a real error instead of registering as unused once
-# `--warn-unused-ignores` sees no `override` diagnostic to match it to. See
-# the "interim state" comment on that suppression for why it exists. Remove
-# this directive too once that suppression goes — see
-# docs/adr/007-reactivate-a-disabled-checker-code-per-module.md.
-# mypy: enable-error-code="override"
 import json
 import re
 import socket
@@ -23,7 +14,7 @@ from xml.etree.ElementTree import Element, tostring
 import regex
 from typing_extensions import TypeVar
 
-from filters.base import BaseFilter, Type
+from filters.base import BaseFilter, T_out, Type
 from filters.number import Min
 from filters.simple import MaxLength, MinLength
 
@@ -845,17 +836,16 @@ class TomlDecode(BaseFilter[dict[str, Any]]):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class Unicode(BaseFilter[str]):
-    """Converts a value into a unicode string.
+class _BaseDecoder(BaseFilter[T_out]):
+    """Shared initialiser and decoding logic for :py:class:`Unicode` and
+    :py:class:`ByteString`.
 
-    Note:
-        By default, additional normalisation is applied to the
-        resulting value. See the initialiser docstring for more info.
-
-        References:
-
-        - https://docs.python.org/2/howto/unicode.html
-        - https://en.wikipedia.org/wiki/Unicode_equivalence
+    The two are siblings rather than parent and child: they share how a
+    value is decoded, and disagree about what to hand back afterwards.
+    The shared step lives under ``_decode`` rather than ``_apply`` so
+    that each subclass can declare an ``_apply`` matching its own class
+    parameter. See
+    docs/adr/008-split-bytestring-and-date-into-siblings.md.
     """
 
     CODE_DECODE_ERROR = "wrong_encoding"
@@ -869,7 +859,7 @@ class Unicode(BaseFilter[str]):
         encoding: str = "utf-8",
         normalize: bool = True,
     ) -> None:
-        """Initialises the Unicode filter.
+        """Initialises the filter.
 
         Args:
             encoding: Used to decode non-unicode values.
@@ -899,7 +889,8 @@ class Unicode(BaseFilter[str]):
     def __str__(self):
         return f"{type(self).__name__}(encoding={self.encoding!r})"
 
-    def _apply(self, value: Any) -> str:
+    def _decode(self, value: Any) -> str:
+        """Decodes and (optionally) normalises the incoming value."""
         try:
             if isinstance(value, str):
                 decoded = value
@@ -955,10 +946,31 @@ class Unicode(BaseFilter[str]):
             return decoded
 
 
-class ByteString(Unicode):
+class Unicode(_BaseDecoder[str]):
+    """Converts a value into a unicode string.
+
+    Note:
+        By default, additional normalisation is applied to the
+        resulting value. See the initialiser docstring for more info.
+
+        References:
+
+        - https://docs.python.org/2/howto/unicode.html
+        - https://en.wikipedia.org/wiki/Unicode_equivalence
+    """
+
+    def _apply(self, value: Any) -> str:
+        return self._decode(value)
+
+
+class ByteString(_BaseDecoder[bytes]):
     """Converts a value into a byte string, encoded as UTF-8.
 
     IMPORTANT: This filter returns bytes objects, not bytearrays!
+
+    Note:
+        This filter is a sibling of :py:class:`Unicode`, not a subclass
+        of it, so ``issubclass(ByteString, Unicode)`` is ``False``.
     """
 
     def __init__(
@@ -983,29 +995,9 @@ class ByteString(Unicode):
         """
         super().__init__(encoding, normalize)
 
-    # Interim state, and a partial one: ``ByteString`` still inherits
-    # ``Unicode``'s now-``str`` class parameter, so ``apply`` would
-    # otherwise keep reporting ``str`` for a filter that actually returns
-    # ``bytes`` -- a real, pre-existing type contradiction (issue #34).
-    #
-    # This override repairs the direct call only: ``ByteString().apply(x)``
-    # reports ``bytes``. Chains through this filter are still wrong --
-    # ``Unicode() | ByteString()`` infers ``FilterChain[str]``, because the
-    # ``|`` overloads dispatch on the class parameter ``ByteString``
-    # inherits, not on this method. Known and accepted; only Phase 5's split
-    # of ``ByteString`` and ``Unicode`` into siblings under a shared private
-    # base fixes it, and that removes this suppression along with the
-    # inheritance itself. ``test/typing/test_string.py`` pins the wrong chain
-    # inference so Phase 5 has to update it deliberately.
-    def apply(self, value: Any) -> Optional[bytes]:  # type: ignore[override]
-        return super().apply(value)
-
     # noinspection SpellCheckingInspection
-    # Same interim contradiction as ``apply`` above: overridden so that
-    # internal callers of ``_apply`` (e.g. ``BaseFilter.apply``, ``_filter``)
-    # see the type this filter actually produces.
-    def _apply(self, value: Any) -> bytes:  # type: ignore[override]
-        decoded: str = super()._apply(value)
+    def _apply(self, value: Any) -> bytes:
+        decoded = self._decode(value)
 
         #
         # No need to catch UnicodeEncodeErrors here; UTF-8 can handle any
@@ -1033,7 +1025,7 @@ class ByteString(Unicode):
         #
 
         # Normally we return ``None`` if we get any errors, but in this case,
-        # we'll let the superclass method decide.
+        # we'll let ``_decode``'s invalid-value handling decide.
         return decoded if self._has_errors else decoded.encode("utf-8")
 
 

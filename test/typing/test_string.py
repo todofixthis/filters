@@ -1,10 +1,10 @@
 """
 Pins the type-checker inference for ``string.py``'s filters (issue #34).
 
-Phase 2b annotates the real filters, including the trickiest case in the
-plan so far -- ``ByteString``, which still subclasses ``Unicode`` at
-runtime (Phase 5's job to split) but returns ``bytes`` where ``Unicode``
-returns ``str``.
+Phase 2b annotated the real filters; Phase 5 then split ``ByteString`` off
+``Unicode`` into siblings under a shared private base, so each reports the
+type it actually produces -- both on a direct call and through a chain. See
+docs/adr/008-split-bytestring-and-date-into-siblings.md.
 """
 
 from typing import Any, Optional, assert_type
@@ -28,26 +28,23 @@ def test_uuid_apply_returns_optional_uuid() -> None:
 
 
 def test_byte_string_apply_returns_optional_bytes() -> None:
-    """``ByteString`` still inherits ``Unicode`` at runtime, but its
-    ``_apply`` override reports ``bytes`` -- the interim suppression this
-    phase adds (see the comment on ``ByteString._apply``) keeps this
-    accurate rather than falling back to ``Unicode``'s ``str``.
+    """``ByteString`` is transforming: its class parameter is fixed to
+    ``bytes``, which it now carries in its own right rather than
+    inheriting ``Unicode``'s ``str``.
     """
     assert_type(f.ByteString().apply("hello"), Optional[bytes])
 
 
-def test_byte_string_chain_still_reports_the_parent_type() -> None:
-    """Pins a known-wrong inference, not correct behaviour.
+def test_byte_string_chain_reports_bytes() -> None:
+    """The payoff of the split: ``|`` dispatches on ``ByteString``'s own
+    class parameter, so a chain ending in it reports what it returns.
 
-    ``ByteString.apply``'s override fixes the direct call, but the ``|``
-    overloads dispatch on the class parameter ``ByteString`` inherits from
-    ``Unicode``, so a chain ending in ``ByteString`` reports ``str`` for a
-    chain that returns ``bytes`` at runtime. Phase 5's split of the two
-    filters is what fixes this; these assertions exist so that split has to
-    update them deliberately rather than silently changing the answer.
+    Before the split both assertions read ``FilterChain[str]``, because
+    ``ByteString`` inherited ``Unicode``'s parameter and the overloads had
+    no way past it.
     """
-    assert_type(f.Unicode() | f.ByteString(), f.FilterChain[str])
-    assert_type(f.Unicode() | f.Strip() | f.ByteString(), f.FilterChain[str])
+    assert_type(f.Unicode() | f.ByteString(), f.FilterChain[bytes])
+    assert_type(f.Unicode() | f.Strip() | f.ByteString(), f.FilterChain[bytes])
 
 
 def test_choice_binds_element_type_from_ctor() -> None:

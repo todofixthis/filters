@@ -1,12 +1,3 @@
-# ``override`` is disabled project-wide in pyproject.toml's baseline (see
-# docs/adr/004-type-checking-in-ci.md); this per-module override switches
-# it back on just here, so the ``Date`` suppression below stays checked
-# against a real error instead of registering as unused once
-# ``--warn-unused-ignores`` sees no ``override`` diagnostic to match it to.
-# See the "interim state" comment on that suppression for why it exists.
-# Remove this directive too once that suppression goes — see
-# docs/adr/007-reactivate-a-disabled-checker-code-per-module.md.
-# mypy: enable-error-code="override"
 from collections.abc import (
     Callable,
     Iterable,
@@ -24,7 +15,7 @@ from dateutil.tz import tzoffset
 from pytz import utc
 from typing_extensions import TypeVar
 
-from filters.base import BaseFilter, PassThrough, Type, Widening
+from filters.base import BaseFilter, PassThrough, T_out, Type, Widening
 from filters.number import Int, Max, Min
 
 # Imported from ``typing_extensions`` because ``default=`` is native only
@@ -290,21 +281,28 @@ class Call(BaseFilter[T_callable]):
             )
 
 
-class Datetime(BaseFilter[datetime]):
-    """Interprets the value as a UTC datetime."""
+class _BaseDatetime(BaseFilter[T_out]):
+    """Shared initialiser and parsing logic for :py:class:`Datetime` and
+    :py:class:`Date`.
 
-    CODE_INVALID = "not_datetime"
+    The two are siblings rather than parent and child: they share how a
+    value is parsed, and disagree about what to hand back afterwards.
+    The shared step lives under ``_parse`` rather than ``_apply`` so that
+    each subclass can declare an ``_apply`` matching its own class
+    parameter. See
+    docs/adr/008-split-bytestring-and-date-into-siblings.md.
+    """
 
-    templates = {
-        CODE_INVALID: "This value does not appear to be a datetime.",
-    }
+    # Each subclass sets its own code and template; ``_parse`` resolves
+    # this polymorphically.
+    CODE_INVALID: str
 
     def __init__(
         self,
         timezone: tzinfo | int | float | None = None,
         naive: bool = False,
     ) -> None:
-        """Initialises the Datetime filter.
+        """Initialises the filter.
 
         Args:
             timezone: Specifies the timezone to use when the *incoming*
@@ -339,7 +337,8 @@ class Datetime(BaseFilter[datetime]):
             f"{type(self).__name__}(timezone={self.timezone!r}, naive={self.naive!r})"
         )
 
-    def _apply(self, value: Any) -> datetime:
+    def _parse(self, value: Any) -> datetime:
+        """Interprets the incoming value as a UTC datetime."""
         if isinstance(value, datetime):
             parsed = value
         elif isinstance(value, date):
@@ -372,13 +371,29 @@ class Datetime(BaseFilter[datetime]):
         return aware_result.replace(tzinfo=None) if self.naive else aware_result
 
 
-class Date(Datetime):
+class Datetime(_BaseDatetime[datetime]):
+    """Interprets the value as a UTC datetime."""
+
+    CODE_INVALID = "not_datetime"
+
+    templates = {
+        CODE_INVALID: "This value does not appear to be a datetime.",
+    }
+
+    def _apply(self, value: Any) -> datetime:
+        return self._parse(value)
+
+
+class Date(_BaseDatetime[date]):
     """Interprets the value as a UTC date.
 
     Note:
         The value is first converted to a datetime with UTC timezone,
         which may cause the resulting date to appear to be off by +/- 1
         day (does not apply if the value is already a date object).
+
+        This filter is a sibling of :py:class:`Datetime`, not a subclass
+        of it, so ``issubclass(Date, Datetime)`` is ``False``.
     """
 
     CODE_INVALID = "not_date"
@@ -387,39 +402,14 @@ class Date(Datetime):
         CODE_INVALID: "This value does not appear to be a date.",
     }
 
-    # Interim state, and a partial one: ``Date`` still inherits
-    # ``Datetime``'s ``datetime`` class parameter, so ``apply`` would
-    # otherwise keep reporting ``datetime`` for a filter that actually
-    # returns ``date`` -- a real, pre-existing type contradiction (issue
-    # #34). Unlike ``ByteString``/``Unicode`` (unrelated types),
-    # ``datetime`` is a *subclass* of ``date`` here, so narrowing the
-    # return type still trips mypy's ``override`` check the same way.
-    #
-    # This override repairs the direct call only: ``Date().apply(x)``
-    # reports ``date``. Chains through this filter are still wrong --
-    # ``Date() | NoOp()`` and ``Unicode() | Date()`` both infer
-    # ``FilterChain[datetime]``, because the ``|`` overloads dispatch on the
-    # class parameter ``Date`` inherits, not on this method, so a caller
-    # reaching for ``.hour`` on a chain's output type-checks and then fails
-    # at runtime. Known and accepted; only Phase 5's split of ``Date`` and
-    # ``Datetime`` into siblings under a shared private base fixes it, and
-    # that removes this suppression along with the inheritance itself.
-    # ``test/typing/test_simple.py`` pins the wrong chain inference so
-    # Phase 5 has to update it deliberately.
-    def apply(self, value: Any) -> date | None:  # type: ignore[override]
-        return super().apply(value)
-
-    # Same interim contradiction as ``apply`` above: overridden so that
-    # internal callers of ``_apply`` (e.g. ``BaseFilter.apply``, ``_filter``)
-    # see the type this filter actually produces.
-    def _apply(self, value: Any) -> date:  # type: ignore[override]
+    def _apply(self, value: Any) -> date:
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
 
-        filtered: datetime = super()._apply(value)
+        filtered = self._parse(value)
 
         # Normally we return `None` if we get any errors, but in this
-        # case, we'll let the superclass method decide.
+        # case, we'll let ``_parse``'s invalid-value handling decide.
         return filtered if self._has_errors else filtered.date()
 
 
