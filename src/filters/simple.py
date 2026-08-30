@@ -33,9 +33,15 @@ T_callable = TypeVar("T_callable", default=Any)
 argument.
 """
 
-T_widened = TypeVar("T_widened", default=None)
+T_optional_default = TypeVar("T_optional_default", default=None)
 """The type :py:class:`Optional` returns, bound from its ``default``
 argument.
+
+Deliberately *not* named ``T_widened``: :py:mod:`filters.base` declares
+its own module-level ``T_widened`` with a different default
+(``default=Any``) for the ``|`` overloads, so two type variables of the
+same name and different meaning would otherwise be in play whenever both
+modules are read together.
 """
 
 __all__ = [
@@ -156,7 +162,7 @@ class Array(Type[Any]):
         super().__init__(Sequence, True, aliases)
 
     def _apply(self, value: Any) -> Any:
-        value: Sequence = super()._apply(value)
+        value = super()._apply(value)
 
         if self._has_errors:
             return None
@@ -834,7 +840,7 @@ class Omit(BaseFilter[Any]):
         )
 
 
-class Optional(Widening[T_widened]):
+class Optional(Widening[T_optional_default]):
     """Changes empty and null values into a default value.
 
     In this context, "empty" is defined as having zero length.
@@ -847,7 +853,7 @@ class Optional(Widening[T_widened]):
 
     def __init__(
         self,
-        default: T_widened = None,
+        default: T_optional_default = None,
         call_default: bool | None = None,
     ):
         """Initialises the Optional filter.
@@ -906,7 +912,7 @@ class Optional(Widening[T_widened]):
 
         return self._get_default()
 
-    def _apply_none(self) -> T_widened | None:
+    def _apply_none(self) -> T_optional_default | None:
         # ``None`` is considered empty by this filter.
         return self._get_default()
 
