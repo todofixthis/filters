@@ -2,6 +2,6 @@
 
 # ADR Index
 
-| # | Status | Title | Tags | Summary |
-|---|--------|-------|------|---------|
-| [001](001-export-test-helpers-as-pytest-plugin.md) | Accepted | Export Test Helpers as a pytest Plugin | pytest, testing, fixtures, plugin | Test helper fixtures are exported as an auto-registered pytest plugin via the `pytest11` entry point. |
+| # | Status | Title | Scope | Summary | Revisit |
+|---|--------|-------|-------|---------|---------|
+| [001](001-export-test-helpers-as-pytest-plugin.md) | Accepted | Export Test Helpers as a pytest Plugin | pyproject.toml, src/filters/pytest.py | Test helper fixtures are exported as an auto-registered pytest plugin via the `pytest11` entry point. |  |
