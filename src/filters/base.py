@@ -383,7 +383,7 @@ class BaseFilter(metaclass=FilterMeta):
         the_filter: FilterCompatible,
         parent: Optional["BaseFilter"] = None,  # Use Optional for Sphinx compat
         key: str | None = None,
-    ) -> Optional["FilterChain"]:  # Use Optional for Sphinx compat
+    ) -> Optional["BaseFilter"]:  # Use Optional for Sphinx compat
         """Converts a filter-compatible value into a consistent type."""
         if the_filter is not None:
             if isinstance(the_filter, BaseFilter):
