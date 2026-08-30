@@ -219,13 +219,13 @@ abstract-argument overloads.
 - `return-value` cannot be cleared by tidying. Nearly every instance is
   `Incompatible return value type (got "None", expected ...)` where a
   filter returns `self._invalid_value(...)`, and replacing that rejection
-  mechanism with a raised `FilterError` is what [future work 002][]
-  proposes and defers. Until that lands, Phase 6 can only leave this code
-  disabled or suppress it at every rejection path — so `revisit-when` is
-  gated on a decision this ADR does not own.
+  mechanism with a raised `FilterError` is what [#121][] proposes and
+  defers. Until that lands, Phase 6 can only leave this code disabled or
+  suppress it at every rejection path — so `revisit-when` is gated on a
+  decision this ADR does not own.
 - Every disabled mypy code and `false` pyright rule above is a debt Phase 6
   must clear, not a permanent configuration — the point at which
   `revisit-when` fires.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
-[future work 002]: ../future/002-filters-raising-filtererror-directly.md
+[#121]: https://github.com/todofixthis/filters/issues/121
