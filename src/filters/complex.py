@@ -1,6 +1,8 @@
 from collections.abc import Callable, Generator, Iterable, Mapping
 from typing import Any, Hashable
 
+from typing_extensions import TypeVar
+
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
 from filters.string import Choice, Unicode
@@ -11,6 +13,19 @@ __all__ = [
     "FilterSwitch",
     "NamedTuple",
 ]
+
+# Imported from ``typing_extensions`` because ``default=`` is native only
+# from Python 3.13, and this package supports 3.12. See
+# docs/adr/005-parameterise-filters-on-one-output-type.md.
+TFR = TypeVar("TFR", bound="FilterRepeater")
+"""The repeater :py:meth:`FilterRepeater.__copy__` was handed, and
+returns.
+"""
+
+T_tuple = TypeVar("T_tuple", bound=tuple)
+"""The namedtuple type :py:class:`NamedTuple` returns, bound from its
+``type_`` argument.
+"""
 
 
 class FilterRepeater(BaseFilter):
@@ -62,7 +77,7 @@ class FilterRepeater(BaseFilter):
         return f"{type(self).__name__}({self._filter_chain})"
 
     @classmethod
-    def __copy__(cls, the_filter: "FilterRepeater") -> "FilterRepeater":
+    def __copy__(cls, the_filter: TFR) -> TFR:
         """
         Creates a shallow copy of the object.
         """
@@ -480,12 +495,12 @@ class FilterSwitch(BaseFilter):
         return self._filter(value, self.default)
 
 
-class NamedTuple(BaseFilter):
+class NamedTuple(BaseFilter[T_tuple]):
     """Attempts to convert the incoming value into a namedtuple."""
 
     def __init__(
         self,
-        type_: type[tuple],
+        type_: type[T_tuple],
         filter_map: Mapping[str, FilterCompatible] | None = None,
     ) -> None:
         """Initialises the NamedTuple filter.
@@ -522,7 +537,7 @@ class NamedTuple(BaseFilter):
         else:
             self.filter_mapper = None
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_tuple:
         value = self._filter(value, Type((Iterable, Mapping)))
 
         if self._has_errors:
