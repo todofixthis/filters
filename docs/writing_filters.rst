@@ -88,6 +88,14 @@ any chain the filter appears in. Leaving it off defaults to
 ``BaseFilter[Any]``, the same as any built-in filter whose output can't be
 pinned down until runtime.
 
+A filter that only validates, returning its input unchanged, should extend
+:py:class:`filters.PassThrough` instead — chaining it then leaves the chain's
+existing output type alone, where ``BaseFilter[Any]`` would collapse it to
+``Any``. A third base class, :py:class:`filters.Widening`, is for a filter
+that *adds* a type to the chain's output rather than replacing it — the way
+:py:class:`filters.Optional` adds its default's type; see the API docs for its
+type parameter.
+
 To create a new filter, write a class that extends
 :py:class:`filters.BaseFilter` and implement the ``_apply`` method:
 
@@ -121,7 +129,7 @@ Here's the ``Pkcs7Pad`` filter with a little bit of validation logic:
      CODE_INVALID_TYPE = 'invalid_type'
 
      templates = {
-       CODE_INVALID_TYPE = 'Binary string required.',
+       CODE_INVALID_TYPE: 'Binary string required.',
      }
 
      block_size = 16
@@ -139,7 +147,7 @@ You can also invoke other filters in your custom filters by calling the
 ``self._filter`` method.
 
 For example, we can simplify the implementation of ``Pkcs7Pad`` by incorporating
-the :py:class:`filters.ByteString` filter:
+the :py:class:`filters.Type` filter:
 
 .. code-block:: python
 
