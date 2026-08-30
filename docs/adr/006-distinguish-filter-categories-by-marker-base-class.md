@@ -58,9 +58,12 @@ built from it infers correctly without naming a type — including
 `f.Unicode | f.NotEmpty` written entirely in bare classes. A downstream
 package gets the same treatment by subclassing the marker.
 **Cons:** Two new public names in `base.py` that exist only for the type
-checker, and seven overloads repeated in three places — the five categories
-plus the `None` and zero-argument-callable arms `FilterCompatible` still
-carries — so twenty-one signatures whose bodies are all one implementation.
+checker, and seven overloads repeated in three places — one for `None`, two
+for `PassThrough` (class and instance), one for `Widening`, two generic
+`BaseFilter[T]` arms covering the transforming, ctor-typed and untyped
+categories, and one for the zero-argument-callable arm `FilterCompatible`
+still carries — so twenty-one signatures whose bodies are all one
+implementation.
 **Risks:** A filter filed in the wrong category produces a confidently
 wrong chain type. `MaxBytes` is the live example: it reads as a length
 check but `_apply` encodes, and returns `bytes` on every path that isn't an

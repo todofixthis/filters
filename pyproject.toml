@@ -96,6 +96,7 @@ include = ["src/*.py", "test/typing/*.py"]
 
 [tool.mypy]
 ignore_missing_imports = true
+warn_unused_ignores = true
 # Baseline bar (see docs/adr/004-type-checking-in-ci.md): today's tree trips
 # these codes independent of the generics work #34 exists for. Phase 6
 # ratchets this list down to nothing and clears the errors it currently
@@ -132,6 +133,17 @@ reportOptionalIterable = false
 reportOptionalMemberAccess = false
 reportRedeclaration = false
 reportReturnType = false
+
+# mypy's `# type: ignore[...]` comments (base.py's self-type overloads, the
+# assert_type negative case in test/typing) suppress mypy-only diagnostics
+# pyright never raises. Without this, reportUnnecessaryTypeIgnoreComment
+# below misreads them as unused, because it also honours the bare
+# `# type: ignore` syntax. Pyright-specific suppressions still use
+# `# pyright: ignore[code]`, which this setting does not affect.
+enableTypeIgnoreComments = false
+# See docs/adr/004-type-checking-in-ci.md Consequences: closes the gap where
+# a suppression that stops being needed decays silently.
+reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.hatch.build.targets.sdist]
 include = [

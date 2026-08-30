@@ -183,7 +183,10 @@ abstract-argument overloads.
   suppress the exact line they trail, so a leading comment (e.g. on an
   `@overload`) leaves the error reported against the `def` below it, and
   `reportUnnecessaryTypeIgnoreComment` is off by default — a misplaced
-  ignore then fails silently rather than erroring.
+  ignore then fails silently rather than erroring. Both are now on
+  (`warn_unused_ignores` in `[tool.mypy]`,
+  `reportUnnecessaryTypeIgnoreComment` in `[tool.pyright]`), closing that
+  gap for `src` and `test/typing`.
 - `reportGeneralTypeIssues` is the broadest-sounding rule in the disabled
   pyright list, but its footprint here is narrow: run under a bare
   `pyrightconfig.json` (no `[tool.pyright]` overrides), it fires on exactly
