@@ -54,7 +54,15 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 
 ## Code Comments
 
-Place comments on the line preceding the code they document, not as trailing comments.
+Place comments on the line preceding the code they document, not as trailing
+comments.
+
+**Exception: `# type: ignore[...]` and `# pyright: ignore[...]`.** Each
+checker applies a trailing suppression only to the line it sits on. On a
+preceding line (e.g. an `@overload` decorator) the error still reports
+against the `def` below it, and pyright's
+`reportUnnecessaryTypeIgnoreComment` is off by default, so a misplaced
+ignore fails silently. Keep these two forms trailing.
 
 ## Language and Style
 
