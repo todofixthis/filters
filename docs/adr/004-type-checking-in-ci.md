@@ -193,15 +193,37 @@ abstract-argument overloads.
   2 pre-existing errors in `src` — `base.py:78` (a `UnionType` used where a
   class is expected) and `macros.py:76` (a zero-argument `super()` call
   inside a `@staticmethod`) — both unrelated to [#34][].
-- `mypy src` also prints 21 `annotation-unchecked` notes on every run (e.g.
-  `base.py:78: note: By default the bodies of untyped functions are not
+- `mypy src` also prints `annotation-unchecked` notes on every run (e.g.
+  `complex.py:93: note: By default the bodies of untyped functions are not
   checked, consider using --check-untyped-defs`). These are notes, not
   errors, so the exit code is unaffected: mypy skips checking variable
   annotations inside untyped function bodies unless `--check-untyped-defs`
   is set, which this baseline leaves unset. Expected, non-blocking noise —
-  Phase 6 is the natural place to revisit `check_untyped_defs`.
+  Phase 6 is the natural place to revisit `check_untyped_defs`. 21 when
+  this ADR was written, 2 at the tip of #34's branch: annotating a function
+  body is what stops it triggering the note.
+- Re-measured at that same tip, the backlog the disabled codes hide has
+  roughly doubled rather than shrunk: `mypy src` with all twelve codes
+  re-enabled reports 77 errors against the 37 above. Two codes supply 32 of
+  the 40 new ones — `return-value` (2 then, 22 now) and `no-redef` (1 then,
+  13 now) — both a direct consequence of Phase 2 giving every `_apply` a
+  declared return type for mypy to check each rejection path against.
+  Pyright rises the same way, 76 to 114 under a bare `pyrightconfig.json`
+  at both points — a different invocation from the table's 71, so compare
+  the pair, not either figure to it. The disabled list is therefore not the
+  frozen pre-#34 snapshot the Decision above describes: pinning a baseline
+  by code fixes which categories are ignored, not how many errors they
+  hide.
+- `return-value` cannot be cleared by tidying. Nearly every instance is
+  `Incompatible return value type (got "None", expected ...)` where a
+  filter returns `self._invalid_value(...)`, and replacing that rejection
+  mechanism with a raised `FilterError` is what [future work 002][]
+  proposes and defers. Until that lands, Phase 6 can only leave this code
+  disabled or suppress it at every rejection path — so `revisit-when` is
+  gated on a decision this ADR does not own.
 - Every disabled mypy code and `false` pyright rule above is a debt Phase 6
   must clear, not a permanent configuration — the point at which
   `revisit-when` fires.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
+[future work 002]: ../future/002-filters-raising-filtererror-directly.md

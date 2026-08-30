@@ -1,5 +1,6 @@
 ---
-status: Accepted
+status: Superseded
+superseded-by: 8
 date: 2026-08-30
 scope: [src/filters/]
 summary: Re-enable mypy's globally disabled `override` code with a file-level directive in each module carrying an interim override suppression, rather than adding `unused-ignore` to the suppression comment, which forfeits decay detection.

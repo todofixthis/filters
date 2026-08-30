@@ -97,10 +97,11 @@ include = ["src/*.py", "test/typing/*.py"]
 [tool.mypy]
 ignore_missing_imports = true
 warn_unused_ignores = true
-# Baseline bar (see docs/adr/004-type-checking-in-ci.md): today's tree trips
-# these codes independent of the generics work #34 exists for. Phase 6
-# ratchets this list down to nothing and clears the errors it currently
-# hides.
+# Baseline bar (see docs/adr/004-type-checking-in-ci.md): the tree tripped
+# these codes before #34's generics work, which has since added to the same
+# categories rather than clearing them. Phase 6 ratchets this list down to
+# nothing; ADR 004's Consequences record the current counts and what
+# `return-value` is blocked on.
 disable_error_code = [
     "arg-type",
     "assignment",
@@ -117,10 +118,10 @@ disable_error_code = [
 ]
 
 [tool.pyright]
-# Baseline bar (see docs/adr/004-type-checking-in-ci.md): today's tree trips
-# these rules independent of the generics work #34 exists for. Phase 6
-# ratchets this list down to nothing and clears the errors it currently
-# hides.
+# Baseline bar (see docs/adr/004-type-checking-in-ci.md): the tree tripped
+# these rules before #34's generics work, which has since added to the same
+# categories rather than clearing them. Phase 6 ratchets this list down to
+# nothing; ADR 004's Consequences record the current counts.
 reportArgumentType = false
 reportAssignmentType = false
 reportAttributeAccessIssue = false
