@@ -151,7 +151,7 @@ validating a delimited string positionally, e.g. after
 
    import filters as f
 
-   filter_ = (
+   volume_mount = (
        f.Unicode | f.Strip | f.NotEmpty | f.Split(':') |
        f.FilterMapper(
            {
@@ -167,12 +167,12 @@ validating a delimited string positionally, e.g. after
    )
 
    # The mode flag is present.
-   runner = f.FilterRunner(filter_, '/config:/data:rw')
+   runner = f.FilterRunner(volume_mount, '/config:/data:rw')
    assert runner.is_valid() is True
    assert runner.cleaned_data == ['/config', '/data', 'rw']
 
    # The mode flag is missing, so it defaults to 'ro'.
-   runner = f.FilterRunner(filter_, '/config:/data')
+   runner = f.FilterRunner(volume_mount, '/config:/data')
    assert runner.is_valid() is True
    assert runner.cleaned_data == ['/config', '/data', 'ro']
 
