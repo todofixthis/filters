@@ -48,7 +48,7 @@ degrade are the most common ones, so the failure is widespread and quiet.
 
 ### Option 2: Marker base classes, dispatched by overloads on `|` (Accepted)
 
-`base.py` gains `PassThrough` and `Widening[D]`, both `BaseFilter`
+`base.py` gains `PassThrough` and `Widening[T_widened]`, both `BaseFilter`
 subclasses that add no runtime behaviour, and each of the three places `|`
 is defined carries a set of overloads that dispatches on them. A filter
 joins a category by its base class.
@@ -58,8 +58,9 @@ built from it infers correctly without naming a type — including
 `f.Unicode | f.NotEmpty` written entirely in bare classes. A downstream
 package gets the same treatment by subclassing the marker.
 **Cons:** Two new public names in `base.py` that exist only for the type
-checker, and five overloads repeated in three places — fifteen signatures
-whose bodies are all one implementation.
+checker, and seven overloads repeated in three places — the five categories
+plus the `None` and zero-argument-callable arms `FilterCompatible` still
+carries — so twenty-one signatures whose bodies are all one implementation.
 **Risks:** A filter filed in the wrong category produces a confidently
 wrong chain type. `MaxBytes` is the live example: it reads as a length
 check but `_apply` encodes, and returns `bytes` on every path that isn't an
@@ -110,7 +111,7 @@ Five categories, only two of which need a marker:
 |---|---|---|
 | Transforming | `BaseFilter[T]` | Output becomes `T` |
 | Pass-through | `PassThrough` | Output unchanged |
-| Widening | `Widening[D]` | Output becomes `T \| D` |
+| Widening | `Widening[T_widened]` | Output becomes `T \| T_widened` |
 | Ctor-typed | `BaseFilter[T]`, `T` bound in `__init__` | Output becomes `T` |
 | Untyped | `BaseFilter[Any]` | Output becomes `Any` |
 
@@ -122,17 +123,17 @@ and no overload of their own. Only pass-through and widening change what
 Nothing does an `isinstance` check against either marker, and nothing
 should: their whole job is to be visible in an overload signature.
 
-`Widening[D]` widens to `T_out | D` and stops there, even though `Optional`
-— its only member — exists to remove `None` and `apply()` returns
-`T_out | None` regardless. Resolving that means giving `Optional` a
-narrowing override, which #34 defers.
+`Widening[T_widened]` widens to `T_out | T_widened` and stops there, even
+though `Optional` — its only member — exists to remove `None` and
+`apply()` returns `T_out | None` regardless. Resolving that means giving
+`Optional` a narrowing override, which #34 defers.
 
 ## Consequences
 
 - `PassThrough` and `Widening` are public API in `base.py` and in
   `__all__`. Downstream packages join a category the same way this one
   does, by subclassing.
-- The five overloads are duplicated across `FilterMeta.__or__`,
+- The overloads are duplicated across `FilterMeta.__or__`,
   `BaseFilter.__or__` and `FilterChain.__or__`. `FilterChain` cannot simply
   inherit them: it overrides `__or__` for a runtime reason — chaining onto
   a chain copies rather than mutating — and every `|` after the first
@@ -141,9 +142,32 @@ narrowing override, which #34 defers.
   `FilterChain[Any]` on both checkers, while deleting the override
   altogether infers correctly; keeping the runtime behaviour is what
   obliges the third copy.
-- Overload order is load-bearing. `PassThrough` and `Widening` are
-  `BaseFilter` subclasses, so the general `BaseFilter[T]` overloads match
-  them too; the marker overloads must come first or the markers never fire.
+- Every set has to cover the whole of `FilterCompatible`, not just the
+  categories. `None` and a zero-argument callable are both accepted by
+  `resolve_filter`, so each set carries an arm for them; omitting either
+  makes `f.Unicode | None` a type error, which is a break #34 schedules for
+  phase 5 rather than one this ADR takes.
+- Overload order is load-bearing, in both directions. `PassThrough` and
+  `Widening` are `BaseFilter` subclasses, so the general `BaseFilter[T]`
+  overloads match them too and the marker overloads must come first or the
+  markers never fire. The callable arm is the mirror image: a filter
+  *class* is itself a zero-argument callable returning a filter, so it must
+  come last or it swallows every `type[...]` arm above it. Measured —
+  putting the callable arm first degrades `f.Unicode | f.NotEmpty` to
+  `FilterChain[Any]` on both checkers.
+- Assigning a category is a hierarchy change, not an annotation. A marker
+  is a real base class, so rebasing `NotEmpty` onto `PassThrough` in phase
+  2 adds an MRO entry and flips `issubclass(f.NotEmpty, f.PassThrough)`
+  from `False` to `True`. #34 treats that class of change as breaking for
+  the `ByteString`/`Unicode` split; this one runs the other way — it only
+  adds a base nothing downstream can have been testing for, the marker not
+  having existed — so it is additive, and `issubclass`-visible all the
+  same.
+- A filter is pass-through **or** typed, never both. `PassThrough` is
+  `BaseFilter[Any]`, and the marker overloads run first, so a filter that
+  lists both — `class Foo(PassThrough, BaseFilter[str])` — has its `str`
+  silently ignored: both checkers accept the class and then chain it as a
+  pass-through. Phase 2 has to pick one per filter.
 - Phase 2 assigns every filter a category, and a wrong assignment is not
   something either checker can catch — the filter's `_apply` is the only
   evidence. `MaxBytes` is the one already known to read against its

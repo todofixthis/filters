@@ -3,7 +3,7 @@ status: Accepted
 date: 2026-08-30
 scope: [src/filters/]
 summary: Parameterise BaseFilter on a single invariant output type variable, declared with typing_extensions.TypeVar(default=Any) rather than PEP 695 syntax or a second input parameter.
-revisit-when: A filter needs to constrain its input type as well as its output; or PEP 695 syntax gains a way to declare variance rather than infer it; or requires-python reaches 3.13, making typing_extensions.TypeVar redundant.
+revisit-when: A filter needs to constrain its input type as well as its output; or PEP 695 syntax gains a way to declare variance rather than infer it. requires-python reaching 3.13 changes only where TypeVar is imported from — typing rather than typing_extensions — and neither the syntax nor the variance decision with it.
 ---
 
 # 005: Parameterise Filters on One Output Type
@@ -88,11 +88,16 @@ write `Any` in the one place it would have mattered.
 
 ### Option 4: PEP 695 syntax (`class BaseFilter[T_out]`)
 
-**Pros:** No `TypeVar` call, no `Generic` base, no import — and PEP 695 has
-native `= Any` defaults, so no `typing_extensions` dependency.
-**Cons:** PEP 695 infers variance from usage rather than letting it be
-declared. Today `T_out` is output-only, so both checkers would infer
-covariance; the narrowing category deferred in
+**Pros:** No `TypeVar` call, no `Generic` base, no import.
+**Cons:** It cannot carry the default on this package's floor. PEP 696
+defaults reached PEP 695 syntax in Python 3.13, so
+`class BaseFilter[T_out = Any]` is a `SyntaxError` under the `>=3.12`
+`requires-python` declares (checked on 3.12.14 and 3.13.15), and a PEP 695
+parameter cannot borrow a `typing_extensions` `TypeVar` to get one — the
+dependency this option looks like it saves is what a working default costs.
+PEP 695 also infers variance from usage rather than letting it be declared.
+Today `T_out` is output-only, so both checkers would infer covariance; the
+narrowing category deferred in
 [006: Distinguish Filter Categories by Marker Base Class][] would put it in
 an input position and flip that inference, changing the variance of a
 public generic class as a side effect of an unrelated change.
@@ -103,10 +108,12 @@ consumers that nothing in this repository would flag.
 
 Option 2. Option 3's second parameter is charged to every subclass author
 in this package and downstream, and buys a parameter that is `Any` wherever
-it would have to be written. Option 4 is rejected on variance alone: this
-is a public generic base subclassed outside this repository, and the one
-property a public generic owes those subclasses is that its variance does
-not change without someone deciding it should.
+it would have to be written. Option 4 does not survive the 3.12 floor —
+the default it needs is a syntax error there — and would be rejected on
+variance even if it did: this is a public generic base subclassed outside
+this repository, and the one property a public generic owes those
+subclasses is that its variance does not change without someone deciding
+it should.
 
 Invariant, and deliberately so. Covariance would be sound today — `T_out`
 appears only in `apply`, `_apply` and `_apply_none` return positions, and
