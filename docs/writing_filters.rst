@@ -81,6 +81,13 @@ Custom Filters
 Sometimes you just can't get what you want by assembling existing filters, and
 you need to write your own.
 
+:py:class:`filters.BaseFilter` takes an optional type parameter declaring the
+filter's output type — ``BaseFilter[bytes]`` for a filter whose ``_apply``
+always returns ``bytes`` — which lets a type checker infer the output type of
+any chain the filter appears in. Leaving it off defaults to
+``BaseFilter[Any]``, the same as any built-in filter whose output can't be
+pinned down until runtime.
+
 To create a new filter, write a class that extends
 :py:class:`filters.BaseFilter` and implement the ``_apply`` method:
 
@@ -88,7 +95,7 @@ To create a new filter, write a class that extends
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      block_size = 16
 
      def _apply(self, value):
@@ -110,7 +117,7 @@ Here's the ``Pkcs7Pad`` filter with a little bit of validation logic:
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      CODE_INVALID_TYPE = 'invalid_type'
 
      templates = {
@@ -138,7 +145,7 @@ the :py:class:`filters.ByteString` filter:
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      block_size = 16
 
      def _apply(self, value):
