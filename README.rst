@@ -224,9 +224,13 @@ The following extensions are available:
      current status.
 
 .. tip::
-   To install multiple extensions, separate them with commas, e.g.::
+   To install multiple ``pip install phx-filters[...]`` extras together,
+   separate them with commas, e.g.::
 
       pip install phx-filters[django,iso]
+
+   Pydantic Filters is a standalone package, so it installs on its own
+   rather than as one of these extras.
 
 Maintainers
 -----------
