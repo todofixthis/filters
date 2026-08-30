@@ -166,6 +166,13 @@ class FilterMapper(BaseFilter):
     Note:
         The order of extra keys is undefined, but they will always be
         last.
+
+    Note:
+        If every key in ``filter_map`` is a non-bool ``int``, the
+        FilterMapper also accepts a ``list``/``tuple`` and applies each
+        filter to the item at the corresponding index, returning a
+        ``list`` instead of a dict. This is useful for validating the
+        output of e.g. :py:class:`.Split` positionally.
     """
 
     CODE_EXTRA_KEY = "unexpected"
@@ -175,6 +182,9 @@ class FilterMapper(BaseFilter):
         CODE_EXTRA_KEY: 'Unexpected key "{actual_key}".',
         CODE_MISSING_KEY: "{key} is required.",
     }
+
+    mapping_result_type = dict
+    sequence_result_type = list
 
     def __init__(
         self,
@@ -232,8 +242,19 @@ class FilterMapper(BaseFilter):
                 self._filters[key] = self.resolve_filter(
                     filter_chain,
                     parent=self,
-                    key=key,
+                    # ``resolve_filter`` skips a falsy ``key`` and
+                    # ``_make_key`` joins key parts with ``str.join``,
+                    # so an un-stringified int key (especially ``0``)
+                    # would go missing from error contexts, or blow up
+                    # ``str.join`` if a sibling key is a string.
+                    key=self.unicodify_key(key),
                 )
+
+        # Every key must be a non-bool int for this FilterMapper to
+        # also accept sequence input (see class docstring).
+        self._is_positional = bool(self._filters) and all(
+            isinstance(key, int) and not isinstance(key, bool) for key in self._filters
+        )
 
     def __str__(self):
         return (
@@ -245,70 +266,139 @@ class FilterMapper(BaseFilter):
         )
 
     def _apply(self, value):
-        value: Mapping = self._filter(value, Type(Mapping))
+        allowed_types = (Mapping, list, tuple) if self._is_positional else Mapping
+        value = self._filter(value, Type(allowed_types))
 
         if self._has_errors:
             return None
 
-        return dict(self.iter(value))
+        result_type = (
+            self.mapping_result_type
+            if isinstance(value, Mapping)
+            else self.sequence_result_type
+        )
 
-    def iter(self, value: Mapping) -> Generator[tuple[str, Any], None, None]:
+        return result_type(self.iter(value))
+
+    def iter(self, value: Mapping | list | tuple) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
-            # Apply filtered values first.
-            for key, filter_chain in self._filters.items():
-                if key in value:
-                    yield key, self._apply_item(key, value[key], filter_chain)
+            if isinstance(value, Mapping):
+                yield from self._iter_mapping(value)
+            else:
+                yield from self._iter_sequence(value)
 
-                elif self._missing_key_allowed(key):
-                    # Filter the missing value as if it was set to ``None``.
-                    yield key, self._apply_item(key, None, filter_chain)
+    def _iter_mapping(
+        self,
+        value: Mapping,
+    ) -> Generator[tuple[Hashable, Any], None, None]:
+        """Iterator version of :py:meth:`apply` for mapping input."""
+        # Apply filtered values first.
+        for key, filter_chain in self._filters.items():
+            if key in value:
+                yield key, self._apply_item(key, value[key], filter_chain)
 
-                else:
-                    # Treat the missing value as invalid.
-                    yield key, self._invalid_value(
-                        value=None,
-                        reason=self.CODE_MISSING_KEY,
-                        sub_key=key,
-                    )
+            elif self._missing_key_allowed(key):
+                # Filter the missing value as if it was set to ``None``.
+                yield key, self._apply_item(key, None, filter_chain)
 
-            # Extra values go last.
-            # Note that we iterate in sorted order, in case the result type
-            # preserves ordering.
-            # https://github.com/eflglobal/filters/issues/13
-            for key in sorted(set(value.keys()) - set(self._filters.keys())):
-                if self._extra_key_allowed(key):
-                    yield key, value[key]
-                else:
-                    unicode_key = self.unicodify_key(key)
+            else:
+                # Treat the missing value as invalid.
+                yield key, self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=self.unicodify_key(key),
+                )
 
-                    # Handle the extra value just like any other invalid value,
-                    # but do not include it in the result (note that there is
-                    # no ``yield`` here).
-                    self._invalid_value(
-                        value=value[key],
-                        reason=self.CODE_EXTRA_KEY,
-                        sub_key=unicode_key,
-                        # https://github.com/eflglobal/filters/issues/15
-                        template_vars={
-                            "actual_key": unicode_key,
-                        },
-                    )
+        # Extra values go last.
+        # Note that we iterate in sorted order, in case the result type
+        # preserves ordering.
+        # https://github.com/eflglobal/filters/issues/13
+        for key in sorted(set(value.keys()) - set(self._filters.keys())):
+            if self._extra_key_allowed(key):
+                yield key, value[key]
+            else:
+                unicode_key = self.unicodify_key(key)
+
+                # Handle the extra value just like any other invalid value,
+                # but do not include it in the result (note that there is
+                # no ``yield`` here).
+                self._invalid_value(
+                    value=value[key],
+                    reason=self.CODE_EXTRA_KEY,
+                    sub_key=unicode_key,
+                    # https://github.com/eflglobal/filters/issues/15
+                    template_vars={
+                        "actual_key": unicode_key,
+                    },
+                )
+
+    def _iter_sequence(
+        self,
+        value: list | tuple,
+    ) -> Generator[Any, None, None]:
+        """Iterator version of :py:meth:`apply` for sequence input.
+
+        Keys in ``filter_map`` are treated as indexes into ``value``.
+        """
+        length = len(value)
+
+        # Apply filtered values first.
+        for key, filter_chain in self._filters.items():
+            if 0 <= key < length:
+                yield self._apply_item(key, value[key], filter_chain)
+
+            elif self._missing_key_allowed(key):
+                # Filter the missing value as if it was set to ``None``.
+                yield self._apply_item(key, None, filter_chain)
+
+            else:
+                # Treat the missing value as invalid.
+                yield self._invalid_value(
+                    value=None,
+                    reason=self.CODE_MISSING_KEY,
+                    sub_key=self.unicodify_key(key),
+                )
+
+        # Extra values go last, in their original order.
+        covered_indexes = set(self._filters.keys())
+        for index in range(length):
+            if index in covered_indexes:
+                continue
+
+            if self._extra_key_allowed(index):
+                yield value[index]
+            else:
+                unicode_key = self.unicodify_key(index)
+
+                # Handle the extra value just like any other invalid value,
+                # but do not include it in the result (note that there is
+                # no ``yield`` here).
+                self._invalid_value(
+                    value=value[index],
+                    reason=self.CODE_EXTRA_KEY,
+                    sub_key=unicode_key,
+                    # https://github.com/eflglobal/filters/issues/15
+                    template_vars={
+                        "actual_key": unicode_key,
+                    },
+                )
 
     def _apply_item(
         self,
-        key: str,
+        key: Hashable,
         value: Any,
         filter_chain: FilterCompatible,
     ) -> Any:
-        """Applies filters to a single item in the mapping.
+        """Applies filters to a single item in the incoming mapping or
+        sequence.
 
         Override this method in a subclass if you want to customise the
         way specific items get filtered.
         """
-        return self._filter(value, filter_chain, sub_key=key)
+        return self._filter(value, filter_chain, sub_key=self.unicodify_key(key))
 
-    def _missing_key_allowed(self, key: str) -> bool:
+    def _missing_key_allowed(self, key: Hashable) -> bool:
         """Returns whether the specified key is allowed to be omitted
         from the incoming value.
         """
@@ -320,7 +410,7 @@ class FilterMapper(BaseFilter):
         except TypeError:
             return False
 
-    def _extra_key_allowed(self, key: str) -> bool:
+    def _extra_key_allowed(self, key: Hashable) -> bool:
         """Returns whether the specified extra key is allowed."""
         if self.allow_extra_keys is True:
             return True
