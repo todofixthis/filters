@@ -184,6 +184,19 @@ abstract-argument overloads.
   `@overload`) leaves the error reported against the `def` below it, and
   `reportUnnecessaryTypeIgnoreComment` is off by default — a misplaced
   ignore then fails silently rather than erroring.
+- `reportGeneralTypeIssues` is the broadest-sounding rule in the disabled
+  pyright list, but its footprint here is narrow: run under a bare
+  `pyrightconfig.json` (no `[tool.pyright]` overrides), it fires on exactly
+  2 pre-existing errors in `src` — `base.py:78` (a `UnionType` used where a
+  class is expected) and `macros.py:76` (a zero-argument `super()` call
+  inside a `@staticmethod`) — both unrelated to [#34][].
+- `mypy src` also prints 21 `annotation-unchecked` notes on every run (e.g.
+  `base.py:78: note: By default the bodies of untyped functions are not
+  checked, consider using --check-untyped-defs`). These are notes, not
+  errors, so the exit code is unaffected: mypy skips checking variable
+  annotations inside untyped function bodies unless `--check-untyped-defs`
+  is set, which this baseline leaves unset. Expected, non-blocking noise —
+  Phase 6 is the natural place to revisit `check_untyped_defs`.
 - Every disabled mypy code and `false` pyright rule above is a debt Phase 6
   must clear, not a permanent configuration — the point at which
   `revisit-when` fires.
