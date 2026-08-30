@@ -4,6 +4,8 @@
 # against a real error instead of registering as unused once
 # ``--warn-unused-ignores`` sees no ``override`` diagnostic to match it to.
 # See the "interim state" comment on that suppression for why it exists.
+# Remove this directive too once that suppression goes — see
+# docs/adr/007-reactivate-a-disabled-checker-code-per-module.md.
 # mypy: enable-error-code="override"
 from collections.abc import (
     Callable,
