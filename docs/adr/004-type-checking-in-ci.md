@@ -194,7 +194,7 @@ abstract-argument overloads.
   class is expected) and `macros.py:76` (a zero-argument `super()` call
   inside a `@staticmethod`) — both unrelated to [#34][].
 - `mypy src` also prints `annotation-unchecked` notes on every run (e.g.
-  `complex.py:93: note: By default the bodies of untyped functions are not
+  `complex.py:92: note: By default the bodies of untyped functions are not
   checked, consider using --check-untyped-defs`). These are notes, not
   errors, so the exit code is unaffected: mypy skips checking variable
   annotations inside untyped function bodies unless `--check-untyped-defs`
@@ -204,16 +204,18 @@ abstract-argument overloads.
   body is what stops it triggering the note.
 - Re-measured at that same tip, the backlog the disabled codes hide has
   roughly doubled rather than shrunk: `mypy src` with all twelve codes
-  re-enabled reports 77 errors against the 37 above. Two codes supply 32 of
-  the 40 new ones — `return-value` (2 then, 22 now) and `no-redef` (1 then,
+  re-enabled reports 81 errors against the 37 above. Two codes supply 35 of
+  the 44 new ones — `return-value` (2 then, 22 now) and `no-redef` (1 then,
   13 now) — both a direct consequence of Phase 2 giving every `_apply` a
   declared return type for mypy to check each rejection path against.
-  Pyright rises the same way, 76 to 114 under a bare `pyrightconfig.json`
-  at both points — a different invocation from the table's 71, so compare
-  the pair, not either figure to it. The disabled list is therefore not the
-  frozen pre-#34 snapshot the Decision above describes: pinning a baseline
-  by code fixes which categories are ignored, not how many errors they
-  hide.
+  Pyright shows the same pattern — its count under a bare
+  `pyrightconfig.json` also roughly doubles across the same two points —
+  but the exact figures didn't reproduce consistently across repeated
+  measurements, unlike mypy's, so treat pyright here as directional
+  confirmation rather than a citable count. The disabled list is therefore
+  not the frozen pre-#34 snapshot the Decision above describes: pinning a
+  baseline by code fixes which categories are ignored, not how many errors
+  they hide.
 - `return-value` cannot be cleared by tidying. Nearly every instance is
   `Incompatible return value type (got "None", expected ...)` where a
   filter returns `self._invalid_value(...)`, and replacing that rejection
