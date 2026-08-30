@@ -29,10 +29,14 @@ def test_smoke_set_handler_return_type_is_base_filter() -> None:
     Proves the harness and its CI wiring work end to end against a
     construct where mypy and pyright already agree, before Phase 1 makes
     the interesting cases (chain inference) possible to write.
+
+    ``Unicode`` now carries its real ``BaseFilter[str]`` type (Phase 2b),
+    so the expectation follows it rather than the ``BaseFilter[Any]`` this
+    predates.
     """
     assert_type(
         f.Unicode().set_handler(f.ExceptionHandler()),
-        f.BaseFilter,
+        f.BaseFilter[str],
     )
 
 
@@ -44,5 +48,5 @@ def test_smoke_resolve_filter_return_type_is_optional_base_filter() -> None:
     """
     assert_type(
         f.BaseFilter.resolve_filter(f.Unicode()),
-        Optional[f.BaseFilter],
+        Optional[f.BaseFilter[str]],
     )
