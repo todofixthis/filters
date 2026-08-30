@@ -5,3 +5,4 @@
 | # | Status | Title | Scope | Summary | Revisit |
 |---|--------|-------|-------|---------|---------|
 | [001](001-export-test-helpers-as-pytest-plugin.md) | Accepted | Export Test Helpers as a pytest Plugin | pyproject.toml, src/filters/pytest.py | Test helper fixtures are exported as an auto-registered pytest plugin via the `pytest11` entry point. |  |
+| [003](003-infer-filtermapper-sequence-support-from-key-types.md) | Accepted | Infer FilterMapper's Sequence Support from Filter-Map Key Types | src/filters/complex.py | FilterMapper accepts sequence input (returning a list) exactly when filter_map is non-empty and every key is a non-bool int; a FilterMapper with any other key keeps accepting Mapping input only. | A real use case needs FilterMapper's positional mode to accept a Sequence type other than list/tuple, or to accept str/bytes positionally, or to mix int and non-int keys in one positional FilterMapper. |

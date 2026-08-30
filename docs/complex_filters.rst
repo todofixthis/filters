@@ -141,6 +141,41 @@ You can also provide explicit key names for allowed extra/missing parameters:
    This filter is often chained with :py:class:`filters.JsonDecode`, when
    parsing a JSON object into a ``dict``.
 
+If every key in the ``filter_map`` is an ``int``, ``FilterMapper`` also accepts
+a sequence (e.g., ``list``) and applies each filter chain to the item at the
+matching index, returning a ``list`` instead of a ``dict``. This is handy for
+validating a delimited string positionally, e.g. after
+:py:class:`filters.Split`.
+
+.. code-block:: python
+
+   import filters as f
+
+   filter_ = (
+       f.Unicode | f.Strip | f.NotEmpty | f.Split(':') |
+       f.FilterMapper(
+           {
+               0: f.Unicode,
+               1: f.Unicode,
+               2: f.CaseFold | f.Choice({'ro', 'rw'}) | f.Optional('ro'),
+           },
+           allow_extra_keys = False,
+
+           # The mode flag is optional; default to 'ro' if omitted.
+           allow_missing_keys = {2},
+       )
+   )
+
+   # The mode flag is present.
+   runner = f.FilterRunner(filter_, '/config:/data:rw')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['/config', '/data', 'rw']
+
+   # The mode flag is missing, so it defaults to 'ro'.
+   runner = f.FilterRunner(filter_, '/config:/data')
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == ['/config', '/data', 'ro']
+
 .. _filter-repeater:
 
 FilterRepeater
