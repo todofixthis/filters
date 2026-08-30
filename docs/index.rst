@@ -236,10 +236,14 @@ the ``filters.ext`` namespace:
 
       pip install phx-filters-pydantic
 
+  .. note::
+     Not yet published to PyPI — see the `Pydantic Filters`_ repository for
+     current status.
+
 Happy filtering!
 
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
 .. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
 .. _pydantic: https://docs.pydantic.dev/
-.. _Pydantic Filters: https://pypi.python.org/pypi/phx-filters-pydantic
+.. _Pydantic Filters: https://github.com/todofixthis/filters-pydantic
 .. _Unicode normalization: https://en.wikipedia.org/wiki/Unicode_equivalence
