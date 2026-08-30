@@ -191,8 +191,14 @@ class FilterRunner(Generic[T_out]):
     def __str__(self):
         return str(self.filter_chain)
 
-    def apply(self, incoming_data: Any):
+    def apply(self, incoming_data: Any) -> None:
         """Reruns the filter chain against a new value.
+
+        Note:
+            Unlike :py:meth:`filters.BaseFilter.apply`, this returns
+            nothing: it resets the cached result, so the next read of
+            :py:attr:`cleaned_data` (or ``errors``, ``is_valid()``, ...)
+            refilters.
 
         Args:
             incoming_data: The new value to filter.
@@ -339,7 +345,7 @@ class FilterRunner(Generic[T_out]):
         """
         return not self.filter_messages
 
-    def full_clean(self):
+    def full_clean(self) -> None:
         """Applies the filter to the request data."""
         if self._handler is None:
             self._handler = MemoryHandler(self.capture_exc_info)

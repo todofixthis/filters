@@ -1,7 +1,5 @@
 from collections.abc import Callable, Generator, Iterable, Mapping
-from typing import Any, Hashable
-
-from typing_extensions import TypeVar
+from typing import Any, Hashable, TypeVar
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
@@ -14,8 +12,9 @@ __all__ = [
     "NamedTuple",
 ]
 
-# Imported from ``typing_extensions`` because ``default=`` is native only
-# from Python 3.13, and this package supports 3.12. See
+# Plain ``typing.TypeVar``: neither type variable in this module declares a
+# ``default=``, the one PEP 696 feature needing ``typing_extensions`` while
+# ``requires-python`` stays below 3.13. See
 # docs/adr/005-parameterise-filters-on-one-output-type.md.
 TFR = TypeVar("TFR", bound="FilterRepeater")
 """The repeater :py:meth:`FilterRepeater.__copy__` was handed, and

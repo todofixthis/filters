@@ -841,6 +841,19 @@ class Optional(Widening[T_optional_default]):
         If an incoming value does not have a length, it is considered
         to be not empty (in particular, note that ``False`` and ``0``
         are considered not empty in this context).
+
+    Note:
+        The class parameter is bound from ``default`` itself, so the
+        factory idiom below (``default=list``) widens a chain by the
+        *callable's* type rather than by the type it constructs:
+        ``f.Unicode() | f.Optional(list)`` reports ``str`` union the type
+        of ``list`` (spelled differently by each checker) where the
+        runtime value is ``str | list``. Binding the constructed type
+        would take a second ``__init__`` overload keyed on callability,
+        which no checker can tell from the plain-value form when the
+        value is callable. An accepted limit rather than a defect, in
+        the same spirit as :py:class:`filters.Type`'s 2-tuple ceiling.
+        Pinned in ``test/typing/test_simple.py``.
     """
 
     def __init__(
