@@ -225,8 +225,21 @@ The following extensions are available:
 
       pip install phx-filters[django,iso]
 
+Integrations
+~~~~~~~~~~~~
+Integrations connect Filters to other libraries, rather than adding filters to
+the ``filters.ext`` namespace:
+
+* `Pydantic Filters`_: Use a Filters chain as a `pydantic`_ field validator, or
+  validate a value against a pydantic model from inside one.
+  To install::
+
+      pip install phx-filters-pydantic
+
 Happy filtering!
 
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
 .. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
+.. _pydantic: https://docs.pydantic.dev/
+.. _Pydantic Filters: https://pypi.python.org/pypi/phx-filters-pydantic
 .. _Unicode normalization: https://en.wikipedia.org/wiki/Unicode_equivalence
