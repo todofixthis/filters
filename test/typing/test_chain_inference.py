@@ -196,5 +196,6 @@ def test_chain_inference_type_binds_from_its_argument() -> None:
     """``Type``'s overloads bind the output type from ``allowed_types``."""
     assert_type(f.Type(str), f.Type[str])
     assert_type(f.Type((str, int)), f.Type[Union[str, int]])
-    # Tuples stop at two; a longer one degrades rather than erroring.
-    assert_type(f.Type((str, int, float)), f.Type[Any])
+    assert_type(f.Type((str, int, float)), f.Type[Union[str, int, float]])
+    # Tuples stop at three; a longer one degrades rather than erroring.
+    assert_type(f.Type((str, int, float, bool)), f.Type[Any])

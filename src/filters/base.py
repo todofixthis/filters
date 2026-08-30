@@ -46,6 +46,9 @@ T_allowed1 = TypeVar("T_allowed1")
 T_allowed2 = TypeVar("T_allowed2")
 """The second type a :py:class:`Type` filter accepts."""
 
+T_allowed3 = TypeVar("T_allowed3")
+"""The third type a :py:class:`Type` filter accepts."""
+
 TF = TypeVar("TF", bound="BaseFilter[Any]")
 """The filter :py:meth:`BaseFilter.__copy__` was handed, and returns."""
 
@@ -782,9 +785,13 @@ class Type(BaseFilter[T_out]):
     # pyright reaches the same conclusion from the first overload alone,
     # so it reports the fallback as unreachable; it is not, for mypy.
     #
-    # Tuples stop at two. ``Type((str, int, float))`` resolves to
+    # Tuples stop at three. ``Type((str, int, float, bool))`` resolves to
     # ``Type[Any]``, which is an accepted limit rather than a defect —
-    # neither ``src`` nor ``test`` passes a 3-tuple today.
+    # neither ``src`` nor ``test`` passes a 4-tuple today. A TypeVarTuple
+    # can't replace these individual overloads: neither mypy nor pyright
+    # allows unpacking one into a ``Union`` (confirmed against both), so
+    # supporting an arbitrary size would still mean one overload per
+    # arity, same as this list, just longer.
     #
     @overload
     def __init__(
@@ -806,6 +813,14 @@ class Type(BaseFilter[T_out]):
     def __init__(
         self: "Type[Union[T_allowed1, T_allowed2]]",
         allowed_types: tuple[type[T_allowed1], type[T_allowed2]],
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: "Type[Union[T_allowed1, T_allowed2, T_allowed3]]",
+        allowed_types: tuple[type[T_allowed1], type[T_allowed2], type[T_allowed3]],
         allow_subclass: bool = True,
         aliases: Optional[Mapping[type, str]] = None,
     ) -> None: ...
