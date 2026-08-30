@@ -379,15 +379,25 @@ class Date(Datetime):
         CODE_INVALID: "This value does not appear to be a date.",
     }
 
-    # Interim state: ``Date`` still inherits ``Datetime``'s ``datetime``
-    # class parameter, so ``apply`` would otherwise keep reporting
-    # ``datetime`` for a filter that actually returns ``date`` -- a real,
-    # pre-existing type contradiction (issue #34). Unlike ``ByteString``/
-    # ``Unicode`` (unrelated types), ``datetime`` is a *subclass* of
-    # ``date`` here, so narrowing the return type still trips mypy's
-    # ``override`` check the same way. Phase 5 splits ``Date`` and
-    # ``Datetime`` into siblings under a shared private base, which
-    # removes this suppression along with the inheritance itself.
+    # Interim state, and a partial one: ``Date`` still inherits
+    # ``Datetime``'s ``datetime`` class parameter, so ``apply`` would
+    # otherwise keep reporting ``datetime`` for a filter that actually
+    # returns ``date`` -- a real, pre-existing type contradiction (issue
+    # #34). Unlike ``ByteString``/``Unicode`` (unrelated types),
+    # ``datetime`` is a *subclass* of ``date`` here, so narrowing the
+    # return type still trips mypy's ``override`` check the same way.
+    #
+    # This override repairs the direct call only: ``Date().apply(x)``
+    # reports ``date``. Chains through this filter are still wrong --
+    # ``Date() | NoOp()`` and ``Unicode() | Date()`` both infer
+    # ``FilterChain[datetime]``, because the ``|`` overloads dispatch on the
+    # class parameter ``Date`` inherits, not on this method, so a caller
+    # reaching for ``.hour`` on a chain's output type-checks and then fails
+    # at runtime. Known and accepted; only Phase 5's split of ``Date`` and
+    # ``Datetime`` into siblings under a shared private base fixes it, and
+    # that removes this suppression along with the inheritance itself.
+    # ``test/typing/test_simple.py`` pins the wrong chain inference so
+    # Phase 5 has to update it deliberately.
     def apply(self, value: Any) -> date | None:  # type: ignore[override]
         return super().apply(value)
 

@@ -36,6 +36,20 @@ def test_byte_string_apply_returns_optional_bytes() -> None:
     assert_type(f.ByteString().apply("hello"), Optional[bytes])
 
 
+def test_byte_string_chain_still_reports_the_parent_type() -> None:
+    """Pins a known-wrong inference, not correct behaviour.
+
+    ``ByteString.apply``'s override fixes the direct call, but the ``|``
+    overloads dispatch on the class parameter ``ByteString`` inherits from
+    ``Unicode``, so a chain ending in ``ByteString`` reports ``str`` for a
+    chain that returns ``bytes`` at runtime. Phase 5's split of the two
+    filters is what fixes this; these assertions exist so that split has to
+    update them deliberately rather than silently changing the answer.
+    """
+    assert_type(f.Unicode() | f.ByteString(), f.FilterChain[str])
+    assert_type(f.Unicode() | f.Strip() | f.ByteString(), f.FilterChain[str])
+
+
 def test_choice_binds_element_type_from_ctor() -> None:
     """``Choice`` is ctor-typed: its class parameter is bound from the
     ``choices`` argument, not fixed like a transforming filter.

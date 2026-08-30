@@ -981,12 +981,20 @@ class ByteString(Unicode):
         """
         super().__init__(encoding, normalize)
 
-    # Interim state: ``ByteString`` still inherits ``Unicode``'s now-``str``
-    # class parameter, so ``apply`` would otherwise keep reporting ``str``
-    # for a filter that actually returns ``bytes`` -- a real, pre-existing
-    # type contradiction (issue #34). Phase 5 splits ``ByteString`` and
-    # ``Unicode`` into siblings under a shared private base, which removes
-    # this suppression along with the inheritance itself.
+    # Interim state, and a partial one: ``ByteString`` still inherits
+    # ``Unicode``'s now-``str`` class parameter, so ``apply`` would
+    # otherwise keep reporting ``str`` for a filter that actually returns
+    # ``bytes`` -- a real, pre-existing type contradiction (issue #34).
+    #
+    # This override repairs the direct call only: ``ByteString().apply(x)``
+    # reports ``bytes``. Chains through this filter are still wrong --
+    # ``Unicode() | ByteString()`` infers ``FilterChain[str]``, because the
+    # ``|`` overloads dispatch on the class parameter ``ByteString``
+    # inherits, not on this method. Known and accepted; only Phase 5's split
+    # of ``ByteString`` and ``Unicode`` into siblings under a shared private
+    # base fixes it, and that removes this suppression along with the
+    # inheritance itself. ``test/typing/test_string.py`` pins the wrong chain
+    # inference so Phase 5 has to update it deliberately.
     def apply(self, value: Any) -> Optional[bytes]:  # type: ignore[override]
         return super().apply(value)
 

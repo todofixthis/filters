@@ -46,6 +46,21 @@ def test_date_apply_returns_optional_date_not_datetime() -> None:
     assert_type(f.Date().apply("2000-01-01"), Optional[date])
 
 
+def test_date_chain_still_reports_the_parent_type() -> None:
+    """Pins a known-wrong inference, not correct behaviour.
+
+    ``Date.apply``'s override fixes the direct call, but the ``|``
+    overloads dispatch on the class parameter ``Date`` inherits from
+    ``Datetime``, so a chain through ``Date`` reports ``datetime`` for a
+    chain that returns ``date`` at runtime -- ``.hour`` on that output
+    type-checks and then raises. Phase 5's split of the two filters is what
+    fixes this; these assertions exist so that split has to update them
+    deliberately rather than silently changing the answer.
+    """
+    assert_type(f.Date() | f.NoOp(), f.FilterChain[datetime])
+    assert_type(f.Unicode() | f.Date(), f.FilterChain[datetime])
+
+
 def test_empty_not_empty_and_length_filters_are_pass_through() -> None:
     """Checks that only validate, so their own ``apply`` reports
     ``PassThrough``'s fixed ``Any`` -- the input type only survives
