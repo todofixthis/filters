@@ -3,9 +3,9 @@ from collections.abc import MutableMapping
 from logging import ERROR, Logger, LoggerAdapter
 from traceback import format_exc
 from types import TracebackType
-from typing import Any
+from typing import Any, Generic, Optional
 
-from filters.base import BaseFilter, BaseInvalidValueHandler, FilterCompatible
+from filters.base import BaseFilter, BaseInvalidValueHandler, FilterCompatible, T_out
 
 __all__ = [
     "FilterMessage",
@@ -152,7 +152,7 @@ class MemoryHandler(BaseInvalidValueHandler):
         return super().handle_exception(message, exc)
 
 
-class FilterRunner(object):
+class FilterRunner(Generic[T_out]):
     """Wrapper for a filter that provides an API similar to what you would
     expect from a Django form -- at least, when it comes to methods
     related to data validation :)
@@ -160,7 +160,7 @@ class FilterRunner(object):
 
     def __init__(
         self,
-        starting_filter: FilterCompatible,
+        starting_filter: "FilterCompatible[T_out]",
         incoming_data: Any = None,
         capture_exc_info: bool = False,
     ) -> None:
@@ -185,7 +185,7 @@ class FilterRunner(object):
         self.data = incoming_data
         self.capture_exc_info = capture_exc_info
 
-        self._cleaned_data = None
+        self._cleaned_data: Optional[T_out] = None
         self._handler: MemoryHandler | None = None
 
     def __str__(self):
@@ -203,8 +203,16 @@ class FilterRunner(object):
         self._handler = None
 
     @property
-    def cleaned_data(self):
+    def cleaned_data(self) -> T_out:
         """Returns the resulting value after applying the filter.
+
+        Note:
+            Typed as ``T_out`` rather than ``Optional[T_out]``: the
+            runtime value is ``None`` when the filter rejected the
+            input, but reading ``cleaned_data`` is documented to
+            require checking ``is_valid()``/``errors`` first, and this
+            optimistic typing reflects that intended usage contract
+            rather than an oversight.
 
         Returns:
             The resulting value after applying the request filter.

@@ -15,6 +15,7 @@ __all__ = [
     "FilterError",
     "FilterMeta",
     "PassThrough",
+    "T_out",
     "Type",
     "Widening",
 ]
