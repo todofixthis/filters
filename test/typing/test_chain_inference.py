@@ -16,6 +16,8 @@ ABC), so an assertion either way fails one of them.
 from copy import copy
 from typing import Any, Optional, Union, assert_type
 
+import pytest
+
 import filters as f
 
 
@@ -54,6 +56,11 @@ class _StubUnparameterised(f.BaseFilter):
         return value
 
 
+def _make_stub_transform_int() -> _StubTransformInt:
+    """Stands in for a filter supplied as a zero-argument callable."""
+    return _StubTransformInt()
+
+
 def test_chain_inference_pass_through_preserves_output_type() -> None:
     """A pass-through filter leaves the chain's output type alone."""
     assert_type(_StubTransform | _StubPassThrough, f.FilterChain[str])
@@ -74,6 +81,52 @@ def test_chain_inference_survives_three_filters() -> None:
         _StubTransform | _StubPassThrough | _StubPassThrough,
         f.FilterChain[str],
     )
+
+
+def test_chain_inference_none_leaves_the_chain_alone() -> None:
+    """``None`` on the right of ``|`` is a no-op, as it is at runtime.
+
+    Dropping this arm is a breaking change that #34 schedules for phase 5;
+    until then ``resolve_filter`` no-ops on ``None`` and the type has to
+    say so.
+    """
+    assert_type(_StubTransform | None, f.FilterChain[str])
+    assert_type(_StubTransform() | None, f.FilterChain[str])
+    assert_type((_StubTransform | _StubPassThrough) | None, f.FilterChain[str])
+
+    # The runtime half of the same claim: nothing was appended.
+    assert len((_StubTransform | None)._filters) == 1
+
+
+def test_chain_inference_callable_reports_what_it_returns() -> None:
+    """A zero-argument callable is resolved to the filter it returns, so
+    the chain takes that filter's output type.
+    """
+    assert_type(_StubTransform | _make_stub_transform_int, f.FilterChain[int])
+    assert_type(_StubTransform() | _make_stub_transform_int, f.FilterChain[int])
+    assert_type(
+        (_StubTransform | _StubPassThrough) | _make_stub_transform_int,
+        f.FilterChain[int],
+    )
+    assert_type(_StubTransform | (lambda: _StubTransformInt()), f.FilterChain[int])
+
+
+def test_chain_inference_rejects_a_non_filter_operand() -> None:
+    """Negative case: widening the overloads to swallow anything is the
+    failure mode this file exists to catch.
+
+    Both suppressions are load-bearing — remove either and the checker it
+    speaks for reports the mismatch, because a rejected operand leaves the
+    expression ``Any`` (mypy) or ``Unknown`` (pyright) rather than
+    ``FilterChain[str]``. Kept inside ``pytest.raises`` because this module
+    is collected and run like any other, and ``resolve_filter`` raises on an
+    operand it cannot resolve.
+    """
+    with pytest.raises(TypeError):
+        assert_type(  # type: ignore[assert-type]
+            _StubTransform() | 42,  # pyright: ignore[reportAssertTypeFailure]
+            f.FilterChain[str],
+        )
 
 
 def test_chain_inference_widening_adds_to_output_type() -> None:

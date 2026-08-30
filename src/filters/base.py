@@ -27,7 +27,7 @@ __all__ = [
 T_out = TypeVar("T_out", default=Any)
 """The type a filter produces."""
 
-D = TypeVar("D", default=Any)
+T_widened = TypeVar("T_widened", default=Any)
 """The type a :py:class:`Widening` filter adds to a chain's output."""
 
 T_next = TypeVar("T_next")
@@ -98,9 +98,19 @@ class FilterMeta(ABCMeta):
     # for mypy's structural objection, not for a wrong result.
     #
     # Overload order matters: PassThrough and Widening are BaseFilter
-    # subclasses, so the general overloads below would swallow them.
+    # subclasses, so the general overloads below would swallow them. The
+    # callable overload comes last for the same reason in reverse — a
+    # filter *class* is itself a zero-argument callable returning a
+    # filter, so placing it any earlier would swallow every ``type[...]``
+    # overload above it.
     # See docs/adr/006-distinguish-filter-categories-by-marker-base-class.md.
     #
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: None,
+    ) -> "FilterChain[T_out]": ...
+
     @overload
     def __or__(  # type: ignore[misc]
         cls: "type[BaseFilter[T_out]]",
@@ -116,8 +126,8 @@ class FilterMeta(ABCMeta):
     @overload
     def __or__(  # type: ignore[misc]
         cls: "type[BaseFilter[T_out]]",
-        next_filter: "Union[Widening[D], type[Widening[D]]]",
-    ) -> "FilterChain[Union[T_out, D]]": ...
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
 
     @overload
     def __or__(  # type: ignore[misc]
@@ -129,6 +139,12 @@ class FilterMeta(ABCMeta):
     def __or__(  # type: ignore[misc]
         cls: "type[BaseFilter[T_out]]",
         next_filter: "BaseFilter[T_next]",
+    ) -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "Callable[[], BaseFilter[T_next]]",
     ) -> "FilterChain[T_next]": ...
 
     def __or__(cls, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
@@ -154,7 +170,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         CODE_EXCEPTION: "An error occurred while processing this value.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self._parent: Optional[BaseFilter[Any]] = None
@@ -186,9 +202,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
         return new_filter
 
-    # The same five overloads as FilterMeta.__or__, in the same order, so
+    # The same seven overloads as FilterMeta.__or__, in the same order, so
     # that chaining behaves identically whether the left operand is a
     # filter class or a filter instance.
+    @overload
+    def __or__(self, next_filter: None) -> "FilterChain[T_out]": ...
+
     @overload
     def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
@@ -198,8 +217,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @overload
     def __or__(
         self,
-        next_filter: "Union[Widening[D], type[Widening[D]]]",
-    ) -> "FilterChain[Union[T_out, D]]": ...
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
 
     @overload
     def __or__(
@@ -209,6 +228,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
     @overload
     def __or__(self, next_filter: "BaseFilter[T_next]") -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Callable[[], BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
 
     def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
         """Chains another filter with this one."""
@@ -514,6 +539,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             elif callable(the_filter):
                 resolved = cls.resolve_filter(the_filter())
 
+                # A callable is free to hand back ``None``; without this
+                # guard the ``parent``/``key`` assignments below would
+                # raise ``AttributeError`` on it.
+                if resolved is None:
+                    return None
+
             # Uhh... hm.
             else:
                 raise TypeError(
@@ -550,10 +581,10 @@ class PassThrough(BaseFilter[Any]):
     """
 
 
-class Widening(BaseFilter[Any], Generic[D]):
-    """Marks a filter that adds ``D`` to the chain's output type rather
-    than replacing it — ``Optional``, whose ``D`` is the type of its
-    default.
+class Widening(BaseFilter[Any], Generic[T_widened]):
+    """Marks a filter that adds ``T_widened`` to the chain's output type
+    rather than replacing it — ``Optional``, whose ``T_widened`` is the
+    type of its default.
 
     Like :py:class:`PassThrough`, this is a static-typing device with no
     runtime behaviour of its own.
@@ -582,6 +613,11 @@ class FilterChain(BaseFilter[T_out]):
     # dispatches here, and an override without them collapses a
     # three-filter chain to ``FilterChain[Any]`` on both checkers.
     #
+    # Same order as the other two sets: markers first, callable last.
+    #
+    @overload
+    def __or__(self, next_filter: None) -> "FilterChain[T_out]": ...
+
     @overload
     def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
@@ -591,8 +627,8 @@ class FilterChain(BaseFilter[T_out]):
     @overload
     def __or__(
         self,
-        next_filter: "Union[Widening[D], type[Widening[D]]]",
-    ) -> "FilterChain[Union[T_out, D]]": ...
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
 
     @overload
     def __or__(
@@ -602,6 +638,12 @@ class FilterChain(BaseFilter[T_out]):
 
     @overload
     def __or__(self, next_filter: "BaseFilter[T_next]") -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Callable[[], BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
 
     def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
         """Chains a filter with this one.
