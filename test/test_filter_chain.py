@@ -37,6 +37,19 @@ def test_filter_chain_rejects_none(chain_none):
         chain_none()
 
 
+def test_filter_chain_rejects_none_names_the_class_operand():
+    """
+    ``SomeFilter | None`` names ``SomeFilter`` in its error, not the
+    ``FilterChain`` that ``FilterMeta.__or__`` wraps it in before
+    delegating.
+
+    ``Int() | None`` (the instance form) never had this problem, since
+    ``self`` there already is the filter the caller wrote.
+    """
+    with pytest.raises(TypeError, match=r"^None is not compatible with Int "):
+        f.Int | None
+
+
 def test_filter_chain_still_accepts_none_as_a_start_filter():
     """
     Only ``|`` rejects ``None``; ``FilterChain``'s own initialiser still

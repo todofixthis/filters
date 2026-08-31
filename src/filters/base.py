@@ -172,7 +172,20 @@ class FilterMeta(ABCMeta):
 
         Note:
             Reference: http://stackoverflow.com/a/10773232
+
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
         """
+        # Checked here, naming ``cls``, rather than left to the
+        # ``FilterChain(cls) | next_filter`` delegation below: that
+        # raises the same error but names the wrapping ``FilterChain``
+        # instead of the class the caller actually wrote.
+        if cls.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {cls.__name__} in a "
+                f"filter chain; use NoOp instead.",
+            )
+
         return FilterChain(cls) | next_filter
 
 
