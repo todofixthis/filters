@@ -744,7 +744,7 @@ class Split(BaseFilter[T_split]):
 
         split = self.regex.split(value)
 
-        if self.keys:
+        if self.keys is not None:
             # The split value can have at most as many items as ``self.keys``.
             split = self._filter(split, MaxLength(len(self.keys)))
 
