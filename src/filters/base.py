@@ -4,7 +4,7 @@ from copy import copy
 from typing import Any, Generic, Optional, Union, overload
 from weakref import ProxyTypes, proxy
 
-from typing_extensions import TypeVar
+from typing_extensions import TypeAliasType, TypeVar
 
 __all__ = [
     "BaseFilter",
@@ -58,13 +58,26 @@ TFC = TypeVar("TFC", bound="FilterChain[Any]")
 # Note: Using typing.Optional/Union instead of PEP 604 syntax (X | Y) for
 # forward references to avoid Sphinx autodoc warnings. Sphinx cannot parse
 # the | operator when combined with string forward references like "BaseFilter".
-FilterCompatible = Optional[
-    Union[
-        "BaseFilter[T_out]",
-        "type[BaseFilter[T_out]]",
-        Callable[[], "BaseFilter[T_out]"],
-    ]
-]
+#
+# Built via TypeAliasType rather than a plain assignment so that
+# ``type_params`` declares its genericity explicitly: a Union built from
+# string forward references carries no ``__parameters__`` of its own
+# (they're inside unevaluated ForwardRef objects), so a plain assignment
+# left this unsubscriptable at runtime and broke ``get_type_hints()`` on
+# every signature that names it. ``type_params=(T_out,)`` fixes both,
+# reusing ``T_out``'s own ``default=Any`` so bare ``FilterCompatible``
+# still works exactly as it did before.
+FilterCompatible = TypeAliasType(
+    "FilterCompatible",
+    Optional[
+        Union[
+            "BaseFilter[T_out]",
+            "type[BaseFilter[T_out]]",
+            Callable[[], "BaseFilter[T_out]"],
+        ]
+    ],
+    type_params=(T_out,),
+)
 """Used in PEP-484 type hints to indicate a value that can be
 normalised into an instance of a BaseFilter subclass.
 """
