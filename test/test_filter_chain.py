@@ -16,7 +16,16 @@ def test_filter_chain_implicit_chain(assert_filter_passes, assert_filter_errors)
     assert_filter_errors(filter_instance, "4", [f.Max.CODE_TOO_BIG])
 
 
-def test_filter_chain_rejects_none():
+@pytest.mark.parametrize(
+    "chain_none",
+    [
+        lambda: f.Int() | None,
+        lambda: f.Int | None,
+        lambda: (f.Int() | f.Max(3)) | None,
+    ],
+    ids=["instance", "class", "chain"],
+)
+def test_filter_chain_rejects_none(chain_none):
     """
     Chaining a filter with ``None`` raises, whichever side of the
     operator the chain is on.
@@ -25,13 +34,7 @@ def test_filter_chain_rejects_none():
     docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
     """
     with pytest.raises(TypeError):
-        f.Int() | None
-
-    with pytest.raises(TypeError):
-        f.Int | None
-
-    with pytest.raises(TypeError):
-        (f.Int() | f.Max(3)) | None
+        chain_none()
 
 
 def test_filter_chain_still_accepts_none_as_a_start_filter():
