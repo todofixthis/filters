@@ -384,6 +384,8 @@ class Datetime(_BaseDatetime[datetime]):
         return self._parse(value)
 
 
+# Do not make this a subclass of Datetime — see
+# docs/adr/008-split-bytestring-and-date-into-siblings.md.
 class Date(_BaseDatetime[date]):
     """Interprets the value as a UTC date.
 

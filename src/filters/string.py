@@ -963,6 +963,8 @@ class Unicode(_BaseDecoder[str]):
         return self._decode(value)
 
 
+# Do not make this a subclass of Unicode — see
+# docs/adr/008-split-bytestring-and-date-into-siblings.md.
 class ByteString(_BaseDecoder[bytes]):
     """Converts a value into a byte string, encoded as UTF-8.
 

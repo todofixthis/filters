@@ -1,6 +1,7 @@
 ---
-status: Accepted
+status: Archived
 date: 2026-08-30
+archived-because: Comments above the Date and ByteString class declarations forbid restoring the inheritance, met while either is being edited.
 scope: [src/filters/simple.py, src/filters/string.py, test/test_byte_string.py, test/test_date.py, test/typing/test_simple.py, test/typing/test_string.py]
 summary: Rebase `ByteString` and `Date` as siblings of `Unicode` and `Datetime` under a private generic base that holds the shared logic under a name of its own, rather than under `_apply`, and do not register the split pairs back together as virtual subclasses.
 revisit-when: A filter outside either pair needs the shared decode or parse logic, which would put the private base on the public surface; or a third sibling joins either base, where `_BaseDatetime`'s unenforced `CODE_INVALID` contract (see Consequences) would have to be enforced rather than documented.
@@ -188,6 +189,13 @@ three repositories, not a claim about every consumer.
   with an `AttributeError` from `_parse`'s exception path rather than at
   class definition. `_BaseDecoder` needs no equivalent, its
   `CODE_DECODE_ERROR` being one concrete value both siblings share.
+- Archiving removes this ADR from `INDEX.md`, but `archived-because` only
+  defends the one breach someone is likely to author by hand: restoring
+  either subclass relationship. The choice of `_decode`/`_parse` over
+  `_apply` for the shared logic, the `register()` rejection, and the
+  downstream consumer sweep have no comparable defence and could regress
+  unnoticed; accepted, since none of the three is a decision someone
+  reverses by editing a class declaration.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md
