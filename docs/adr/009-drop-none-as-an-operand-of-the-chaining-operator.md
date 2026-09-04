@@ -128,13 +128,25 @@ silent about `docs/`. Sweeping the paths it leaves out, `rg '\| None\b'` over
   That is the guard: re-adding a `None` arm returning `FilterChain[T_out]`
   would make the assertion pass again, and each checker would then report its
   own suppression as unused and fail the build.
-- The class form's `TypeError` names the wrong class. `f.Int | None` says
-  `None is not compatible with FilterChain in a filter chain`, not `Int`:
-  `FilterMeta.__or__` carries no guard of its own, delegating to
-  `FilterChain(cls) | next_filter`, and `FilterChain.__or__` raises using
-  `type(self).__name__`. The instance and chain forms name their own class.
-  Left as is: a third copy of the guard would buy a better noun in the message
-  at the price of a third `resolve_filter` call on the same operand.
+- The class form's `TypeError` now names the operand's own class rather than
+  the `FilterChain` wrapper `FilterMeta.__or__` builds internally: `f.Int |
+  None` says `None is not compatible with Int in a filter chain`, matching
+  the instance and chain forms. Fixed by checking `cls.__name__` directly in
+  `FilterMeta.__or__`, ahead of its existing delegation to `FilterChain(cls)
+  | next_filter`. That guard doesn't replace `FilterChain.__or__`'s own
+  check, only runs ahead of it, so the class form now costs the third
+  `resolve_filter` call on the same operand this bullet originally declined
+  to pay for a better noun.
+- The same message also reaches a reader `FilterMeta.__or__` was never
+  written for: a PEP 604 annotation like `def g(x: f.Unicode | None)` hits
+  the same operator. `develop` didn't raise there either — it silently built
+  a `FilterChain` where a type belonged — so v4.0.0 turning that into a loud
+  error is this ADR's own rationale reaching a case it didn't enumerate, not
+  a regression. "use NoOp instead" only serves the chain reader, so the
+  message now names both remedies — `NoOp` for a chain, `Optional[...]` for
+  an annotation — since quoting the annotation doesn't dodge the error: on
+  3.12 `from __future__ import annotations` and on 3.14 PEP 649 both only
+  defer the identical `TypeError` to `get_type_hints`.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md

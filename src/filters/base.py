@@ -182,8 +182,9 @@ class FilterMeta(ABCMeta):
         # instead of the class the caller actually wrote.
         if cls.resolve_filter(next_filter) is None:
             raise TypeError(
-                f"None is not compatible with {cls.__name__} in a "
-                f"filter chain; use NoOp instead.",
+                f"None is not compatible with {cls.__name__} in a filter "
+                f"chain; use NoOp instead, or Optional[{cls.__name__}] in "
+                f"a type annotation.",
             )
 
         return FilterChain(cls) | next_filter
@@ -272,7 +273,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         if self.resolve_filter(next_filter) is None:
             raise TypeError(
                 f"None is not compatible with {type(self).__name__} in a "
-                f"filter chain; use NoOp instead.",
+                f"filter chain; use NoOp instead, or "
+                f"Optional[{type(self).__name__}] in a type annotation.",
             )
 
         #
@@ -690,7 +692,8 @@ class FilterChain(BaseFilter[T_out]):
         if self.resolve_filter(next_filter) is None:
             raise TypeError(
                 f"None is not compatible with {type(self).__name__} in a "
-                f"filter chain; use NoOp instead.",
+                f"filter chain; use NoOp instead, or "
+                f"Optional[{type(self).__name__}] in a type annotation.",
             )
 
         new_chain: FilterChain[Any] = copy(self)
