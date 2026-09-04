@@ -108,6 +108,14 @@ chain the filter appears in:
        it — the way :py:class:`filters.Optional` adds its default's type.
      - ``class Optional(f.Widening[T]):``
 
+.. note::
+
+   There's no ``Narrowing`` counterpart for a filter that *removes* a type
+   rather than adding one — e.g., taking a chain from ``T | None`` to
+   ``T``. If you have a use case for one, describe it in
+   `#122 <https://github.com/todofixthis/filters/issues/122>`_ or send a
+   pull request.
+
 To create a new filter, write a class that extends
 :py:class:`filters.BaseFilter` and implement the ``_apply`` method:
 
