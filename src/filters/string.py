@@ -185,7 +185,7 @@ class Choice(BaseFilter[T_choice]):
     def __str__(self):
         return f"{type(self).__name__}({sorted(map(str, self.choice_map.values()))!r})"
 
-    # Ctor-typed rather than pass-through: in case-insensitive mode the
+    # Constructor-typed rather than pass-through: in case-insensitive mode the
     # returned value is the canonical choice, not the input verbatim (e.g.
     # ``Choice(['RO'], case_sensitive=False).apply('ro')`` returns ``'RO'``).
     def _apply(self, value: Any) -> T_choice:
