@@ -32,7 +32,15 @@ class FilterMacroType(BaseFilter, metaclass=ABCMeta):
        assert not isinstance(MyMacro, FilterMacroType)
     """
 
-    pass
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Never actually runs: ``FilterMacroMeta.__call__`` intercepts
+        # instantiation and hands runtime args straight to the wrapped
+        # function instead. This override exists only so that static
+        # type checkers accept calls like ``SomeMacro(some_kwarg=...)``
+        # against the macro's erased ``type[FilterMacroType]`` return
+        # type -- there's no way to thread the wrapped function's real
+        # signature through ``filter_macro``'s return type.
+        super().__init__()
 
 
 def filter_macro(
