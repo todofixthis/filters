@@ -58,8 +58,13 @@ dev = [
     "black>=26,<27",
     # >=3.29 fixes an OSError on Docker/macOS volume mounts (fcntl file locking)
     "filelock>=3.29",
-    "mypy==1.20.2",
-    "pyright==1.1.411",
+    # Pinned to patch level (see docs/adr/004-type-checking-in-ci.md): a
+    # type checker can add diagnostics in a minor release, unlike an
+    # ordinary dependency, which only changes behaviour at a major one —
+    # so the range stops at today's minor, and only patch releases flow
+    # in without a manual bump.
+    "mypy>=1.20.2,<1.21",
+    "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
     "sphinx>=9,<10",
@@ -70,8 +75,10 @@ dev = [
     "types-pytz>=2025",
 ]
 ci = [
-    "mypy==1.20.2",
-    "pyright==1.1.411",
+    # Same patch-level pin as the dev group above; see
+    # docs/adr/004-type-checking-in-ci.md.
+    "mypy>=1.20.2,<1.21",
+    "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
     "sphinx>=9,<10",

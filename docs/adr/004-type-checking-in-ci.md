@@ -159,13 +159,17 @@ abstract-argument overloads.
   file, including ones outside this ADR's scope (e.g. `scripts/`) that
   still fail even under `ignore_missing_imports` (a known-stub-package hint
   such as `types-PyYAML`, which that flag does not suppress).
-- `pyright` and `mypy` join `[dependency-groups]` dev and ci, pinned exact
-  (`mypy==1.20.2`, `pyright==1.1.411` — both newer patch/minor releases of
-  the versions #34's design was validated against, 1.19.1 and 1.1.408, in
-  the same major line) so a new release can't silently change which of
-  today's errors are and aren't caught. `autohooks-plugin-mypy` has no
-  pyright counterpart on PyPI, confirmed by search — pyright runs as a
-  plain tox command and CI step instead of through autohooks.
+- `pyright` and `mypy` join `[dependency-groups]` dev and ci, bounded to
+  patch level (`mypy>=1.20.2,<1.21`, `pyright>=1.1.411,<1.2` — both newer
+  patch/minor releases of the versions #34's design was validated against,
+  1.19.1 and 1.1.408, in the same major line) rather than pinned exact.
+  An ordinary dependency only changes behaviour at a major bump under
+  semver, but a type checker can add or sharpen a diagnostic in a minor
+  release — the failure this baseline exists to avoid — so the range stops
+  at today's minor rather than opening to `<2`; a patch release still
+  flows in without a manual bump. `autohooks-plugin-mypy` has no pyright
+  counterpart on PyPI, confirmed by search — pyright runs as a plain tox
+  command and CI step instead of through autohooks.
 - `typing_extensions` becomes a runtime dependency (`uv add --bounds major
   typing_extensions`): `TypeVar(..., default=)` (PEP 696), which the type
   model in #34 depends on, is native only from Python 3.13, and

@@ -850,8 +850,8 @@ provides-extras = ["django", "iso"]
 
 [package.metadata.requires-dev]
 ci = [
-    { name = "mypy", specifier = "==1.20.2" },
-    { name = "pyright", specifier = "==1.1.411" },
+    { name = "mypy", specifier = ">=1.20.2,<1.21" },
+    { name = "pyright", specifier = ">=1.1.411,<1.2" },
     { name = "pytest", specifier = ">=9,<10" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "sphinx", specifier = ">=9,<10" },
@@ -865,8 +865,8 @@ dev = [
     { name = "autohooks-plugin-ruff", specifier = ">=25,<26" },
     { name = "black", specifier = ">=26,<27" },
     { name = "filelock", specifier = ">=3.29" },
-    { name = "mypy", specifier = "==1.20.2" },
-    { name = "pyright", specifier = "==1.1.411" },
+    { name = "mypy", specifier = ">=1.20.2,<1.21" },
+    { name = "pyright", specifier = ">=1.1.411,<1.2" },
     { name = "pytest", specifier = ">=9,<10" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "sphinx", specifier = ">=9,<10" },
