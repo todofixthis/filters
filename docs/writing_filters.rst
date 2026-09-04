@@ -81,20 +81,32 @@ Custom Filters
 Sometimes you just can't get what you want by assembling existing filters, and
 you need to write your own.
 
-:py:class:`filters.BaseFilter` takes an optional type parameter declaring the
-filter's output type — ``BaseFilter[bytes]`` for a filter whose ``_apply``
-always returns ``bytes`` — which lets a type checker infer the output type of
-any chain the filter appears in. Leaving it off defaults to
-``BaseFilter[Any]``, the same as any built-in filter whose output can't be
-pinned down until runtime.
+Every custom filter extends one of three base classes, chosen by how its
+output relates to its input. Each takes its output type as a type parameter
+in a different place, so a type checker can infer the output type of any
+chain the filter appears in:
 
-A filter that only validates, returning its input unchanged, should extend
-:py:class:`filters.PassThrough` instead — chaining it then leaves the chain's
-existing output type alone, where ``BaseFilter[Any]`` would collapse it to
-``Any``. A third base class, :py:class:`filters.Widening`, is for a filter
-that *adds* a type to the chain's output rather than replacing it — the way
-:py:class:`filters.Optional` adds its default's type; see the API docs for its
-type parameter.
+.. list-table::
+   :header-rows: 1
+   :widths: 20 45 35
+
+   * - Base class
+     - Use when…
+     - Example declaration
+   * - :py:class:`filters.BaseFilter`
+     - The output has its own type, unrelated to the input's. Leaving out
+       the type parameter defaults to ``BaseFilter[Any]``, the same as any
+       built-in filter whose output can't be pinned down until runtime.
+     - ``class Pkcs7Pad(f.BaseFilter[bytes]):``
+   * - :py:class:`filters.PassThrough`
+     - The filter only validates, returning its input unchanged — chaining
+       it leaves the chain's existing output type alone, where
+       ``BaseFilter[Any]`` would collapse it to ``Any``.
+     - ``class NotEmpty(f.PassThrough):``
+   * - :py:class:`filters.Widening`
+     - The filter *adds* a type to the chain's output rather than replacing
+       it — the way :py:class:`filters.Optional` adds its default's type.
+     - ``class Optional(f.Widening[T]):``
 
 To create a new filter, write a class that extends
 :py:class:`filters.BaseFilter` and implement the ``_apply`` method:
