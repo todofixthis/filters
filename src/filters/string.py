@@ -7,15 +7,27 @@ from base64 import standard_b64decode, urlsafe_b64decode
 from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
-from typing import Hashable
+from typing import Any, Hashable, Optional, overload
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
 import regex
+from typing_extensions import TypeVar
 
-from filters.base import BaseFilter, Type
+from filters.base import BaseFilter, T_out, Type
 from filters.number import Min
 from filters.simple import MaxLength, MinLength
+
+# Imported from ``typing_extensions`` because ``default=`` is native only
+# from Python 3.13, and this package supports 3.12. See
+# docs/adr/005-parameterise-filters-on-one-output-type.md.
+T_choice = TypeVar("T_choice", bound=Hashable)
+"""The type :py:class:`Choice` returns, bound from its ``choices`` argument."""
+
+T_split = TypeVar("T_split", default=list[str])
+"""The type :py:class:`Split` returns, bound from whether its ``keys``
+argument is set.
+"""
 
 __all__ = [
     "Base64Decode",
@@ -35,7 +47,7 @@ __all__ = [
 ]
 
 
-class Base64Decode(BaseFilter):
+class Base64Decode(BaseFilter[bytes]):
     """Decodes an incoming value using the Base64 algo."""
 
     CODE_INVALID = "not_base64"
@@ -50,7 +62,7 @@ class Base64Decode(BaseFilter):
         self.whitespace_re = regex.compile(b"[ \t\r\n]+", regex.ASCII)
         self.base64_re = regex.compile(b"^[-+_/A-Za-z0-9=]+$", regex.ASCII)
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> bytes:
         value: bytes = self._filter(value, Type(bytes))
 
         if self._has_errors:
@@ -96,7 +108,7 @@ class Base64Decode(BaseFilter):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class CaseFold(BaseFilter):
+class CaseFold(BaseFilter[str]):
     """Applies case folding to an incoming string, allowing you to
     perform case-insensitive comparisons.
 
@@ -116,7 +128,7 @@ class CaseFold(BaseFilter):
         - https://docs.python.org/3/library/stdtypes.html#str.upper
     """
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> str:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -125,7 +137,7 @@ class CaseFold(BaseFilter):
         return value.casefold()
 
 
-class Choice(BaseFilter):
+class Choice(BaseFilter[T_choice]):
     """Requires an incoming value to match one of a set of allowed
     options.
 
@@ -145,7 +157,7 @@ class Choice(BaseFilter):
 
     def __init__(
         self,
-        choices: Iterable[Hashable],
+        choices: Iterable[T_choice],
         case_sensitive: bool = True,
     ) -> None:
         """
@@ -160,7 +172,7 @@ class Choice(BaseFilter):
 
         self.case_sensitive: bool = case_sensitive
 
-        self.choice_map: dict[Hashable, Hashable] = {}
+        self.choice_map: dict[Hashable, T_choice] = {}
 
         MinLength(1).apply(choices)
 
@@ -173,7 +185,10 @@ class Choice(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({sorted(map(str, self.choice_map.values()))!r})"
 
-    def _apply(self, value):
+    # Constructor-typed rather than pass-through: in case-insensitive mode the
+    # returned value is the canonical choice, not the input verbatim (e.g.
+    # ``Choice(['RO'], case_sensitive=False).apply('ro')`` returns ``'RO'``).
+    def _apply(self, value: Any) -> T_choice:
         if (not self.case_sensitive) and isinstance(value, str):
             value = self._filter(value, CaseFold)
 
@@ -193,7 +208,7 @@ class Choice(BaseFilter):
             )
 
 
-class IpAddress(BaseFilter):
+class IpAddress(BaseFilter[str]):
     """Validates an incoming value as an IPv[46] address."""
 
     CODE_INVALID = "not_ip_address"
@@ -235,7 +250,7 @@ class IpAddress(BaseFilter):
             )
         )
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> str:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -290,7 +305,7 @@ class JsonDecode(BaseFilter):
 
         self.decoder = decoder
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -302,7 +317,7 @@ class JsonDecode(BaseFilter):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class MaxBytes(BaseFilter):
+class MaxBytes(BaseFilter[bytes]):
     """Ensures an incoming string fits in a specified number of bytes.
 
     Note:
@@ -363,7 +378,7 @@ class MaxBytes(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.max_bytes!r}, encoding={self.encoding!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> bytes:
         """Applies the MaxBytes filter.
 
         Returns:
@@ -511,7 +526,7 @@ class MaxBytes(BaseFilter):
                     )
 
 
-class MaxChars(BaseFilter):
+class MaxChars(BaseFilter[str]):
     """Ensures incoming value fits in a certain number of characters.
 
     Note:
@@ -564,7 +579,7 @@ class MaxChars(BaseFilter):
         self.prefix = prefix
         self.suffix = suffix
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> str:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -592,7 +607,7 @@ class MaxChars(BaseFilter):
         return value
 
 
-class Regex(BaseFilter):
+class Regex(BaseFilter[list[str]]):
     """Matches a regular expression in the value.
 
     IMPORTANT: This filter returns a LIST of all sequences in the input
@@ -642,7 +657,7 @@ class Regex(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.regex.pattern!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> list[str]:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -662,18 +677,38 @@ class Regex(BaseFilter):
         return matches
 
 
-class Split(BaseFilter):
+class Split(BaseFilter[T_split]):
     """Splits an incoming string into parts.
 
     The result is either a list or a dict, depending on whether you
     specify keys to map to the result.
     """
 
+    # Overloaded on ``keys`` rather than the type of a bound argument (as
+    # ``Round`` in number.py does with ``result_type``), because the two
+    # branches produce different container shapes -- ``list[str]`` versus
+    # ``dict[str, str]`` -- not different element types of the same shape.
+    # See ``Type.__init__`` in base.py for the same self-type-overload
+    # technique applied to a different constructor.
+    @overload
+    def __init__(
+        self: "Split[list[str]]",
+        pattern: str | re.Pattern,
+        keys: None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: "Split[dict[str, str]]",
+        pattern: str | re.Pattern,
+        keys: Sequence[str],
+    ) -> None: ...
+
     # noinspection PyProtectedMember
     def __init__(
         self,
         pattern: str | re.Pattern,
-        keys: Sequence[str] | None = None,
+        keys: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialises the Split filter.
 
@@ -701,7 +736,7 @@ class Split(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.regex.pattern!r}, keys={self.keys!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_split:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -709,7 +744,7 @@ class Split(BaseFilter):
 
         split = self.regex.split(value)
 
-        if self.keys:
+        if self.keys is not None:
             # The split value can have at most as many items as ``self.keys``.
             split = self._filter(split, MaxLength(len(self.keys)))
 
@@ -721,7 +756,7 @@ class Split(BaseFilter):
             return split
 
 
-class Strip(BaseFilter):
+class Strip(BaseFilter[str]):
     """Strips characters from the end(s) of a string.
 
     Strips whitespace and non-printables by default.
@@ -765,7 +800,7 @@ class Strip(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(leading={self.leading.pattern!r}, trailing={self.trailing.pattern!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> str:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -780,7 +815,7 @@ class Strip(BaseFilter):
         return value
 
 
-class TomlDecode(BaseFilter):
+class TomlDecode(BaseFilter[dict[str, Any]]):
     """Interprets the value as TOML."""
 
     CODE_INVALID = "not_toml"
@@ -789,7 +824,7 @@ class TomlDecode(BaseFilter):
         CODE_INVALID: "This value is not valid TOML.",
     }
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> dict[str, Any]:
         value: str = self._filter(value, Type(str))
 
         if self._has_errors:
@@ -801,17 +836,16 @@ class TomlDecode(BaseFilter):
             return self._invalid_value(value, self.CODE_INVALID, exc_info=True)
 
 
-class Unicode(BaseFilter):
-    """Converts a value into a unicode string.
+class _BaseDecoder(BaseFilter[T_out]):
+    """Shared initialiser and decoding logic for :py:class:`Unicode` and
+    :py:class:`ByteString`.
 
-    Note:
-        By default, additional normalisation is applied to the
-        resulting value. See the initialiser docstring for more info.
-
-        References:
-
-        - https://docs.python.org/2/howto/unicode.html
-        - https://en.wikipedia.org/wiki/Unicode_equivalence
+    The two are siblings rather than parent and child: they share how a
+    value is decoded, and disagree about what to hand back afterwards.
+    The shared step lives under ``_decode`` rather than ``_apply`` so
+    that each subclass can declare an ``_apply`` matching its own class
+    parameter. See
+    docs/adr/008-split-bytestring-and-date-into-siblings.md.
     """
 
     CODE_DECODE_ERROR = "wrong_encoding"
@@ -825,7 +859,7 @@ class Unicode(BaseFilter):
         encoding: str = "utf-8",
         normalize: bool = True,
     ) -> None:
-        """Initialises the Unicode filter.
+        """Initialises the filter.
 
         Args:
             encoding: Used to decode non-unicode values.
@@ -855,7 +889,8 @@ class Unicode(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(encoding={self.encoding!r})"
 
-    def _apply(self, value):
+    def _decode(self, value: Any) -> str:
+        """Decodes and (optionally) normalises the incoming value."""
         try:
             if isinstance(value, str):
                 decoded = value
@@ -911,10 +946,33 @@ class Unicode(BaseFilter):
             return decoded
 
 
-class ByteString(Unicode):
+class Unicode(_BaseDecoder[str]):
+    """Converts a value into a unicode string.
+
+    Note:
+        By default, additional normalisation is applied to the
+        resulting value. See the initialiser docstring for more info.
+
+        References:
+
+        - https://docs.python.org/2/howto/unicode.html
+        - https://en.wikipedia.org/wiki/Unicode_equivalence
+    """
+
+    def _apply(self, value: Any) -> str:
+        return self._decode(value)
+
+
+# Do not make this a subclass of Unicode — see
+# docs/adr/008-split-bytestring-and-date-into-siblings.md.
+class ByteString(_BaseDecoder[bytes]):
     """Converts a value into a byte string, encoded as UTF-8.
 
     IMPORTANT: This filter returns bytes objects, not bytearrays!
+
+    Note:
+        This filter is a sibling of :py:class:`Unicode`, not a subclass
+        of it, so ``issubclass(ByteString, Unicode)`` is ``False``.
     """
 
     def __init__(
@@ -940,8 +998,8 @@ class ByteString(Unicode):
         super().__init__(encoding, normalize)
 
     # noinspection SpellCheckingInspection
-    def _apply(self, value):
-        decoded: str = super()._apply(value)
+    def _apply(self, value: Any) -> bytes:
+        decoded = self._decode(value)
 
         #
         # No need to catch UnicodeEncodeErrors here; UTF-8 can handle any
@@ -969,11 +1027,11 @@ class ByteString(Unicode):
         #
 
         # Normally we return ``None`` if we get any errors, but in this case,
-        # we'll let the superclass method decide.
+        # we'll let ``_decode``'s invalid-value handling decide.
         return decoded if self._has_errors else decoded.encode("utf-8")
 
 
-class Uuid(BaseFilter):
+class Uuid(BaseFilter[UUID]):
     """Interprets an incoming value as a UUID.
 
     Note:
@@ -1002,7 +1060,7 @@ class Uuid(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(version={self.version!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> UUID:
         value: str | UUID = self._filter(
             value,
             Type((str, UUID)),

@@ -13,9 +13,29 @@ from typing import Any, Hashable
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
 from pytz import utc
+from typing_extensions import TypeVar
 
-from filters.base import BaseFilter, Type
+from filters.base import BaseFilter, PassThrough, T_out, Type, Widening
 from filters.number import Int, Max, Min
+
+# Imported from ``typing_extensions`` because ``default=`` is native only
+# from Python 3.13, and this package supports 3.12. See
+# docs/adr/005-parameterise-filters-on-one-output-type.md.
+T_callable = TypeVar("T_callable", default=Any)
+"""The type :py:class:`Call` returns, bound from its ``callable_``
+argument.
+"""
+
+T_optional_default = TypeVar("T_optional_default", default=None)
+"""The type :py:class:`Optional` returns, bound from its ``default``
+argument.
+
+Deliberately *not* named ``T_widened``: :py:mod:`filters.base` declares
+its own module-level ``T_widened`` with a different default
+(``default=Any``) for the ``|`` overloads, so two type variables of the
+same name and different meaning would otherwise be in play whenever both
+modules are read together.
+"""
 
 __all__ = [
     "Array",
@@ -118,7 +138,14 @@ def selective_copy_sequence(
     return values
 
 
-class Array(Type):
+#
+# Explicitly ``Type[Any]`` rather than inferring from the ``super().__init__``
+# call below: that call would otherwise let ``Type``'s own overloads infer
+# something like ``Type[Sequence[Any]]``, overstating the contract --
+# ``_apply`` explicitly rejects ``str``/``bytes``, which *are* ``Sequence``s,
+# so "any sequence" doesn't actually describe what this filter accepts.
+#
+class Array(Type[Any]):
     """Validates that the incoming value is a non-string sequence."""
 
     def __init__(
@@ -127,8 +154,8 @@ class Array(Type):
     ) -> None:
         super().__init__(Sequence, True, aliases)
 
-    def _apply(self, value):
-        value: Sequence = super()._apply(value)
+    def _apply(self, value: Any) -> Any:
+        value = super()._apply(value)
 
         if self._has_errors:
             return None
@@ -146,7 +173,7 @@ class Array(Type):
         return value
 
 
-class ByteArray(BaseFilter):
+class ByteArray(BaseFilter[bytearray]):
     """Converts an incoming value into a bytearray."""
 
     CODE_BAD_ENCODING = "bad_encoding"
@@ -166,7 +193,7 @@ class ByteArray(BaseFilter):
 
         self.encoding = encoding
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> bytearray:
         value = self._filter(value, Type(Iterable))
 
         if self._has_errors:
@@ -213,7 +240,7 @@ class ByteArray(BaseFilter):
         return bytearray(filtered)
 
 
-class Call(BaseFilter):
+class Call(BaseFilter[T_callable]):
     """Runs the value through a callable.
 
     Usually, creating a custom filter type works better, as you have
@@ -225,7 +252,7 @@ class Call(BaseFilter):
     """
 
     def __init__(
-        self, callable_: Callable[..., Any], *extra_args, **extra_kwargs
+        self, callable_: Callable[..., T_callable], *extra_args, **extra_kwargs
     ) -> None:
         """Initialises the Call filter.
 
@@ -243,7 +270,7 @@ class Call(BaseFilter):
         self.extra_args = extra_args
         self.extra_kwargs = extra_kwargs
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_callable:
         try:
             return self.callable(value, *self.extra_args, **self.extra_kwargs)
         except Exception as e:
@@ -254,21 +281,28 @@ class Call(BaseFilter):
             )
 
 
-class Datetime(BaseFilter):
-    """Interprets the value as a UTC datetime."""
+class _BaseDatetime(BaseFilter[T_out]):
+    """Shared initialiser and parsing logic for :py:class:`Datetime` and
+    :py:class:`Date`.
 
-    CODE_INVALID = "not_datetime"
+    The two are siblings rather than parent and child: they share how a
+    value is parsed, and disagree about what to hand back afterwards.
+    The shared step lives under ``_parse`` rather than ``_apply`` so that
+    each subclass can declare an ``_apply`` matching its own class
+    parameter. See
+    docs/adr/008-split-bytestring-and-date-into-siblings.md.
+    """
 
-    templates = {
-        CODE_INVALID: "This value does not appear to be a datetime.",
-    }
+    # Each subclass sets its own code and template; ``_parse`` resolves
+    # this polymorphically.
+    CODE_INVALID: str
 
     def __init__(
         self,
         timezone: tzinfo | int | float | None = None,
         naive: bool = False,
     ) -> None:
-        """Initialises the Datetime filter.
+        """Initialises the filter.
 
         Args:
             timezone: Specifies the timezone to use when the *incoming*
@@ -303,7 +337,8 @@ class Datetime(BaseFilter):
             f"{type(self).__name__}(timezone={self.timezone!r}, naive={self.naive!r})"
         )
 
-    def _apply(self, value):
+    def _parse(self, value: Any) -> datetime:
+        """Interprets the incoming value as a UTC datetime."""
         if isinstance(value, datetime):
             parsed = value
         elif isinstance(value, date):
@@ -336,13 +371,31 @@ class Datetime(BaseFilter):
         return aware_result.replace(tzinfo=None) if self.naive else aware_result
 
 
-class Date(Datetime):
+class Datetime(_BaseDatetime[datetime]):
+    """Interprets the value as a UTC datetime."""
+
+    CODE_INVALID = "not_datetime"
+
+    templates = {
+        CODE_INVALID: "This value does not appear to be a datetime.",
+    }
+
+    def _apply(self, value: Any) -> datetime:
+        return self._parse(value)
+
+
+# Do not make this a subclass of Datetime — see
+# docs/adr/008-split-bytestring-and-date-into-siblings.md.
+class Date(_BaseDatetime[date]):
     """Interprets the value as a UTC date.
 
     Note:
         The value is first converted to a datetime with UTC timezone,
         which may cause the resulting date to appear to be off by +/- 1
         day (does not apply if the value is already a date object).
+
+        This filter is a sibling of :py:class:`Datetime`, not a subclass
+        of it, so ``issubclass(Date, Datetime)`` is ``False``.
     """
 
     CODE_INVALID = "not_date"
@@ -351,18 +404,18 @@ class Date(Datetime):
         CODE_INVALID: "This value does not appear to be a date.",
     }
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> date:
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
 
-        filtered: datetime = super()._apply(value)
+        filtered = self._parse(value)
 
         # Normally we return `None` if we get any errors, but in this
-        # case, we'll let the superclass method decide.
+        # case, we'll let ``_parse``'s invalid-value handling decide.
         return filtered if self._has_errors else filtered.date()
 
 
-class Empty(BaseFilter):
+class Empty(PassThrough):
     """Expects the value to be empty.
 
     In this context, "empty" is defined as having zero length. Note
@@ -376,7 +429,7 @@ class Empty(BaseFilter):
         CODE_NOT_EMPTY: "Empty value expected.",
     }
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         try:
             length = len(value)
         except TypeError:
@@ -385,7 +438,7 @@ class Empty(BaseFilter):
         return self._invalid_value(value, self.CODE_NOT_EMPTY) if length else value
 
 
-class Item(BaseFilter):
+class Item(BaseFilter[Any]):
     """Returns a single item from an incoming mapping or sequence."""
 
     CODE_MISSING_KEY = "missing"
@@ -406,7 +459,7 @@ class Item(BaseFilter):
             f"{type(self).__name__}({'' if self.target is None else repr(self.target)})"
         )
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(
             value,
             Type((Mapping, Sequence)) | NotEmpty,
@@ -448,7 +501,7 @@ class Item(BaseFilter):
             )
 
 
-class Len(BaseFilter):
+class Len(PassThrough):
     """Validates that a value's length satisfies the configured constraint.
 
     Modes (mutually exclusive):
@@ -514,7 +567,7 @@ class Len(BaseFilter):
             parts.append(f"max={self.max!r}")
         return f"{type(self).__name__}({', '.join(parts)})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(value, Type(Sized))
 
         if self._has_errors:
@@ -552,7 +605,7 @@ class Len(BaseFilter):
         return value
 
 
-class Length(BaseFilter):
+class Length(PassThrough):
     """Ensures incoming values have exactly the right length."""
 
     CODE_TOO_LONG = "too_long"
@@ -571,7 +624,7 @@ class Length(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(length={self.length!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(value, Type(Sized))
 
         if self._has_errors:
@@ -597,7 +650,7 @@ class Length(BaseFilter):
         return value
 
 
-class MaxLength(BaseFilter):
+class MaxLength(PassThrough):
     """Enforces a maximum length on the value."""
 
     CODE_TOO_LONG = "too_long"
@@ -622,7 +675,7 @@ class MaxLength(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.max_length!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         if len(value) > self.max_length:
             if self.truncate:
                 return value[0 : self.max_length]
@@ -639,7 +692,7 @@ class MaxLength(BaseFilter):
         return value
 
 
-class MinLength(BaseFilter):
+class MinLength(PassThrough):
     """Enforces a minimum length on the value."""
 
     CODE_TOO_SHORT = "too_short"
@@ -656,7 +709,7 @@ class MinLength(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.min_length!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         if len(value) < self.min_length:
             #
             # Note that we do not pad the value:
@@ -678,16 +731,16 @@ class MinLength(BaseFilter):
         return value
 
 
-class NoOp(BaseFilter):
+class NoOp(PassThrough):
     """Filter that does nothing, used when you need a placeholder
     Filter in a FilterChain.
     """
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         return value
 
 
-class NotEmpty(BaseFilter):
+class NotEmpty(PassThrough):
     """Expects the value not to be empty.
 
     In this context, "empty" is defined as having zero length. Note
@@ -718,7 +771,7 @@ class NotEmpty(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(allow_none={self.allow_none!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         try:
             length = len(value)
         except TypeError:
@@ -726,14 +779,14 @@ class NotEmpty(BaseFilter):
 
         return value if length else self._invalid_value(value, self.CODE_EMPTY)
 
-    def _apply_none(self):
+    def _apply_none(self) -> Any:
         if not self.allow_none:
             return self._invalid_value(None, self.CODE_EMPTY)
 
         return None
 
 
-class Omit(BaseFilter):
+class Omit(BaseFilter[Any]):
     """Returns a copy of an incoming mapping or sequence, with the
     specified keys omitted. Any other items will be passed through.
     """
@@ -754,7 +807,7 @@ class Omit(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({sorted(self.keys)})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(value, Type((Mapping, Sequence)))
 
         if self._has_errors:
@@ -781,7 +834,7 @@ class Omit(BaseFilter):
         )
 
 
-class Optional(BaseFilter):
+class Optional(Widening[T_optional_default]):
     """Changes empty and null values into a default value.
 
     In this context, "empty" is defined as having zero length.
@@ -790,11 +843,24 @@ class Optional(BaseFilter):
         If an incoming value does not have a length, it is considered
         to be not empty (in particular, note that ``False`` and ``0``
         are considered not empty in this context).
+
+    Note:
+        The class parameter is bound from ``default`` itself, so the
+        factory idiom below (``default=list``) widens a chain by the
+        *callable's* type rather than by the type it constructs:
+        ``f.Unicode() | f.Optional(list)`` reports ``str`` union the type
+        of ``list`` (spelled differently by each checker) where the
+        runtime value is ``str | list``. Binding the constructed type
+        would take a second ``__init__`` overload keyed on callability,
+        which no checker can tell from the plain-value form when the
+        value is callable. An accepted limit rather than a defect, in
+        the same spirit as :py:class:`filters.Type`'s 3-tuple ceiling.
+        Pinned in ``test/typing/test_simple.py``.
     """
 
     def __init__(
         self,
-        default: Any = None,
+        default: T_optional_default = None,
         call_default: bool | None = None,
     ):
         """Initialises the Optional filter.
@@ -841,7 +907,7 @@ class Optional(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(default={self.actual_default!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         try:
             length = len(value)
         except TypeError:
@@ -853,10 +919,18 @@ class Optional(BaseFilter):
 
         return self._get_default()
 
-    def _apply_none(self):
+    def _apply_none(self) -> T_optional_default | None:
         # ``None`` is considered empty by this filter.
         return self._get_default()
 
+    # Left unannotated: the compound condition below correlates
+    # ``self.call_default`` with ``self.callable_default`` in a way
+    # established back in ``__init__``, which mypy's checker cannot see
+    # across two attributes -- annotating this return type turns on body
+    # checking and produces a spurious "None not callable" here for a
+    # call that is safe at runtime. Its caller (`_apply_none`) is
+    # annotated, and calling an unannotated method returns ``Any``, which
+    # satisfies that annotation without masking a real error.
     def _get_default(self):
         """Returns the default value that should be used to replace an
         empty value.
@@ -869,7 +943,7 @@ class Optional(BaseFilter):
         )
 
 
-class Pick(BaseFilter):
+class Pick(BaseFilter[Any]):
     """Returns a copy of an incoming mapping or sequence, with only the
     specified keys included.
     """
@@ -911,7 +985,7 @@ class Pick(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self.keys})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(value, Type((Mapping, Sequence)))
 
         if self._has_errors:

@@ -1154,39 +1154,38 @@ instance, even in cases where no filtering is needed.
    assert runner.is_valid() is True
    assert runner.cleaned_data == 'literally anything'
 
-.. tip::
+Every operand of ``|`` must be filter-compatible, so :py:class:`filters.NoOp`
+is what a chain uses for a step that does nothing.  ``None`` is not a
+substitute — ``some_filter | None`` raises :py:class:`TypeError`.
 
-   In many contexts, you can safely substitute ``None`` for
-   :py:class:`filters.NoOp`:
+.. code-block:: python
 
-   .. code-block:: python
+   import filters as f
 
-      import filters as f
+   runner = f.FilterRunner(
+      f.Unicode | f.NoOp | f.NotEmpty,
+      'literally anything',
+   )
+   assert runner.is_valid() is True
+   assert runner.cleaned_data == 'literally anything'
 
-      runner = f.FilterRunner(
-         f.Unicode | None | f.NotEmpty,
-         'literally anything',
-      )
-      assert runner.is_valid() is True
-      assert runner.cleaned_data == 'literally anything'
+This matters most when you want to make the first filter in a chain dynamic,
+e.g.:
 
-   An example of a case where you might need to use :py:class:`NoOp` is if you
-   want to make the first filter in a chain dynamic, e.g.:
+.. code-block:: python
 
-   .. code-block:: python
+   import filters as f
+   from decimal import Decimal
 
-      import filters as f
-      from decimal import Decimal
+   @f.filter_macro
+   def Number(strip_sign: bool = False):
+       # Can't return ``None`` here, or else an error will occur when we
+       # try to chain it with ``f.Min`` below, so we have to use ``f.NoOp``
+       # instead.
+       return f.Strip(r'-') if strip_sign else f.NoOp | f.Decimal
 
-      @f.filter_macro
-      def Number(strip_sign: bool = False):
-          # Can't return ``None`` here, or else an error will occur when we
-          # try to chain it with ``f.Min`` below, so we have to use ``f.NoOp``
-          # instead.
-          return f.Strip(r'-') if strip_sign else f.NoOp | f.Decimal
-
-      runner = f.FilterRunner(Number | f.Min(42), '-100')
-      assert runner.is_valid() is False
+   runner = f.FilterRunner(Number | f.Min(42), '-100')
+   assert runner.is_valid() is False
 
 NotEmpty
 --------

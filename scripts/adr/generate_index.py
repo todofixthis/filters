@@ -54,7 +54,7 @@ REVISIT_DISCHARGED_BY_FIELD = "revisit-discharged-by"
 # `/`, never globs.
 SCOPE_FIELD = "scope"
 
-# Replaced by `scope` (see docs/adr/004). Named here so a stale field fails rather
+# Replaced by `scope` (see docs/adr/002). Named here so a stale field fails rather
 # than being silently ignored, which is what would otherwise let a half-finished
 # migration pass in both directions.
 TAGS_FIELD = "tags"

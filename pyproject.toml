@@ -32,6 +32,7 @@ dependencies = [
     "python-dateutil>=2,<3",
     "pytz>=2025",
     "regex>=2024",
+    "typing-extensions>=4.15.0,<5.0.0",
 ]
 
 [project.entry-points."pytest11"]
@@ -51,13 +52,19 @@ Issues = "https://github.com/todofixthis/filters/issues"
 dev = [
     "autohooks>=26,<27",
     "autohooks-plugin-black>=23,<24",
-    #    "autohooks-plugin-mypy>=23,<24",
+    "autohooks-plugin-mypy>=23,<24",
     "autohooks-plugin-pytest>=23,<24",
     "autohooks-plugin-ruff>=25,<26",
     "black>=26,<27",
     # >=3.29 fixes an OSError on Docker/macOS volume mounts (fcntl file locking)
     "filelock>=3.29",
-    #    "mypy>=1,<2",
+    # Pinned to patch level (see docs/adr/004-type-checking-in-ci.md): a
+    # type checker can add diagnostics in a minor release, unlike an
+    # ordinary dependency, which only changes behaviour at a major one —
+    # so the range stops at today's minor, and only patch releases flow
+    # in without a manual bump.
+    "mypy>=1.20.2,<1.21",
+    "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
     "sphinx>=9,<10",
@@ -68,7 +75,10 @@ dev = [
     "types-pytz>=2025",
 ]
 ci = [
-#    "mypy>=1,<2",
+    # Same patch-level pin as the dev group above; see
+    # docs/adr/004-type-checking-in-ci.md.
+    "mypy>=1.20.2,<1.21",
+    "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
     "sphinx>=9,<10",
@@ -79,14 +89,69 @@ ci = [
 mode = "pythonpath"
 pre-commit = [
     "autohooks.plugins.black",
-#    "autohooks.plugins.mypy",
+    "autohooks.plugins.mypy",
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
     "adr_index",
 ]
 
-#[tool.mypy]
-#strict = true
+[tool.autohooks.plugins.mypy]
+# Matches the CI scope (see docs/adr/004-type-checking-in-ci.md): the
+# baseline bar covers `src` and the `test/typing` assert_type harness, not
+# the rest of `test/` or `scripts/`.
+include = ["src/*.py", "test/typing/*.py"]
+
+[tool.mypy]
+ignore_missing_imports = true
+warn_unused_ignores = true
+# Baseline bar (see docs/adr/004-type-checking-in-ci.md): the tree tripped
+# these codes before #34's generics work, which has since added to the same
+# categories rather than clearing them. Phase 6 ratchets this list down to
+# nothing; ADR 004's Consequences record the current counts and what
+# `return-value` is blocked on.
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "call-arg",
+    "call-overload",
+    "no-redef",
+    "operator",
+    "override",
+    "return",
+    "return-value",
+    "union-attr",
+    "var-annotated",
+]
+
+[tool.pyright]
+# Baseline bar (see docs/adr/004-type-checking-in-ci.md): the tree tripped
+# these rules before #34's generics work, which has since added to the same
+# categories rather than clearing them. Phase 6 ratchets this list down to
+# nothing; ADR 004's Consequences record the current counts.
+reportArgumentType = false
+reportAssignmentType = false
+reportAttributeAccessIssue = false
+reportCallIssue = false
+reportGeneralTypeIssues = false
+reportIncompatibleMethodOverride = false
+reportOperatorIssue = false
+reportOptionalCall = false
+reportOptionalIterable = false
+reportOptionalMemberAccess = false
+reportRedeclaration = false
+reportReturnType = false
+
+# mypy's `# type: ignore[...]` comments (base.py's self-type overloads, the
+# assert_type negative case in test/typing) suppress mypy-only diagnostics
+# pyright never raises. Without this, reportUnnecessaryTypeIgnoreComment
+# below misreads them as unused, because it also honours the bare
+# `# type: ignore` syntax. Pyright-specific suppressions still use
+# `# pyright: ignore[code]`, which this setting does not affect.
+enableTypeIgnoreComments = false
+# See docs/adr/004-type-checking-in-ci.md Consequences: closes the gap where
+# a suppression that stops being needed decays silently.
+reportUnnecessaryTypeIgnoreComment = "error"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -113,7 +178,10 @@ env_list = ["py314", "py313", "py312"]
 [tool.tox.env_run_base]
 commands = [
     ["pytest"],
-#    ["mypy", "src", "test"]
+    ["mypy", "src"],
+    ["mypy", "test/typing"],
+    ["pyright", "src/filters"],
+    ["pyright", "test/typing"],
 ]
 runner = "uv-venv-lock-runner"
 
