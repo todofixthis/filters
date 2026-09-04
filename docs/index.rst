@@ -237,9 +237,6 @@ The following extensions are available:
 
       pip install phx-filters[django,iso]
 
-   Pydantic Filters is a standalone package, so it installs on its own
-   rather than as one of these extras.
-
 Happy filtering!
 
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
