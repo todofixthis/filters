@@ -854,7 +854,7 @@ class Optional(Widening[T_optional_default]):
         would take a second ``__init__`` overload keyed on callability,
         which no checker can tell from the plain-value form when the
         value is callable. An accepted limit rather than a defect, in
-        the same spirit as :py:class:`filters.Type`'s 2-tuple ceiling.
+        the same spirit as :py:class:`filters.Type`'s 3-tuple ceiling.
         Pinned in ``test/typing/test_simple.py``.
     """
 
