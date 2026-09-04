@@ -301,7 +301,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @property
     def parent(
         self,
-    ) -> Optional["BaseFilter[Any]"]:  # Use Optional for Sphinx compat
+    ) -> Optional["BaseFilter[Any]"]:  # Use `Optional` instead of `|` for Sphinx compat
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
@@ -558,10 +558,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     def resolve_filter(
         cls,
         the_filter: "FilterCompatible[T_resolved]",
-        # Use Optional for Sphinx compat
+        # Use `Optional` instead of `|` for Sphinx compat
         parent: Optional["BaseFilter[Any]"] = None,
         key: Optional[str] = None,
-    ) -> Optional["BaseFilter[T_resolved]"]:  # Use Optional for Sphinx compat
+    ) -> Optional[
+        "BaseFilter[T_resolved]"
+    ]:  # Use `Optional` instead of `|` for Sphinx compat
         """Converts a filter-compatible value into a consistent type."""
         if the_filter is not None:
             resolved: Optional[BaseFilter[T_resolved]]

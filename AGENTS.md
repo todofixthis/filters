@@ -34,7 +34,7 @@ uv run make -C docs clean && uv run make -C docs html  # build docs
 Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
 
 - Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use Optional for Sphinx compat` inline
+- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` inline
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
 
 ## Tests
