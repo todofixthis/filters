@@ -9,6 +9,7 @@ Contents
    simple_filters
    complex_filters
    extension_filters
+   upgrading_to_v4
    api
 
 Filters
