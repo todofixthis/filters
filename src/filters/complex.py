@@ -519,17 +519,17 @@ class NamedTuple(BaseFilter[T_tuple]):
 
                     >>> import filters as f
                     >>> from collections import namedtuple
-                    >>> Color = namedtuple('Color', ('r', 'g', 'b'))
+                    >>> Colour = namedtuple('Colour', ('r', 'g', 'b'))
 
                     >>> # noinspection PyTypeChecker
-                    >>> filter_chain = f.NamedTuple(Color, {
+                    >>> filter_chain = f.NamedTuple(Colour, {
                     ...     'r': f.Required | f.Int | f.Min(0) | f.Max(255),
                     ...     'g': f.Required | f.Int | f.Min(0) | f.Max(255),
                     ...     'b': f.Required | f.Int | f.Min(0) | f.Max(255),
                     ... })
 
                     >>> filter_chain.apply(['64', '128', '192'])
-                    Color(r=64, g=128, b=192)
+                    Colour(r=64, g=128, b=192)
         """
         super().__init__()
 

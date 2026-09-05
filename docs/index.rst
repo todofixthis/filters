@@ -229,4 +229,3 @@ Happy filtering!
 
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
 .. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
-.. _Unicode normalization: https://en.wikipedia.org/wiki/Unicode_equivalence
