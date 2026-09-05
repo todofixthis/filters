@@ -15,12 +15,13 @@ output parameter, which settles what a *single* filter produces. It does
 not settle what a *chain* produces, and chaining is what [#34][] is about.
 
 The obvious rule — a chain's output is its last filter's output — is wrong
-for a third of this package. `f.Unicode | f.NotEmpty` produces `str`, but
+for a sizeable minority of this package. `f.Unicode | f.NotEmpty` produces `str`, but
 `NotEmpty` has no output type of its own: it returns whatever it was given.
 Ten filters behave that way (`NotEmpty`, `Required`, `Empty`, `Min`, `Max`,
-`MinLength`, `MaxLength`, `Len`, `Length`, `NoOp`), and a validation chain
-that checks nothing is unusual, so getting them wrong collapses the common
-chain to `Any` and takes the issue's headline case with it.
+`MinLength`, `MaxLength`, `Len`, `Length`, `NoOp`) — a quarter of the filters
+this package exports — and a validation chain that checks nothing is unusual, so
+getting them wrong collapses the common chain to `Any` and takes the issue's
+headline case with it.
 
 `Optional` is wrong under that rule in a second way: it produces its input
 type *or* its default, so it widens rather than replaces.
@@ -53,17 +54,18 @@ subclasses that add no runtime behaviour, and each of the three places `|`
 is defined carries a set of overloads that dispatches on them. A filter
 joins a category by its base class.
 
-**Pros:** The category is declared once, on the filter, and every chain
-built from it infers correctly without naming a type — including
-`f.Unicode | f.NotEmpty` written entirely in bare classes. A downstream
-package gets the same treatment by subclassing the marker.
+**Pros:** The category is declared once, on the filter, and a chain infers
+correctly without naming a type — including `f.Unicode | f.NotEmpty`
+written entirely in bare classes. A downstream package gets the same
+treatment by subclassing the marker.
 **Cons:** Two new public names in `base.py` that exist only for the type
 checker, and seven overloads repeated in three places — one for `None`, two
 for `PassThrough` (class and instance), one for `Widening`, two generic
 `BaseFilter[T]` arms covering the transforming, ctor-typed and untyped
 categories, and one for the zero-argument-callable arm `FilterCompatible`
 still carries — so twenty-one signatures whose bodies are all one
-implementation.
+implementation. [009: Drop `None` as an Operand of the Chaining Operator][]
+has since removed the `None` arm, leaving six and eighteen.
 **Risks:** A filter filed in the wrong category produces a confidently
 wrong chain type. `MaxBytes` is the live example: it reads as a length
 check but `_apply` encodes, and returns `bytes` on every path that isn't an
@@ -149,7 +151,9 @@ though `Optional` — its only member — exists to remove `None` and
   categories. `None` and a zero-argument callable are both accepted by
   `resolve_filter`, so each set carries an arm for them; omitting either
   makes `f.Unicode | None` a type error, which is a break #34 schedules for
-  phase 5 rather than one this ADR takes.
+  phase 5 rather than one this ADR takes. 009 took that break: the `None`
+  arm is gone from all three sets, and `base.py` records its absence where
+  the arm used to sit.
 - Overload order is load-bearing, in both directions. `PassThrough` and
   `Widening` are `BaseFilter` subclasses, so the general `BaseFilter[T]`
   overloads match them too and the marker overloads must come first or the
@@ -175,9 +179,24 @@ though `Optional` — its only member — exists to remove `None` and
   something either checker can catch — the filter's `_apply` is the only
   evidence. `MaxBytes` is the one already known to read against its
   category.
+- The marker overloads fire wherever mypy evaluates `|` as an expression,
+  which is not everywhere. Against an assignment target mypy reads `X | Y`
+  between two *classes* as an implicit [PEP 604][] type alias and never
+  consults `__or__`, so `chain = f.Unicode | f.NotEmpty` binds
+  `types.UnionType` and anything drawn from it degrades to `Any`, with no
+  error raised. At runtime the expression is a real `FilterChain` —
+  `FilterMeta.__or__` runs regardless — so this is mypy asserting a type the
+  object does not have, not merely losing one. Annotating the target, or
+  instantiating any one of the operands, restores it; pyright is unaffected.
+  This is a rule about assignment statements rather than about overloads, so
+  Option 4 measures identically and no category scheme avoids it.
 - The `test/typing/` harness is where a category assignment is pinned:
   `assert_type` on a chain is the only thing that fails when a filter is
-  refiled or a marker stops matching.
+  refiled or a marker stops matching. It cannot catch the assignment case
+  above, `assert_type` taking the chain as an argument — the one position
+  that works.
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [005: Parameterise Filters on One Output Type]: 005-parameterise-filters-on-one-output-type.md
+[009: Drop `None` as an Operand of the Chaining Operator]: 009-drop-none-as-an-operand-of-the-chaining-operator.md
+[PEP 604]: https://peps.python.org/pep-0604/
