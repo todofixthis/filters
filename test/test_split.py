@@ -135,6 +135,23 @@ def test_split_pass_regex_library_support(assert_filter_passes):
     )
 
 
+def test_split_fail_empty_keys(assert_filter_errors):
+    """
+    ``keys=()`` maps onto a dict with zero keys, so any non-empty split
+    is too long — not a bare list, even though an empty ``keys`` is
+    falsy.
+
+    Both checkers already infer ``Split[dict[str, str]]`` for this
+    overload regardless of how many keys it's given; this pins the
+    runtime behaviour to agree.
+    """
+    assert_filter_errors(
+        f.Split(pattern=":", keys=()),
+        "foo:bar",
+        [f.MaxLength.CODE_TOO_LONG],
+    )
+
+
 def test_split_fail_too_long(assert_filter_errors):
     """
     The incoming value has too many parts to assign a key to each one, so

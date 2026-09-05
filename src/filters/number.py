@@ -1,7 +1,9 @@
 from decimal import Decimal as DecimalType, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
-from filters.base import BaseFilter, Type
+from typing_extensions import TypeVar
+
+from filters.base import BaseFilter, PassThrough, Type
 
 __all__ = [
     "Decimal",
@@ -11,8 +13,16 @@ __all__ = [
     "Round",
 ]
 
+# Imported from ``typing_extensions`` because ``default=`` is native only
+# from Python 3.13, and this package supports 3.12. See
+# docs/adr/005-parameterise-filters-on-one-output-type.md.
+T_result = TypeVar("T_result", default=DecimalType)
+"""The type :py:class:`Round` returns, bound from its ``result_type``
+argument.
+"""
 
-class Decimal(BaseFilter):
+
+class Decimal(BaseFilter[DecimalType]):
     """Interprets the value as a :py:class:`decimal.Decimal` object."""
 
     CODE_INVALID = "not_numeric"
@@ -59,7 +69,7 @@ class Decimal(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}(max_precision={self.max_precision!r})"
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> DecimalType:
         allowed_types = (
             str,
             int,
@@ -100,7 +110,7 @@ class Decimal(BaseFilter):
         return d
 
 
-class Int(BaseFilter):
+class Int(BaseFilter[int]):
     """Interprets the value as an int.
 
     Strings and other compatible values will be converted, but floats
@@ -119,7 +129,7 @@ class Int(BaseFilter):
         CODE_DECIMAL: "Integer value expected.",
     }
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> int:
         decimal: DecimalType = self._filter(value, Decimal)
 
         if self._has_errors:
@@ -136,7 +146,7 @@ class Int(BaseFilter):
         return int(decimal)
 
 
-class Max(BaseFilter):
+class Max(PassThrough):
     """Enforces a maximum value.
 
     Note:
@@ -174,7 +184,7 @@ class Max(BaseFilter):
             f"{type(self).__name__}({self.max_value!r}, exclusive={self.exclusive!r})"
         )
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         # Note that this will yield weird results for string values.
         # We could add better unicode support, if we ever need it.
         # http://stackoverflow.com/q/1097908
@@ -195,7 +205,7 @@ class Max(BaseFilter):
         return value
 
 
-class Min(BaseFilter):
+class Min(PassThrough):
     """Enforces a minimum value.
 
     Note:
@@ -233,7 +243,7 @@ class Min(BaseFilter):
             f"{type(self).__name__}({self.min_value!r}, exclusive={self.exclusive!r})"
         )
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         # Note that this will yield weird results for string values.
         # We could add better unicode support, if we ever need it.
         # http://stackoverflow.com/q/1097908
@@ -254,14 +264,14 @@ class Min(BaseFilter):
         return value
 
 
-class Round(BaseFilter):
+class Round(BaseFilter[T_result]):
     """Rounds incoming values to whole numbers or decimals."""
 
     def __init__(
         self,
         to_nearest: int | str | DecimalType = 1,
         rounding: str = ROUND_HALF_UP,
-        result_type: type = DecimalType,
+        result_type: type[T_result] = DecimalType,
     ):
         """Initialises the Round filter.
 
@@ -287,7 +297,7 @@ class Round(BaseFilter):
         self.result_type = result_type
         self.rounding = rounding
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_result:
         value: DecimalType = self._filter(value, Decimal)
 
         if self._has_errors:

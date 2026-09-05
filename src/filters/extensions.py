@@ -63,7 +63,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         """
         # create_instance returns the class itself (not an instance) when called
         # without args, so the runtime type is type[BaseFilter], not BaseFilter.
-        return self[item]  # type: ignore[return-value]
+        return self[item]
 
     def __repr__(self):
         return repr(self._get_cache())

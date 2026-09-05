@@ -1,12 +1,14 @@
 API Documentation
 =================
 
-.. automodule:: filters.base
-.. automodule:: filters.complex
+.. automodule:: filters
+
+Extensions
+----------
+
 .. automodule:: filters.extensions
-.. automodule:: filters.handlers
-.. automodule:: filters.macros
-.. automodule:: filters.number
-.. automodule:: filters.simple
-.. automodule:: filters.string
+
+Test Helpers
+------------
+
 .. automodule:: filters.test
