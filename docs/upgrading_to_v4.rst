@@ -297,7 +297,7 @@ type instead:
 
    Passing a chain straight into a filter, as in the examples above, is
    unaffected. Where you do want to name it, either annotate the variable or
-   instantiate the first filter:
+   instantiate any one of the filters:
 
    .. code-block:: python
 
