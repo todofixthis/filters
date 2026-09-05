@@ -202,7 +202,11 @@ class FilterMapper(BaseFilter):
 
     def __init__(
         self,
-        filter_map: Mapping[str, FilterCompatible],
+        # ``Any`` rather than ``str | int``: an all-``int`` map selects the
+        # sequence mode (see ADR 003), but ``Mapping``'s key type is
+        # invariant, so a union would reject a ``dict[str, ...]`` variable
+        # that callers pass today.
+        filter_map: Mapping[Any, FilterCompatible],
         allow_missing_keys: bool | Iterable[str] = True,
         allow_extra_keys: bool | Iterable[str] = True,
     ) -> None:
