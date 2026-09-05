@@ -239,6 +239,24 @@ Chains and :py:class:`filters.FilterRunner` infer real types instead of
 The library ships a ``py.typed`` marker, so you get this without installing a
 separate stubs package.
 
+.. note::
+
+   Not every filter can declare an output type. A validator that passes its
+   input through — :py:class:`filters.NotEmpty`, :py:class:`filters.Required`,
+   :py:class:`filters.Min` — leaves the chain's type alone, and
+   :py:class:`filters.Optional` widens it to include its default's type. But a
+   filter whose output shape is only known at runtime still yields
+   :py:obj:`~typing.Any`, so a chain ending in one infers nothing:
+   :py:class:`filters.JsonDecode`, :py:class:`filters.FilterMapper`,
+   :py:class:`filters.FilterRepeater`, :py:class:`filters.FilterSwitch`,
+   :py:class:`filters.Array`, :py:class:`filters.Item`,
+   :py:class:`filters.Pick` and :py:class:`filters.Omit`.
+
+   :py:class:`filters.Type`, :py:class:`filters.NamedTuple`,
+   :py:class:`filters.Choice`, :py:class:`filters.Round` and
+   :py:class:`filters.Call` take their output type from their constructor
+   arguments, so they infer only when you instantiate them.
+
 **Your own filters need no changes.** The type parameter defaults to
 :py:obj:`~typing.Any`, so a bare subclass keeps working exactly as before:
 
