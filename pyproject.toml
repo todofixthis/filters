@@ -63,7 +63,7 @@ dev = [
     # ordinary dependency, which only changes behaviour at a major one —
     # so the range stops at today's minor, and only patch releases flow
     # in without a manual bump.
-    "mypy>=1.20.2,<1.21",
+    "mypy>=2.3.1,<2.4",
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
@@ -77,7 +77,7 @@ dev = [
 ci = [
     # Same patch-level pin as the dev group above; see
     # docs/adr/004-type-checking-in-ci.md.
-    "mypy>=1.20.2,<1.21",
+    "mypy>=2.3.1,<2.4",
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "pyyaml>=6.0.3",
