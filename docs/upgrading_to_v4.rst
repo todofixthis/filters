@@ -43,7 +43,9 @@ If the alpha bites, going back is just as explicit::
 
 At a Glance
 -----------
-Start with the change that gives you no warning at all:
+Ordered by how likely each is to affect your code, not by how loud the
+failure is — the last one gives no warning at all, but tripping it takes a
+subclass check on these specific filters, which most code never does:
 
 .. list-table::
    :header-rows: 1
@@ -52,70 +54,23 @@ Start with the change that gives you no warning at all:
    * - Change
      - How it surfaces
      - How to find it
-   * - :ref:`upgrade-v4-siblings`
-     - **Nothing.** No exception, no warning — a check silently returns
-       ``False`` and your code takes the other branch.
-     - ``rg -U '(?s)(isinstance|issubclass)\(.{0,120}?\b(ByteString|Date|Datetime|Unicode)\b'``
    * - :ref:`upgrade-v4-none`
      - :py:class:`TypeError` when the chain is *built*. For chains defined at
-       module scope, that's on import, so your test suite finds every one.
-     - Don't search — ``| None`` matches every ``str | None`` annotation in
-       your codebase. Let the :py:class:`TypeError` find them.
+       module scope, that's on import — but only if your test suite imports
+       that module.
+     - A type checker flags every one immediately; if you don't have one,
+       consider adopting one. Otherwise,
+       ``rg -U 'f\.\w+(?:\([^)]*\))?\s*\|\s*None'`` catches chains built off
+       the conventional ``import filters as f`` alias, though not one
+       assembled through an intermediate variable.
    * - :ref:`upgrade-v4-split`
      - ``FilterError`` on every input.
      - ``rg -U 'Split\([^)]*,'`` — a candidate list to eyeball; check each
        hit for a ``keys`` argument
-
-.. _upgrade-v4-siblings:
-
-ByteString and Date are no longer subclasses
---------------------------------------------
-.. important::
-
-   :py:class:`filters.ByteString` no longer subclasses
-   :py:class:`filters.Unicode`, and :py:class:`filters.Date` no longer
-   subclasses :py:class:`filters.Datetime`. Each pair is now two siblings
-   sharing a private base class:
-
-   .. code-block:: python
-
-      >>> issubclass(f.ByteString, f.Unicode)
-      False
-      >>> isinstance(f.ByteString(), f.Unicode)
-      False
-
-**This is the one change nothing will tell you about.** There is no exception
-and no warning: a check that used to be ``True`` is now ``False``, and whatever
-branch depended on it quietly stops running. Search for ``ByteString`` and
-``Date`` wherever you use ``isinstance()`` or ``issubclass()`` — both are
-affected, so searching for only one of them will miss cases.
-
-The subclass relationship was never meaningful — a
-:py:class:`filters.ByteString` emits :py:class:`bytes` where a
-:py:class:`filters.Unicode` emits :py:class:`str`, so it could not stand in for
-its parent. Once each filter declared an output type, a type checker could see
-the violation.
-
-If you were testing for the concrete filter, name it directly:
-
-.. code-block:: python
-
-   # Unchanged, and now means what it says.
-   isinstance(some_filter, f.ByteString)
-
-If you were testing for "any decoder" or "any date-like filter", there is no
-public replacement — the shared base classes are private. Test against the pair:
-
-.. code-block:: python
-
-   isinstance(some_filter, (f.Unicode, f.ByteString))
-   isinstance(some_filter, (f.Datetime, f.Date))
-
-.. note::
-
-   Only the class hierarchy changed. Both filters accept the same input and
-   produce the same output as they did in Filters v3, so code that simply *uses*
-   them needs no changes.
+   * - :ref:`upgrade-v4-siblings`
+     - **Nothing.** No exception, no warning — a check silently returns
+       ``False`` and your code takes the other branch.
+     - ``rg -U '(?s)(isinstance|issubclass)\(.{0,120}?\b(ByteString|Date|Datetime|Unicode)\b'``
 
 .. _upgrade-v4-none:
 
@@ -218,6 +173,57 @@ Filters v4:
    out — ``keys=[k for k in fields if ...]`` that happens to select nothing. In
    Filters v3 that quietly returned a list; it now fails loudly, which is the
    point.
+
+.. _upgrade-v4-siblings:
+
+ByteString and Date are no longer subclasses
+--------------------------------------------
+.. important::
+
+   :py:class:`filters.ByteString` no longer subclasses
+   :py:class:`filters.Unicode`, and :py:class:`filters.Date` no longer
+   subclasses :py:class:`filters.Datetime`. Each pair is now two siblings
+   sharing a private base class:
+
+   .. code-block:: python
+
+      >>> issubclass(f.ByteString, f.Unicode)
+      False
+      >>> isinstance(f.ByteString(), f.Unicode)
+      False
+
+**This is the one change nothing will tell you about.** There is no exception
+and no warning: a check that used to be ``True`` is now ``False``, and whatever
+branch depended on it quietly stops running. Search for ``ByteString`` and
+``Date`` wherever you use ``isinstance()`` or ``issubclass()`` — both are
+affected, so searching for only one of them will miss cases.
+
+The subclass relationship was never meaningful — a
+:py:class:`filters.ByteString` emits :py:class:`bytes` where a
+:py:class:`filters.Unicode` emits :py:class:`str`, so it could not stand in for
+its parent. Once each filter declared an output type, a type checker could see
+the violation.
+
+If you were testing for the concrete filter, name it directly:
+
+.. code-block:: python
+
+   # Unchanged, and now means what it says.
+   isinstance(some_filter, f.ByteString)
+
+If you were testing for "any decoder" or "any date-like filter", there is no
+public replacement — the shared base classes are private. Test against the pair:
+
+.. code-block:: python
+
+   isinstance(some_filter, (f.Unicode, f.ByteString))
+   isinstance(some_filter, (f.Datetime, f.Date))
+
+.. note::
+
+   Only the class hierarchy changed. Both filters accept the same input and
+   produce the same output as they did in Filters v3, so code that simply *uses*
+   them needs no changes.
 
 Type Parameters
 ---------------
