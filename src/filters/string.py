@@ -722,8 +722,20 @@ class Split(BaseFilter[T_split]):
 
                 Important: If ``keys`` is set, the split value's length
                 must be less than or equal to ``len(keys)``.
+
+        Raises:
+            ValueError: If ``keys`` is an empty sequence. An empty
+                ``keys`` can never produce a result, so this is
+                rejected at construction rather than on every
+                ``apply()`` call. Pass ``None`` (the default) for
+                list output instead.
         """
         super().__init__()
+
+        if keys is not None and len(keys) == 0:
+            raise ValueError(
+                "keys must not be empty; pass None for list output instead."
+            )
 
         self.regex = (
             pattern
