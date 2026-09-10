@@ -154,6 +154,19 @@ an empty ``keys`` caps the split at zero items, and nothing fits — so rather
 than let every ``apply()`` call fail on that, it's rejected up front, where the
 mistake was actually made.
 
+.. note::
+
+   Why not just fall back to a list, the way Filters v3 did? The two
+   constructor overloads dispatch on the *type* of ``keys`` — ``None``
+   versus ``Sequence[str]`` — not its value, and there is no way to type
+   "a non-empty sequence" separately from "a sequence." For a *computed*
+   ``keys``, a type checker can't know whether it will be empty at
+   runtime, so it infers ``Split[dict[str, str]]`` for any non-``None``
+   ``keys`` regardless. Falling back to a list on empty input would make
+   that inference silently wrong: code trusting the dict type would only
+   fail later, at whatever call site used the result — further from the
+   mistake, and with no exception pointing back to it.
+
 The :py:class:`ValueError` fires when the filter is *constructed*, not when it
 runs, so a filter built at module scope raises on import.
 
