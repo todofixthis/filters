@@ -93,6 +93,11 @@ pre-commit = [
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
     "adr_index",
+    # Runs a strict, full-reread Sphinx build on staged docs/docstring
+    # changes (see docs/adr/012-check-the-docs-build-in-the-pre-commit-hook.md)
+    # — removing this reopens a gap neither CI nor the pre-commit chain
+    # otherwise catches.
+    "docs_build",
 ]
 
 [tool.autohooks.plugins.mypy]
