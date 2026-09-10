@@ -1,20 +1,22 @@
-# Byte-compiled / optimized / DLL files
-__pycache__
-*.pyc
+# Byte-compiled / optimised / DLL files
+*.py[cod]
+__pycache__/
 
 # Distribution / packaging
-build
-dist
-*.egg-info
-
-# dotenv
-.env
+*.egg-info/
+dist/
 
 # Git worktrees
-.worktrees
+.agents/worktrees/
+.claude/worktrees/
+
+# Release artefacts (local working files)
+release-*-body.md
+release-*.md
+release-*.md.asc
 
 # Sphinx documentation
 docs/_build/
 
-# Tox
+# Testing
 .tox

@@ -4,6 +4,7 @@ Tests for the Split filter.
 
 import re
 
+import pytest
 import regex
 
 import filters as f
@@ -133,6 +134,16 @@ def test_split_pass_regex_library_support(assert_filter_passes):
         word,
         ["", "!"],
     )
+
+
+def test_split_invalid_empty_keys():
+    """
+    An empty ``keys`` can never produce a result — any non-empty split
+    is too long, and even the empty string splits to a non-empty list.
+    Rejected at construction rather than on every ``apply()`` call.
+    """
+    with pytest.raises(ValueError):
+        f.Split(pattern=":", keys=())
 
 
 def test_split_fail_too_long(assert_filter_errors):

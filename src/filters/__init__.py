@@ -10,7 +10,9 @@ __all__ = [
     "FilterCompatible",
     "FilterError",
     "FilterMeta",
+    "PassThrough",
     "Type",
+    "Widening",
     # handlers
     "FilterMessage",
     "FilterRunner",
@@ -74,7 +76,9 @@ from .base import (
     FilterCompatible,
     FilterError,
     FilterMeta,
+    PassThrough,
     Type,
+    Widening,
 )
 from .handlers import (
     FilterMessage,

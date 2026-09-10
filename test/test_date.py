@@ -159,3 +159,18 @@ def test_date_fail_invalid_value(assert_filter_errors):
         "that's no date",  # it's a space station
         [f.Date.CODE_INVALID],
     )
+
+
+def test_date_is_not_a_datetime_subclass():
+    """
+    ``Date`` is a sibling of ``Datetime``, not a subclass of it.
+
+    The two shared an inheritance chain until the filters were
+    parameterised on their output types; breaking it is a deliberate
+    breaking change (see
+    docs/adr/008-split-bytestring-and-date-into-siblings.md), so this
+    records the new answer rather than leaving a restored inheritance to
+    pass unnoticed.
+    """
+    assert not issubclass(f.Date, f.Datetime)
+    assert not isinstance(f.Date(), f.Datetime)

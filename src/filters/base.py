@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from copy import copy
-from typing import Any, Optional, Union
+from typing import Any, Generic, Optional, Union, overload
 from weakref import ProxyTypes, proxy
+
+from typing_extensions import TypeAliasType, TypeVar
 
 __all__ = [
     "BaseFilter",
@@ -12,15 +14,70 @@ __all__ = [
     "FilterCompatible",
     "FilterError",
     "FilterMeta",
+    "PassThrough",
+    "T_out",
     "Type",
+    "Widening",
 ]
+
+# ``default=Any`` (PEP 696) keeps ``class Country(BaseFilter)`` — no type
+# argument — valid even under mypy's ``disallow_any_generics`` and pyright's
+# ``reportMissingTypeArgument``. Imported from ``typing_extensions`` because
+# ``default=`` is native only from Python 3.13, and this package supports
+# 3.12. See docs/adr/005-parameterise-filters-on-one-output-type.md.
+T_out = TypeVar("T_out", default=Any)
+"""The type a filter produces."""
+
+T_widened = TypeVar("T_widened", default=Any)
+"""The type a :py:class:`Widening` filter adds to a chain's output."""
+
+T_next = TypeVar("T_next")
+"""The output type of the filter being chained onto another."""
+
+T_filtered = TypeVar("T_filtered")
+"""The output type of the filter :py:meth:`BaseFilter._filter` applies."""
+
+T_resolved = TypeVar("T_resolved")
+"""The output type of the filter :py:meth:`BaseFilter.resolve_filter` returns."""
+
+T_allowed1 = TypeVar("T_allowed1")
+"""The first type a :py:class:`Type` filter accepts."""
+
+T_allowed2 = TypeVar("T_allowed2")
+"""The second type a :py:class:`Type` filter accepts."""
+
+T_allowed3 = TypeVar("T_allowed3")
+"""The third type a :py:class:`Type` filter accepts."""
+
+TF = TypeVar("TF", bound="BaseFilter[Any]")
+"""The filter :py:meth:`BaseFilter.__copy__` was handed, and returns."""
+
+TFC = TypeVar("TFC", bound="FilterChain[Any]")
+"""The chain :py:meth:`FilterChain.__copy__` was handed, and returns."""
 
 # Note: Using typing.Optional/Union instead of PEP 604 syntax (X | Y) for
 # forward references to avoid Sphinx autodoc warnings. Sphinx cannot parse
 # the | operator when combined with string forward references like "BaseFilter".
-FilterCompatible = Optional[
-    Union["BaseFilter", "FilterMeta", Callable[[], "BaseFilter"]]
-]
+#
+# Built via TypeAliasType rather than a plain assignment so that
+# ``type_params`` declares its genericity explicitly: a Union built from
+# string forward references carries no ``__parameters__`` of its own
+# (they're inside unevaluated ForwardRef objects), so a plain assignment
+# left this unsubscriptable at runtime and broke ``get_type_hints()`` on
+# every signature that names it. ``type_params=(T_out,)`` fixes both,
+# reusing ``T_out``'s own ``default=Any`` so bare ``FilterCompatible``
+# still works exactly as it did before.
+FilterCompatible = TypeAliasType(
+    "FilterCompatible",
+    Optional[
+        Union[
+            "BaseFilter[T_out]",
+            "type[BaseFilter[T_out]]",
+            Callable[[], "BaseFilter[T_out]"],
+        ]
+    ],
+    type_params=(T_out,),
+)
 """Used in PEP-484 type hints to indicate a value that can be
 normalised into an instance of a BaseFilter subclass.
 """
@@ -49,7 +106,63 @@ class FilterMeta(ABCMeta):
             templates.update(cls.templates)
             cls.templates = templates
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
+    #
+    # The ``cls: "type[BaseFilter[T_out]]"`` self-type is what lets
+    # ``Unicode | NotEmpty`` infer ``FilterChain[str]`` rather than
+    # collapsing to ``types.UnionType``. mypy reports ``misc`` against it
+    # because the annotation is not the metaclass itself; both checkers
+    # nonetheless resolve the chain type correctly, so the suppression is
+    # for mypy's structural objection, not for a wrong result.
+    #
+    # Overload order matters: PassThrough and Widening are BaseFilter
+    # subclasses, so the general overloads below would swallow them. The
+    # callable overload comes last for the same reason in reverse — a
+    # filter *class* is itself a zero-argument callable returning a
+    # filter, so placing it any earlier would swallow every ``type[...]``
+    # overload above it.
+    # See docs/adr/006-distinguish-filter-categories-by-marker-base-class.md.
+    #
+    # There is deliberately no ``None`` arm: ``FilterCompatible`` still
+    # admits ``None``, but ``|`` does not — see
+    # docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
+    #
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "type[PassThrough]",
+    ) -> "FilterChain[T_out]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "PassThrough",
+    ) -> "FilterChain[T_out]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "type[BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "BaseFilter[T_next]",
+    ) -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(  # type: ignore[misc]
+        cls: "type[BaseFilter[T_out]]",
+        next_filter: "Callable[[], BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    def __or__(cls, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
         """Convenience alias for adding a Filter with default config.
 
         E.g., the following statements do the same thing::
@@ -59,11 +172,25 @@ class FilterMeta(ABCMeta):
 
         Note:
             Reference: http://stackoverflow.com/a/10773232
+
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
         """
-        return FilterChain(self) | next_filter
+        # Checked here, naming ``cls``, rather than left to the
+        # ``FilterChain(cls) | next_filter`` delegation below: that
+        # raises the same error but names the wrapping ``FilterChain``
+        # instead of the class the caller actually wrote.
+        if cls.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {cls.__name__} in a filter "
+                f"chain; use NoOp instead, or Optional[{cls.__name__}] in "
+                f"a type annotation.",
+            )
+
+        return FilterChain(cls) | next_filter
 
 
-class BaseFilter(metaclass=FilterMeta):
+class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     """Base functionality for all Filters, macros, etc."""
 
     CODE_EXCEPTION = "exception"
@@ -72,12 +199,12 @@ class BaseFilter(metaclass=FilterMeta):
         CODE_EXCEPTION: "An error occurred while processing this value.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-        self._parent: BaseFilter | None = None
-        self._handler: BaseInvalidValueHandler | None = None
-        self._key: str | None = None
+        self._parent: Optional[BaseFilter[Any]] = None
+        self._handler: Optional[BaseInvalidValueHandler] = None
+        self._key: Optional[str] = None
 
         #
         # Indicates whether the Filter detected any invalid values.
@@ -94,9 +221,9 @@ class BaseFilter(metaclass=FilterMeta):
 
     # noinspection PyProtectedMember
     @classmethod
-    def __copy__(cls, the_filter: "BaseFilter") -> "BaseFilter":
+    def __copy__(cls, the_filter: TF) -> TF:
         """Creates a shallow copy of the object."""
-        new_filter: BaseFilter = type(the_filter)()
+        new_filter: TF = type(the_filter)()
 
         new_filter._parent = the_filter._parent
         new_filter._key = the_filter._key
@@ -104,24 +231,63 @@ class BaseFilter(metaclass=FilterMeta):
 
         return new_filter
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
-        """Chains another filter with this one."""
-        normalized = self.resolve_filter(next_filter)
+    # The same six overloads as FilterMeta.__or__, in the same order, so
+    # that chaining behaves identically whether the left operand is a
+    # filter class or a filter instance.
+    @overload
+    def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
-        if normalized:
-            #
-            # Officially, we should do this:
-            # return ``FilterChain(self) | next_filter``
-            #
-            # But that wastes some CPU cycles by creating an extra
-            # FilterChain instance that gets thrown away almost
-            # immediately. It's a bit faster just to create a single
-            # FilterChain instance and modify it in-place.
-            #
-            # noinspection PyProtectedMember
-            return FilterChain(self)._add(next_filter)
-        else:
-            return self if isinstance(self, FilterChain) else FilterChain(self)
+    @overload
+    def __or__(self, next_filter: "PassThrough") -> "FilterChain[T_out]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "type[BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(self, next_filter: "BaseFilter[T_next]") -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Callable[[], BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
+        """Chains another filter with this one.
+
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
+        """
+        # ``resolve_filter`` returns ``None`` only for a ``None`` operand,
+        # directly or via a zero-argument callable that returns one. That
+        # used to be a silent no-op.
+        if self.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {type(self).__name__} in a "
+                f"filter chain; use NoOp instead, or "
+                f"Optional[{type(self).__name__}] in a type annotation.",
+            )
+
+        #
+        # Officially, we should do this:
+        # return ``FilterChain(self) | next_filter``
+        #
+        # But that wastes some CPU cycles by creating an extra
+        # FilterChain instance that gets thrown away almost
+        # immediately. It's a bit faster just to create a single
+        # FilterChain instance and modify it in-place.
+        #
+        # noinspection PyProtectedMember
+        return FilterChain(self)._add(next_filter)
 
     def __str__(self):
         """Returns a string representation of the Filter.
@@ -135,7 +301,9 @@ class BaseFilter(metaclass=FilterMeta):
         return f"{type(self).__name__}()"
 
     @property
-    def parent(self) -> Optional["BaseFilter"]:  # Use Optional for Sphinx compat
+    def parent(
+        self,
+    ) -> Optional["BaseFilter[Any]"]:  # Use `Optional` instead of `|` for Sphinx compat
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
@@ -147,7 +315,7 @@ class BaseFilter(metaclass=FilterMeta):
         return self._parent
 
     @parent.setter
-    def parent(self, parent: "BaseFilter") -> None:
+    def parent(self, parent: "BaseFilter[Any]") -> None:
         """Sets the parent Filter."""
         # Create a weakref to the parent Filter to prevent annoying the
         # garbage collector.
@@ -216,15 +384,22 @@ class BaseFilter(metaclass=FilterMeta):
         """Sets the invalid value handler for the filter."""
         self._handler = handler
 
-    def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter":
+    def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter[T_out]":
         """Cascading method for setting the filter's invalid value
         handler.
         """
         self.handler = handler
         return self
 
-    def apply(self, value):
-        """Applies the filter to a value."""
+    def apply(self, value: Any) -> Optional[T_out]:
+        """Applies the filter to a value.
+
+        Note:
+            The result is ``Optional`` because every rejection path runs
+            through :py:meth:`_invalid_value`, which returns its
+            ``replacement`` (``None`` unless the caller overrode it)
+            whenever the invalid value handler does not raise.
+        """
         self._has_errors = False
 
         try:
@@ -233,7 +408,7 @@ class BaseFilter(metaclass=FilterMeta):
             return self._invalid_value(value, e, exc_info=True)
 
     @abstract_method
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_out:
         """Applies filter-specific logic to a value.
 
         Note:
@@ -244,18 +419,22 @@ class BaseFilter(metaclass=FilterMeta):
             f"Not implemented in {type(self).__name__}.",
         )
 
-    def _apply_none(self):
+    def _apply_none(self) -> Optional[T_out]:
         """Applies filter-specific logic when the value is ``None``."""
         return None
 
     def _filter(
         self,
         value: Any,
-        filter_chain: FilterCompatible,
-        sub_key: str | None = None,
-    ) -> Any:
+        filter_chain: "FilterCompatible[T_filtered]",
+        sub_key: Optional[str] = None,
+    ) -> Optional[T_filtered]:
         """Applies another filter to a value in the same context as
         the current filter.
+
+        Note that the result is parameterised on ``filter_chain``, not on
+        the calling filter — this method reports what the filter it was
+        handed produces.
 
         Args:
             sub_key: Appended to the ``key`` value in the error message
@@ -284,12 +463,12 @@ class BaseFilter(metaclass=FilterMeta):
     def _invalid_value(
         self,
         value: Any,
-        reason: str | Exception,
-        replacement: Any | None = None,
+        reason: Union[str, Exception],
+        replacement: Optional[Any] = None,
         exc_info: bool = False,
-        context: MutableMapping | None = None,
-        sub_key: str | None = None,
-        template_vars: Mapping | None = None,
+        context: Optional[MutableMapping] = None,
+        sub_key: Optional[str] = None,
+        template_vars: Optional[Mapping] = None,
     ) -> Any:
         """Handles an invalid value.
 
@@ -380,17 +559,28 @@ class BaseFilter(metaclass=FilterMeta):
     @classmethod
     def resolve_filter(
         cls,
-        the_filter: FilterCompatible,
-        parent: Optional["BaseFilter"] = None,  # Use Optional for Sphinx compat
-        key: str | None = None,
-    ) -> Optional["FilterChain"]:  # Use Optional for Sphinx compat
+        the_filter: "FilterCompatible[T_resolved]",
+        # Use `Optional` instead of `|` for Sphinx compat
+        parent: Optional["BaseFilter[Any]"] = None,
+        key: Optional[str] = None,
+    ) -> Optional[
+        "BaseFilter[T_resolved]"
+    ]:  # Use `Optional` instead of `|` for Sphinx compat
         """Converts a filter-compatible value into a consistent type."""
         if the_filter is not None:
+            resolved: Optional[BaseFilter[T_resolved]]
+
             if isinstance(the_filter, BaseFilter):
                 resolved = the_filter
 
             elif callable(the_filter):
                 resolved = cls.resolve_filter(the_filter())
+
+                # A callable is free to hand back ``None``; without this
+                # guard the ``parent``/``key`` assignments below would
+                # raise ``AttributeError`` on it.
+                if resolved is None:
+                    return None
 
             # Uhh... hm.
             else:
@@ -407,51 +597,118 @@ class BaseFilter(metaclass=FilterMeta):
 
             return resolved
 
+        return None
+
     @staticmethod
     def _make_key(key_parts: Iterable[str]) -> str:
         """Assembles a dotted key value from its component parts."""
         return ".".join(filter(None, key_parts))
 
 
-class FilterChain(BaseFilter):
+class PassThrough(BaseFilter[Any]):
+    """Marks a filter that returns its input unchanged, so that chaining
+    it leaves the chain's output type alone.
+
+    This class adds no runtime behaviour: it exists so that the overloads
+    on ``|`` can tell a check (``NotEmpty``, ``Min``, ``Len``) apart from
+    a transformation. Nothing does an ``isinstance`` check against it.
+
+    Note:
+        See docs/adr/006-distinguish-filter-categories-by-marker-base-class.md.
+    """
+
+
+class Widening(BaseFilter[Any], Generic[T_widened]):
+    """Marks a filter that adds ``T_widened`` to the chain's output type
+    rather than replacing it — ``Optional``, whose ``T_widened`` is the
+    type of its default.
+
+    Like :py:class:`PassThrough`, this is a static-typing device with no
+    runtime behaviour of its own.
+    """
+
+
+class FilterChain(BaseFilter[T_out]):
     """Allows you to chain multiple filters together so that they are
     treated as a single filter.
     """
 
-    def __init__(self, start_filter: FilterCompatible = None) -> None:
+    def __init__(self, start_filter: "FilterCompatible[T_out]" = None) -> None:
         super().__init__()
 
-        self._filters: list[BaseFilter] = []
+        self._filters: list[BaseFilter[Any]] = []
 
         self._add(start_filter)
 
     def __str__(self):
         return f"{type(self).__name__}({' | '.join(map(str, self._filters))})"
 
-    def __or__(self, next_filter: FilterCompatible) -> "FilterChain":
+    #
+    # This override exists for a runtime reason — chaining onto a chain
+    # copies rather than mutating — but it is also what makes the third
+    # copy of the overloads necessary: every ``|`` after the first
+    # dispatches here, and an override without them collapses a
+    # three-filter chain to ``FilterChain[Any]`` on both checkers.
+    #
+    # Same order as the other two sets: markers first, callable last, and
+    # no ``None`` arm.
+    #
+    @overload
+    def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
+
+    @overload
+    def __or__(self, next_filter: "PassThrough") -> "FilterChain[T_out]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Union[Widening[T_widened], type[Widening[T_widened]]]",
+    ) -> "FilterChain[Union[T_out, T_widened]]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "type[BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(self, next_filter: "BaseFilter[T_next]") -> "FilterChain[T_next]": ...
+
+    @overload
+    def __or__(
+        self,
+        next_filter: "Callable[[], BaseFilter[T_next]]",
+    ) -> "FilterChain[T_next]": ...
+
+    def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
         """Chains a filter with this one.
 
         This method creates a new FilterChain object without modifying
         the current one.
-        """
-        resolved = self.resolve_filter(next_filter)
 
-        if resolved:
-            new_chain: FilterChain = copy(self)
-            new_chain._add(next_filter)
-            return new_chain
-        else:
-            return self
+        Raises:
+            TypeError: if ``next_filter`` is (or resolves to) ``None``.
+        """
+        if self.resolve_filter(next_filter) is None:
+            raise TypeError(
+                f"None is not compatible with {type(self).__name__} in a "
+                f"filter chain; use NoOp instead, or "
+                f"Optional[{type(self).__name__}] in a type annotation.",
+            )
+
+        new_chain: FilterChain[Any] = copy(self)
+        new_chain._add(next_filter)
+        return new_chain
 
     @classmethod
-    def __copy__(cls, the_filter: "FilterChain") -> "FilterChain":
+    def __copy__(cls, the_filter: TFC) -> TFC:
         """Creates a shallow copy of the object."""
         new_filter = super().__copy__(the_filter)
         new_filter._filters = the_filter._filters[:]
         # noinspection PyTypeChecker
         return new_filter
 
-    def _add(self, next_filter: FilterCompatible) -> "FilterChain":
+    def _add(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[T_out]":
         """Adds a Filter to the collection directly."""
         resolved = self.resolve_filter(next_filter, parent=self)
         if resolved:
@@ -459,7 +716,7 @@ class FilterChain(BaseFilter):
 
         return self
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_out:
         for f in self._filters:
             value = self._filter(value, f)
 
@@ -472,7 +729,7 @@ class FilterChain(BaseFilter):
 
         return value
 
-    def _apply_none(self):
+    def _apply_none(self) -> Optional[T_out]:
         return self._apply(None)
 
 
@@ -540,7 +797,7 @@ class ExceptionHandler(BaseInvalidValueHandler):
 # This filter is used extensively by other filters.
 # To avoid lots of needless "circular import" hacks, we'll put it in
 # the base module.
-class Type(BaseFilter):
+class Type(BaseFilter[T_out]):
     """Checks the type of a value."""
 
     CODE_WRONG_TYPE = "wrong_type"
@@ -549,25 +806,82 @@ class Type(BaseFilter):
         CODE_WRONG_TYPE: "{incoming} is not valid (allowed types: {allowed}).",
     }
 
+    #
+    # Each of the two useful forms — a single type, and a 2-tuple of them
+    # — is paired with a bare-``type`` fallback resolving to ``Type[Any]``.
+    # The fallbacks are what let an abstract base class through: mypy
+    # rejects one against ``type[T]`` with ``type-abstract``, and this
+    # package passes ABCs to ``Type`` in ``simple.py`` and ``complex.py``.
+    #
+    # pyright reaches the same conclusion from the first overload alone,
+    # so it reports the fallback as unreachable; it is not, for mypy.
+    #
+    # Tuples stop at three. ``Type((str, int, float, bool))`` resolves to
+    # ``Type[Any]``, which is an accepted limit rather than a defect —
+    # neither ``src`` nor ``test`` passes a 4-tuple today. A TypeVarTuple
+    # can't replace these individual overloads: neither mypy nor pyright
+    # allows unpacking one into a ``Union`` (confirmed against both), so
+    # supporting an arbitrary size would still mean one overload per
+    # arity, same as this list, just longer.
+    #
+    @overload
+    def __init__(
+        self: "Type[T_allowed1]",
+        allowed_types: type[T_allowed1],
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(  # pyright: ignore[reportOverlappingOverload]
+        self: "Type[Any]",
+        allowed_types: type,
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: "Type[Union[T_allowed1, T_allowed2]]",
+        allowed_types: tuple[type[T_allowed1], type[T_allowed2]],
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: "Type[Union[T_allowed1, T_allowed2, T_allowed3]]",
+        allowed_types: tuple[type[T_allowed1], type[T_allowed2], type[T_allowed3]],
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: "Type[Any]",
+        allowed_types: tuple[type, ...],
+        allow_subclass: bool = True,
+        aliases: Optional[Mapping[type, str]] = None,
+    ) -> None: ...
+
     def __init__(
         self,
-        allowed_types: type | tuple[type, ...],
+        allowed_types: Union[type, tuple[type, ...]],
         allow_subclass: bool = True,
-        aliases: Mapping[type, str] | None = None,
+        aliases: Optional[Mapping[type, str]] = None,
     ) -> None:
-        """
-        :param allowed_types:
-            The type (or types) that incoming values are allowed to
-            have.
+        """Initialises the filter.
 
-        :param allow_subclass:
-            Whether to allow subclasses when checking for type matches.
+        Args:
+            allowed_types: The type (or types) that incoming values are
+                allowed to have.
+            allow_subclass: Whether to allow subclasses when checking for
+                type matches.
+            aliases: Aliases to use for type names in error messages.
 
-        :param aliases:
-            Aliases to use for type names in error messages.
-
-            This is useful for providing more context- appropriate
-            names to end users and/or masking native Python type names.
+                This is useful for providing more context-appropriate
+                names to end users and/or masking native Python type
+                names.
         """
         super().__init__()
 
@@ -585,7 +899,7 @@ class Type(BaseFilter):
             f"allow_subclass={self.allow_subclass!r})"
         )
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> T_out:
         valid = (
             isinstance(value, self.allowed_types)
             if self.allow_subclass

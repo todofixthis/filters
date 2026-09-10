@@ -1,7 +1,7 @@
 ---
 status: Accepted
 date: 2026-03-10
-tags: [pytest, testing, fixtures, plugin]
+scope: [pyproject.toml, src/filters/pytest.py]
 summary: Test helper fixtures are exported as an auto-registered pytest plugin via the `pytest11` entry point.
 ---
 
