@@ -64,7 +64,8 @@ subclass check on these specific filters, which most code never does:
        the conventional ``import filters as f`` alias, though not one
        assembled through an intermediate variable.
    * - :ref:`upgrade-v4-split`
-     - ``FilterError`` on every input.
+     - :py:class:`ValueError` when the filter is *constructed*. For one
+       built at module scope, that's on import.
      - ``rg -U 'Split\([^)]*,'`` — a candidate list to eyeball; check each
        hit for a ``keys`` argument
    * - :ref:`upgrade-v4-siblings`
@@ -141,15 +142,20 @@ Split with an empty ``keys``
 ----------------------------
 .. important::
 
-   ``f.Split(pattern, keys=[])`` — an empty ``keys``, not ``None`` — now rejects
-   every input, including the empty string::
+   ``f.Split(pattern, keys=[])`` — an empty ``keys``, not ``None`` — now
+   raises :py:class:`ValueError` immediately::
 
-      FilterError: Value is too long (length must be < 0).
+      ValueError: keys must not be empty; pass None for list output instead.
 
 Filters v3 branched on whether ``keys`` was *truthy*, so an empty ``keys`` fell
 through to the list branch and returned a list. Filters v4 branches on
 ``keys is not None``, which is what the documented behaviour always described:
-an empty ``keys`` caps the split at zero items, and nothing fits.
+an empty ``keys`` caps the split at zero items, and nothing fits — so rather
+than let every ``apply()`` call fail on that, it's rejected up front, where the
+mistake was actually made.
+
+The :py:class:`ValueError` fires when the filter is *constructed*, not when it
+runs, so a filter built at module scope raises on import.
 
 If you were relying on the old behaviour, pass ``None`` — the default:
 
@@ -171,8 +177,8 @@ Filters v4:
 
    This is most likely to bite where ``keys`` is computed rather than written
    out — ``keys=[k for k in fields if ...]`` that happens to select nothing. In
-   Filters v3 that quietly returned a list; it now fails loudly, which is the
-   point.
+   Filters v3 that quietly returned a list; it now raises as soon as that
+   ``Split`` is built, which is the point.
 
 .. _upgrade-v4-siblings:
 

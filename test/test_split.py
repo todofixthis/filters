@@ -4,6 +4,7 @@ Tests for the Split filter.
 
 import re
 
+import pytest
 import regex
 
 import filters as f
@@ -135,21 +136,14 @@ def test_split_pass_regex_library_support(assert_filter_passes):
     )
 
 
-def test_split_fail_empty_keys(assert_filter_errors):
+def test_split_invalid_empty_keys():
     """
-    ``keys=()`` maps onto a dict with zero keys, so any non-empty split
-    is too long — not a bare list, even though an empty ``keys`` is
-    falsy.
-
-    Both checkers already infer ``Split[dict[str, str]]`` for this
-    overload regardless of how many keys it's given; this pins the
-    runtime behaviour to agree.
+    An empty ``keys`` can never produce a result — any non-empty split
+    is too long, and even the empty string splits to a non-empty list.
+    Rejected at construction rather than on every ``apply()`` call.
     """
-    assert_filter_errors(
-        f.Split(pattern=":", keys=()),
-        "foo:bar",
-        [f.MaxLength.CODE_TOO_LONG],
-    )
+    with pytest.raises(ValueError):
+        f.Split(pattern=":", keys=())
 
 
 def test_split_fail_too_long(assert_filter_errors):
