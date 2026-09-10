@@ -102,7 +102,7 @@ Filters v4:
 
 .. code-block:: python
 
-   chain = f.Unicode | f.NoOp() | f.Strip
+   chain = f.Unicode | f.NoOp | f.Strip
 
 This most often shows up when a chain is assembled from parts that may
 legitimately be absent:
@@ -119,7 +119,7 @@ Filters v4:
 .. code-block:: python
 
    def build_chain(extra=None):
-       return f.Unicode | (extra if extra is not None else f.NoOp())
+       return f.Unicode | (extra if extra is not None else f.NoOp)
 
 .. note::
 
@@ -256,7 +256,7 @@ Chains and :py:class:`filters.FilterRunner` infer real types instead of
    import filters as f
 
    # Inferred as ``int``, not ``Any``.
-   f.FilterRunner(f.Int()).cleaned_data
+   f.FilterRunner(f.Int).cleaned_data
 
    # Inferred as ``str``.
    f.FilterRunner(f.Unicode | f.Strip | f.NotEmpty).cleaned_data
@@ -381,8 +381,9 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
-* Neither mypy nor pyright runs at full strictness yet, so some mistakes in your
-  own filters go unreported. Progress is tracked in
+* Neither mypy nor pyright runs at full strictness yet, so some strict typing
+  warnings or errors in your own filters go unreported. Full strictness is
+  expected by the 4.0.0 final release; progress is tracked in
   `issue #119 <https://github.com/todofixthis/filters/issues/119>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
