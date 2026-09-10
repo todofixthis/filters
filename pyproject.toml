@@ -93,6 +93,7 @@ pre-commit = [
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
     "adr_index",
+    "docs_build",
 ]
 
 [tool.autohooks.plugins.mypy]
