@@ -43,7 +43,9 @@ If the alpha bites, going back is just as explicit::
 
 At a Glance
 -----------
-Start with the change that gives you no warning at all:
+Ordered by how likely each is to affect your code, not by how loud the
+failure is — the last one gives no warning at all, but tripping it takes a
+subclass check on these specific filters, which most code never does:
 
 .. list-table::
    :header-rows: 1
@@ -52,19 +54,23 @@ Start with the change that gives you no warning at all:
    * - Change
      - How it surfaces
      - How to find it
-   * - :ref:`upgrade-v4-siblings`
-     - **Nothing.** No exception, no warning — a check silently returns
-       ``False`` and your code takes the other branch.
-     - ``rg -U '(?s)(isinstance|issubclass)\(.{0,120}?\b(ByteString|Date|Datetime|Unicode)\b'``
    * - :ref:`upgrade-v4-none`
      - :py:class:`TypeError` when the chain is *built*. For chains defined at
-       module scope, that's on import, so your test suite finds every one.
-     - Don't search — ``| None`` matches every ``str | None`` annotation in
-       your codebase. Let the :py:class:`TypeError` find them.
+       module scope, that's on import — but only if your test suite imports
+       that module.
+     - A type checker flags every one immediately; if you don't have one,
+       consider adopting one. Otherwise,
+       ``rg -U 'f\.\w+(?:\([^)]*\))?\s*\|\s*None'`` catches chains built off
+       the conventional ``import filters as f`` alias, though not one
+       assembled through an intermediate variable.
    * - :ref:`upgrade-v4-split`
      - ``FilterError`` on every input.
      - ``rg -U 'Split\([^)]*,'`` — a candidate list to eyeball; check each
        hit for a ``keys`` argument
+   * - :ref:`upgrade-v4-siblings`
+     - **Nothing.** No exception, no warning — a check silently returns
+       ``False`` and your code takes the other branch.
+     - ``rg -U '(?s)(isinstance|issubclass)\(.{0,120}?\b(ByteString|Date|Datetime|Unicode)\b'``
 
 .. _upgrade-v4-siblings:
 
