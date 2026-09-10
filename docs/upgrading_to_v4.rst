@@ -72,57 +72,6 @@ subclass check on these specific filters, which most code never does:
        ``False`` and your code takes the other branch.
      - ``rg -U '(?s)(isinstance|issubclass)\(.{0,120}?\b(ByteString|Date|Datetime|Unicode)\b'``
 
-.. _upgrade-v4-siblings:
-
-ByteString and Date are no longer subclasses
---------------------------------------------
-.. important::
-
-   :py:class:`filters.ByteString` no longer subclasses
-   :py:class:`filters.Unicode`, and :py:class:`filters.Date` no longer
-   subclasses :py:class:`filters.Datetime`. Each pair is now two siblings
-   sharing a private base class:
-
-   .. code-block:: python
-
-      >>> issubclass(f.ByteString, f.Unicode)
-      False
-      >>> isinstance(f.ByteString(), f.Unicode)
-      False
-
-**This is the one change nothing will tell you about.** There is no exception
-and no warning: a check that used to be ``True`` is now ``False``, and whatever
-branch depended on it quietly stops running. Search for ``ByteString`` and
-``Date`` wherever you use ``isinstance()`` or ``issubclass()`` — both are
-affected, so searching for only one of them will miss cases.
-
-The subclass relationship was never meaningful — a
-:py:class:`filters.ByteString` emits :py:class:`bytes` where a
-:py:class:`filters.Unicode` emits :py:class:`str`, so it could not stand in for
-its parent. Once each filter declared an output type, a type checker could see
-the violation.
-
-If you were testing for the concrete filter, name it directly:
-
-.. code-block:: python
-
-   # Unchanged, and now means what it says.
-   isinstance(some_filter, f.ByteString)
-
-If you were testing for "any decoder" or "any date-like filter", there is no
-public replacement — the shared base classes are private. Test against the pair:
-
-.. code-block:: python
-
-   isinstance(some_filter, (f.Unicode, f.ByteString))
-   isinstance(some_filter, (f.Datetime, f.Date))
-
-.. note::
-
-   Only the class hierarchy changed. Both filters accept the same input and
-   produce the same output as they did in Filters v3, so code that simply *uses*
-   them needs no changes.
-
 .. _upgrade-v4-none:
 
 Chaining with ``None``
@@ -224,6 +173,57 @@ Filters v4:
    out — ``keys=[k for k in fields if ...]`` that happens to select nothing. In
    Filters v3 that quietly returned a list; it now fails loudly, which is the
    point.
+
+.. _upgrade-v4-siblings:
+
+ByteString and Date are no longer subclasses
+--------------------------------------------
+.. important::
+
+   :py:class:`filters.ByteString` no longer subclasses
+   :py:class:`filters.Unicode`, and :py:class:`filters.Date` no longer
+   subclasses :py:class:`filters.Datetime`. Each pair is now two siblings
+   sharing a private base class:
+
+   .. code-block:: python
+
+      >>> issubclass(f.ByteString, f.Unicode)
+      False
+      >>> isinstance(f.ByteString(), f.Unicode)
+      False
+
+**This is the one change nothing will tell you about.** There is no exception
+and no warning: a check that used to be ``True`` is now ``False``, and whatever
+branch depended on it quietly stops running. Search for ``ByteString`` and
+``Date`` wherever you use ``isinstance()`` or ``issubclass()`` — both are
+affected, so searching for only one of them will miss cases.
+
+The subclass relationship was never meaningful — a
+:py:class:`filters.ByteString` emits :py:class:`bytes` where a
+:py:class:`filters.Unicode` emits :py:class:`str`, so it could not stand in for
+its parent. Once each filter declared an output type, a type checker could see
+the violation.
+
+If you were testing for the concrete filter, name it directly:
+
+.. code-block:: python
+
+   # Unchanged, and now means what it says.
+   isinstance(some_filter, f.ByteString)
+
+If you were testing for "any decoder" or "any date-like filter", there is no
+public replacement — the shared base classes are private. Test against the pair:
+
+.. code-block:: python
+
+   isinstance(some_filter, (f.Unicode, f.ByteString))
+   isinstance(some_filter, (f.Datetime, f.Date))
+
+.. note::
+
+   Only the class hierarchy changed. Both filters accept the same input and
+   produce the same output as they did in Filters v3, so code that simply *uses*
+   them needs no changes.
 
 Type Parameters
 ---------------
