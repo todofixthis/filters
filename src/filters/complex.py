@@ -83,7 +83,11 @@ class FilterRepeater(BaseFilter):
         new_filter = super().__copy__(the_filter)
 
         new_filter._filter_chain = the_filter._filter_chain
-        new_filter.restrict_keys = the_filter.restrict_keys
+        new_filter.restrict_keys = (
+            None
+            if the_filter.restrict_keys is None
+            else the_filter.restrict_keys.copy()
+        )
 
         # noinspection PyTypeChecker
         return new_filter

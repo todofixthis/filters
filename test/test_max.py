@@ -75,3 +75,18 @@ def test_max_string_comparison_oddness(assert_filter_errors):
         "foo",
         [f.Max.CODE_TOO_BIG],
     )
+
+
+def test_max_copy(assert_filter_passes, assert_filter_errors):
+    """Max can be shallow-copied via `copy.copy()` without raising TypeError."""
+    import copy
+
+    original = f.Max(max_value=5, exclusive=True)
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied.max_value == 5
+    assert copied.exclusive is True
+
+    assert_filter_passes(copied, 4)
+    assert_filter_errors(copied, 5, [f.Max.CODE_TOO_BIG])

@@ -2,6 +2,8 @@
 Tests for the FilterRepeater filter.
 """
 
+import copy
+
 import filters as f
 
 
@@ -361,4 +363,70 @@ def test_filter_repeater_repeaterception(assert_filter_passes, assert_filter_err
             "1": [f.MaxLength.CODE_TOO_LONG],
         },
         expected_value=[[42], None],
+    )
+
+
+def test_filter_repeater_copy(assert_filter_passes):
+    """FilterRepeater can be shallow-copied via `copy.copy()`.
+
+    The copied filter behaves identically to the original and does not
+    raise a TypeError during construction.
+    """
+    original = f.FilterRepeater(f.Int())
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied.restrict_keys is None
+    assert_filter_passes(
+        copied,
+        ["1", 2, "-3"],
+        [1, 2, -3],
+    )
+
+
+def test_filter_repeater_copy_with_restrict_keys(
+    assert_filter_passes, assert_filter_errors
+):
+    """A copied FilterRepeater copies `restrict_keys` independently."""
+    original = f.FilterRepeater(
+        f.NotEmpty | f.Int,
+        restrict_keys={"foo", "bar"},
+    )
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied.restrict_keys == {"foo", "bar"}
+
+    # Mutating restrict_keys on the copy must not mutate the original.
+    copied.restrict_keys.add("baz")
+    assert "baz" not in original.restrict_keys
+
+    # Original still functions properly with its initial keys.
+    assert_filter_passes(
+        original,
+        {"foo": "1", "bar": 2},
+        {"foo": 1, "bar": 2},
+    )
+
+    # In the original, 'baz' is treated as an unexpected extra key.
+    assert_filter_errors(
+        original,
+        {"foo": "1", "baz": "3"},
+        {"baz": [f.FilterRepeater.CODE_EXTRA_KEY]},
+        expected_value={"foo": 1},
+    )
+
+    # Copied repeater honours the modified keys and allows 'baz'.
+    assert_filter_passes(
+        copied,
+        {"foo": "1", "bar": 2, "baz": "3"},
+        {"foo": 1, "bar": 2, "baz": 3},
+    )
+
+    # Filter errors are preserved on the copy.
+    assert_filter_errors(
+        copied,
+        {"foo": "NaN"},
+        {"foo": [f.Decimal.CODE_NON_FINITE]},
+        expected_value={"foo": None},
     )

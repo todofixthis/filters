@@ -223,11 +223,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @classmethod
     def __copy__(cls, the_filter: TF) -> TF:
         """Creates a shallow copy of the object."""
-        new_filter: TF = type(the_filter)()
-
-        new_filter._parent = the_filter._parent
-        new_filter._key = the_filter._key
-        new_filter._handler = the_filter._handler
+        new_filter: TF = object.__new__(type(the_filter))
+        new_filter.__dict__.update(the_filter.__dict__)
 
         return new_filter
 
