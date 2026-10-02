@@ -9,6 +9,7 @@ Contents
    simple_filters
    complex_filters
    extension_filters
+   upgrading_to_v4
    api
 
 Filters
@@ -37,7 +38,9 @@ and compose small tools together**.
 Each filter performs a single, focused task. Chain them using the ``|`` operator
 to build sophisticated validation pipelines that are easy to read and maintain.
 
-**Type-safe**: Full type hint support for IDE autocomplete and static analysis.
+**Type-safe**: Chain filters with ``|`` and a type checker infers the real
+output type all the way through — ``FilterRunner(...).cleaned_data`` reports
+``Decimal`` for a chain ending in ``f.Decimal``, not ``Any``.
 
 **Opinionated**: Makes deliberate choices to handle common issues automatically
 (Unicode normalisation, UTC conversion, etc.) so you write less boilerplate.
@@ -66,18 +69,22 @@ Create a validation schema:
    )
 
    # Validate data
-   result = schema.apply({"lat": "42.36", "lon": "-71.06", "name": "  Boston  "})
+   schema.apply({"lat": "42.36", "lon": "-71.06", "name": "  Boston  "})
 
-   if result.is_valid():
-       clean_data = result.value
+   if schema.is_valid():
+       clean_data = schema.cleaned_data
        # clean_data = {
        #     "lat": Decimal("42.36"),
        #     "lon": Decimal("-71.06"),
        #     "name": "Boston"
        # }
    else:
-       errors = result.error_messages
-       # errors = {"lat": ["Decimal value is too small (minimum is -90)."]}
+       errors = schema.errors
+       # errors = {
+       #     "lat": [
+       #         {"code": "too_small", "message": "Value is too small (must be >= -90)."}
+       #     ]
+       # }
 
 ``FilterRunner`` provides a familiar interface similar to Django forms, making
 it easy to integrate into web applications.
@@ -109,14 +116,14 @@ gracefully. FilterRunner makes this straightforward:
    )
 
    # Validate incoming data
-   result = user_schema.apply(request_data)
+   user_schema.apply(request_data)
 
-   if result.is_valid():
+   if user_schema.is_valid():
        # Save to database
-       user = User.create(**result.value)
+       user = User.create(**user_schema.cleaned_data)
    else:
        # Return validation errors to client
-       return {"errors": result.error_messages}, 400
+       return {"errors": user_schema.errors}, 400
 
 
 Parse Complex JSON Structures
@@ -223,4 +230,3 @@ Happy filtering!
 
 .. _Django Filters: https://pypi.python.org/pypi/phx-filters-django
 .. _ISO Filters: https://pypi.python.org/pypi/phx-filters-iso
-.. _Unicode normalization: https://en.wikipedia.org/wiki/Unicode_equivalence

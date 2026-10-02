@@ -216,3 +216,18 @@ def test_byte_string_newline_normalisation_forced(assert_filter_passes):
         "unix\n - windows\r\n - weird\r\r\n",
         b"unix\n - windows\n - weird\n\n",
     )
+
+
+def test_byte_string_is_not_a_unicode_subclass():
+    """
+    ``ByteString`` is a sibling of ``Unicode``, not a subclass of it.
+
+    The two shared an inheritance chain until the filters were
+    parameterised on their output types; breaking it is a deliberate
+    breaking change (see
+    docs/adr/008-split-bytestring-and-date-into-siblings.md), so this
+    records the new answer rather than leaving a restored inheritance to
+    pass unnoticed.
+    """
+    assert not issubclass(f.ByteString, f.Unicode)
+    assert not isinstance(f.ByteString(), f.Unicode)

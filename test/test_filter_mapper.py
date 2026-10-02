@@ -371,6 +371,247 @@ def test_filter_mapper_fail_non_mapping(assert_filter_errors):
     )
 
 
+def test_filter_mapper_pass_sequence(assert_filter_passes):
+    """
+    When every key in ``filter_map`` is an int, a FilterMapper also accepts
+    a list/tuple, applying each filter to the item at the corresponding
+    index and returning a list.
+    """
+    filter_instance = f.FilterMapper(
+        {
+            0: f.Required | f.Int | f.Min(1),
+            1: f.NotEmpty | f.MaxLength(16),
+        }
+    )
+
+    assert_filter_passes(
+        filter_instance,
+        ["42", "Hello, world!"],
+        [42, "Hello, world!"],
+    )
+
+
+def test_filter_mapper_fail_sequence(assert_filter_errors):
+    """
+    A FilterMapper is applied to a sequence containing invalid values; the
+    error keys are the (stringified) indexes of the invalid values.
+    """
+    filter_instance = f.FilterMapper(
+        {
+            0: f.Required | f.Int | f.Min(1),
+            1: f.NotEmpty | f.MaxLength(16),
+        }
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        [None, "Antidisestablishmentarianism"],
+        {
+            "0": [f.Required.CODE_EMPTY],
+            "1": [f.MaxLength.CODE_TOO_LONG],
+        },
+        expected_value=[None, None],
+    )
+
+
+def test_filter_mapper_sequence_result_is_always_a_list(assert_filter_passes):
+    """
+    Regardless of whether the incoming value is a list or a tuple, the
+    filtered value is always a list.
+    """
+    filter_instance = f.FilterMapper({0: f.Required | f.Int | f.Min(1)})
+
+    runner = assert_filter_passes(filter_instance, ("42",), [42])
+
+    assert isinstance(runner.cleaned_data, list)
+
+
+def test_filter_mapper_sequence_extra_keys_allowed(assert_filter_passes):
+    """
+    By default, FilterMappers pass thru extra indexes.
+    """
+    filter_instance = f.FilterMapper({0: f.Required | f.Int | f.Min(1)})
+
+    assert_filter_passes(
+        filter_instance,
+        ["42", "extra"],
+        [42, "extra"],
+    )
+
+
+def test_filter_mapper_sequence_extra_keys_disallowed(assert_filter_errors):
+    """
+    FilterMappers can be configured to treat any extra index as an invalid
+    value.
+    """
+    filter_instance = f.FilterMapper(
+        {0: f.Required | f.Int | f.Min(1)},
+        allow_extra_keys=False,
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        ["42", "extra"],
+        {
+            "1": [f.FilterMapper.CODE_EXTRA_KEY],
+        },
+        expected_value=[42],
+    )
+
+
+def test_filter_mapper_sequence_extra_keys_specified(assert_filter_errors):
+    """
+    FilterMappers can be configured only to allow certain extra indexes.
+    """
+    filter_instance = f.FilterMapper(
+        {0: f.Required | f.Int | f.Min(1)},
+        allow_extra_keys={1},
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        ["42", "extra", "nope"],
+        {
+            "2": [f.FilterMapper.CODE_EXTRA_KEY],
+        },
+        expected_value=[42, "extra"],
+    )
+
+
+def test_filter_mapper_sequence_missing_keys_allowed(assert_filter_passes):
+    """
+    By default, FilterMappers treat missing indexes as ``None``.
+    """
+    filter_instance = f.FilterMapper(
+        {
+            0: f.Int,
+            1: f.NotEmpty | f.MaxLength(16),
+        }
+    )
+
+    assert_filter_passes(
+        filter_instance,
+        ["42"],
+        [42, None],
+    )
+
+
+def test_filter_mapper_sequence_missing_keys_disallowed(assert_filter_errors):
+    """
+    FilterMappers can be configured to treat missing indexes as invalid
+    values.
+    """
+    filter_instance = f.FilterMapper(
+        {
+            0: f.Required | f.Int | f.Min(1),
+            1: f.NotEmpty | f.MaxLength(16),
+        },
+        allow_missing_keys=False,
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        ["42"],
+        {
+            "1": [f.FilterMapper.CODE_MISSING_KEY],
+        },
+        expected_value=[42, None],
+    )
+
+
+def test_filter_mapper_sequence_missing_keys_specified(assert_filter_passes):
+    """
+    FilterMappers can be configured to allow some missing indexes but not
+    others; per the issue example, this lets a trailing, optional index be
+    omitted entirely (e.g., the tail end of a delimited string produced by
+    :py:class:`filters.Split`).
+    """
+    filter_instance = f.FilterMapper(
+        {
+            0: f.Required | f.Int | f.Min(1),
+            1: f.CaseFold | f.Choice({"ro", "rw"}) | f.Optional("ro"),
+        },
+        allow_missing_keys={1},
+    )
+
+    assert_filter_passes(
+        filter_instance,
+        ["42"],
+        [42, "ro"],
+    )
+
+
+def test_filter_mapper_fail_non_sequence(assert_filter_errors):
+    """
+    An int-keyed FilterMapper still rejects an incoming value that is
+    neither a Mapping nor a list/tuple.
+    """
+    filter_instance = f.FilterMapper({0: f.Required | f.Int | f.Min(1)})
+
+    assert_filter_errors(
+        filter_instance,
+        # A set is iterable, but not a Mapping, list or tuple.
+        {"42"},
+        [f.Type.CODE_WRONG_TYPE],
+    )
+
+
+def test_filter_mapper_string_keyed_still_rejects_sequence(assert_filter_errors):
+    """
+    A FilterMapper with any non-int key never accepts sequence input, even
+    though an int-keyed FilterMapper does.
+    """
+    filter_instance = f.FilterMapper(
+        {
+            "id": f.Required | f.Int | f.Min(1),
+            1: f.NotEmpty | f.MaxLength(16),
+        }
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        ["42", "Hello, world!"],
+        [f.Type.CODE_WRONG_TYPE],
+    )
+
+
+def test_filter_mapper_empty_filter_map_rejects_sequence(assert_filter_errors):
+    """
+    A FilterMapper with an empty ``filter_map`` has no keys to infer
+    sequence support from, so it keeps accepting Mapping input only.
+    """
+    filter_instance = f.FilterMapper({})
+
+    assert_filter_errors(
+        filter_instance,
+        ["42"],
+        [f.Type.CODE_WRONG_TYPE],
+    )
+
+
+def test_filter_mapper_bool_keys_reject_sequence(
+    assert_filter_passes, assert_filter_errors
+):
+    """
+    ``bool`` is a subclass of ``int``, but a FilterMapper keyed by ``True``/
+    ``False`` is not treating those keys as indexes, so it keeps accepting
+    Mapping input only.
+    """
+    filter_instance = f.FilterMapper({True: f.Int, False: f.Int})
+
+    assert_filter_passes(
+        filter_instance,
+        {True: "1", False: "2"},
+        {True: 1, False: 2},
+    )
+
+    assert_filter_errors(
+        filter_instance,
+        [1, 2],
+        [f.Type.CODE_WRONG_TYPE],
+    )
+
+
 def test_filter_mapper_chained_with_mapper(assert_filter_passes, assert_filter_errors):
     """
     Chaining two FilterMappers together has basically the same effect as

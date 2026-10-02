@@ -51,7 +51,9 @@ class skip_value_check:
     pass
 
 
-def _run_filter_assertion(filter_instance, test_value, expected_codes, expected_value):
+def _run_filter_assertion(
+    filter_instance, test_value, expected_codes, expected_value
+) -> FilterRunner:
     """
     Core assertion logic for filter testing.
 

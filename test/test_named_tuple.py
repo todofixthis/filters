@@ -6,7 +6,6 @@ from collections import namedtuple
 
 import filters as f
 
-
 Colour = namedtuple("Colour", ("r", "g", "b"))
 
 
