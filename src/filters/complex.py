@@ -21,6 +21,9 @@ TFR = TypeVar("TFR", bound="FilterRepeater")
 returns.
 """
 
+TFM = TypeVar("TFM", bound="FilterMapper")
+"""The mapper :py:meth:`FilterMapper.__copy__` was handed, and returns."""
+
 T_tuple = TypeVar("T_tuple", bound=tuple)
 """The namedtuple type :py:class:`NamedTuple` returns, bound from its
 ``type_`` argument.
@@ -82,7 +85,6 @@ class FilterRepeater(BaseFilter):
         """
         new_filter = super().__copy__(the_filter)
 
-        new_filter._filter_chain = the_filter._filter_chain
         new_filter.restrict_keys = (
             None
             if the_filter.restrict_keys is None
@@ -286,6 +288,31 @@ class FilterMapper(BaseFilter):
             )
             + ")"
         )
+
+    # noinspection PyProtectedMember
+    @classmethod
+    def __copy__(cls, the_filter: TFM) -> TFM:
+        """
+        Creates a shallow copy of the object.
+        """
+        new_filter = super().__copy__(the_filter)
+
+        # Copy the containers so that changing the copy's configuration
+        # leaves the original alone. The filters inside are still shared.
+        new_filter._filters = the_filter._filters.copy()
+        new_filter.allow_missing_keys = (
+            the_filter.allow_missing_keys.copy()
+            if isinstance(the_filter.allow_missing_keys, set)
+            else the_filter.allow_missing_keys
+        )
+        new_filter.allow_extra_keys = (
+            the_filter.allow_extra_keys.copy()
+            if isinstance(the_filter.allow_extra_keys, set)
+            else the_filter.allow_extra_keys
+        )
+
+        # noinspection PyTypeChecker
+        return new_filter
 
     def _apply(self, value):
         allowed_types = (Mapping, list, tuple) if self._is_positional else Mapping

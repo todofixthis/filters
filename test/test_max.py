@@ -2,6 +2,8 @@
 Tests for the Max filter.
 """
 
+import copy
+
 import filters as f
 
 
@@ -79,8 +81,6 @@ def test_max_string_comparison_oddness(assert_filter_errors):
 
 def test_max_copy(assert_filter_passes, assert_filter_errors):
     """Max can be shallow-copied via `copy.copy()` without raising TypeError."""
-    import copy
-
     original = f.Max(max_value=5, exclusive=True)
     copied = copy.copy(original)
 

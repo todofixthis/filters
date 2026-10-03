@@ -2,6 +2,8 @@
 Tests for the FilterChain filter.
 """
 
+import copy
+
 import filters as f
 import pytest
 
@@ -97,8 +99,6 @@ def test_filter_chain_copy(assert_filter_passes, assert_filter_errors):
     The copied chain behaves identically to the original and retains
     copies of its filters list.
     """
-    import copy
-
     original = f.Int | f.Max(10)
     copied = copy.copy(original)
 

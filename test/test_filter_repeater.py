@@ -430,3 +430,19 @@ def test_filter_repeater_copy_with_restrict_keys(
         {"foo": [f.Decimal.CODE_NON_FINITE]},
         expected_value={"foo": None},
     )
+
+
+def test_filter_repeater_copy_preserves_base_attributes():
+    """Copying a FilterRepeater preserves BaseFilter attributes."""
+    parent = f.FilterRepeater(f.Int())
+    repeater = f.FilterRepeater(f.Int())
+    repeater._parent = parent
+    repeater._key = "items"
+    repeater._handler = "dummy_handler"
+
+    copied = copy.copy(repeater)
+    assert copied is not parent
+    assert copied._parent is parent
+    assert copied._key == "items"
+    assert copied._handler == "dummy_handler"
+
