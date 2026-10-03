@@ -2,6 +2,8 @@
 Tests for the FilterMapper filter.
 """
 
+import copy
+
 import filters as f
 
 
@@ -793,3 +795,48 @@ def test_filter_mapper_mapperception(assert_filter_passes, assert_filter_errors)
             },
         },
     )
+
+
+def test_filter_mapper_copy(assert_filter_passes, assert_filter_errors):
+    """FilterMapper can be shallow-copied via ``copy.copy()``.
+
+    The copy keeps the original's configuration.
+    """
+    original = f.FilterMapper({"id": f.Int}, allow_extra_keys=True)
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied.allow_extra_keys is True
+
+    assert_filter_passes(
+        copied,
+        {"id": "42", "extra": "foo"},
+        {"id": 42, "extra": "foo"},
+    )
+    assert_filter_errors(
+        copied,
+        {"id": "NaN"},
+        {"id": [f.Decimal.CODE_NON_FINITE]},
+        expected_value={"id": None},
+    )
+
+
+def test_filter_mapper_copy_is_independent():
+    """Changing a copied FilterMapper's configuration leaves the original
+    alone.
+    """
+    original = f.FilterMapper(
+        {"id": f.Int},
+        allow_missing_keys={"id"},
+        allow_extra_keys={"foo"},
+    )
+    copied = copy.copy(original)
+
+    copied.allow_missing_keys.add("bar")
+    copied.allow_extra_keys.add("bar")
+    copied._filters["bar"] = f.Int
+
+    assert original.allow_missing_keys == {"id"}
+    assert original.allow_extra_keys == {"foo"}
+    assert set(original._filters) == {"id"}
+
