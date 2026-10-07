@@ -2,6 +2,8 @@
 Tests for the FilterChain filter.
 """
 
+import copy
+
 import filters as f
 import pytest
 
@@ -89,3 +91,20 @@ def test_filter_chain_stop_after_invalid_value(assert_filter_errors):
     # MinLength filters, but the FilterChain stops processing
     # after MaxLength fails.
     assert_filter_errors(filter_instance, "foobar", [f.MaxLength.CODE_TOO_LONG])
+
+
+def test_filter_chain_copy(assert_filter_passes, assert_filter_errors):
+    """FilterChain can be shallow-copied via `copy.copy()`.
+
+    The copied chain behaves identically to the original and retains
+    copies of its filters list.
+    """
+    original = f.Int | f.Max(10)
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied._filters == original._filters
+    assert copied._filters is not original._filters
+
+    assert_filter_passes(copied, "5", 5)
+    assert_filter_errors(copied, "15", [f.Max.CODE_TOO_BIG])
