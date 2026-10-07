@@ -81,6 +81,41 @@ Custom Filters
 Sometimes you just can't get what you want by assembling existing filters, and
 you need to write your own.
 
+Every custom filter extends one of three base classes, chosen by how its
+output relates to its input. Each takes its output type as a type parameter
+in a different place, so a type checker can infer the output type of any
+chain the filter appears in:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 45 35
+
+   * - Base class
+     - Use when…
+     - Example declaration
+   * - :py:class:`filters.BaseFilter`
+     - The output has its own type, unrelated to the input's. Leaving out
+       the type parameter defaults to ``BaseFilter[Any]``, the same as any
+       built-in filter whose output can't be pinned down until runtime.
+     - ``class Pkcs7Pad(f.BaseFilter[bytes]):``
+   * - :py:class:`filters.PassThrough`
+     - The filter only validates, returning its input unchanged — chaining
+       it leaves the chain's existing output type alone, where
+       ``BaseFilter[Any]`` would collapse it to ``Any``.
+     - ``class NotEmpty(f.PassThrough):``
+   * - :py:class:`filters.Widening`
+     - The filter *adds* a type to the chain's output rather than replacing
+       it — the way :py:class:`filters.Optional` adds its default's type.
+     - ``class Optional(f.Widening[T]):``
+
+.. note::
+
+   There's no ``Narrowing`` counterpart for a filter that *removes* a type
+   rather than adding one — e.g., taking a chain from ``T | None`` to
+   ``T``. If you have a use case for one, describe it in
+   `#122 <https://github.com/todofixthis/filters/issues/122>`_ or send a
+   pull request.
+
 To create a new filter, write a class that extends
 :py:class:`filters.BaseFilter` and implement the ``_apply`` method:
 
@@ -88,7 +123,7 @@ To create a new filter, write a class that extends
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      block_size = 16
 
      def _apply(self, value):
@@ -110,11 +145,11 @@ Here's the ``Pkcs7Pad`` filter with a little bit of validation logic:
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      CODE_INVALID_TYPE = 'invalid_type'
 
      templates = {
-       CODE_INVALID_TYPE = 'Binary string required.',
+       CODE_INVALID_TYPE: 'Binary string required.',
      }
 
      block_size = 16
@@ -132,13 +167,13 @@ You can also invoke other filters in your custom filters by calling the
 ``self._filter`` method.
 
 For example, we can simplify the implementation of ``Pkcs7Pad`` by incorporating
-the :py:class:`filters.ByteString` filter:
+the :py:class:`filters.Type` filter:
 
 .. code-block:: python
 
    import filters as f
 
-   class Pkcs7Pad(f.BaseFilter):
+   class Pkcs7Pad(f.BaseFilter[bytes]):
      block_size = 16
 
      def _apply(self, value):

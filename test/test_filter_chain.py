@@ -2,6 +2,8 @@
 Tests for the FilterChain filter.
 """
 
+import copy
+
 import filters as f
 import pytest
 
@@ -16,16 +18,49 @@ def test_filter_chain_implicit_chain(assert_filter_passes, assert_filter_errors)
     assert_filter_errors(filter_instance, "4", [f.Max.CODE_TOO_BIG])
 
 
-def test_filter_chain_implicit_chain_null():
+@pytest.mark.parametrize(
+    "chain_none",
+    [
+        lambda: f.Int() | None,
+        lambda: f.Int | None,
+        lambda: (f.Int() | f.Max(3)) | None,
+    ],
+    ids=["instance", "class", "chain"],
+)
+def test_filter_chain_rejects_none(chain_none):
     """
-    Chaining a filter with ``None`` also yields a FilterChain, but
-    unsurprisingly, the chain only contains the one filter.
-    """
-    filter_chain = f.Int() | None
-    assert isinstance(filter_chain, f.FilterChain)
+    Chaining a filter with ``None`` raises, whichever side of the
+    operator the chain is on.
 
-    with pytest.raises(f.FilterError):
-        filter_chain.apply("not an int")
+    This used to be a silent no-op. See
+    docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
+    """
+    with pytest.raises(TypeError):
+        chain_none()
+
+
+def test_filter_chain_rejects_none_names_the_class_operand():
+    """
+    ``SomeFilter | None`` names ``SomeFilter`` in its error, not the
+    ``FilterChain`` that ``FilterMeta.__or__`` wraps it in before
+    delegating.
+
+    ``Int() | None`` (the instance form) never had this problem, since
+    ``self`` there already is the filter the caller wrote.
+    """
+    with pytest.raises(TypeError, match=r"^None is not compatible with Int "):
+        f.Int | None
+
+
+def test_filter_chain_still_accepts_none_as_a_start_filter():
+    """
+    Only ``|`` rejects ``None``; ``FilterChain``'s own initialiser still
+    treats it as "no filter yet", which is what ``FilterMapper`` and
+    ``FilterSwitch`` rely on.
+    """
+    filter_chain = f.FilterChain(None)
+    assert isinstance(filter_chain, f.FilterChain)
+    assert filter_chain.apply("not an int") == "not an int"
 
 
 # noinspection SpellCheckingInspection
@@ -56,3 +91,20 @@ def test_filter_chain_stop_after_invalid_value(assert_filter_errors):
     # MinLength filters, but the FilterChain stops processing
     # after MaxLength fails.
     assert_filter_errors(filter_instance, "foobar", [f.MaxLength.CODE_TOO_LONG])
+
+
+def test_filter_chain_copy(assert_filter_passes, assert_filter_errors):
+    """FilterChain can be shallow-copied via `copy.copy()`.
+
+    The copied chain behaves identically to the original and retains
+    copies of its filters list.
+    """
+    original = f.Int | f.Max(10)
+    copied = copy.copy(original)
+
+    assert copied is not original
+    assert copied._filters == original._filters
+    assert copied._filters is not original._filters
+
+    assert_filter_passes(copied, "5", 5)
+    assert_filter_errors(copied, "15", [f.Max.CODE_TOO_BIG])

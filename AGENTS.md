@@ -34,8 +34,9 @@ uv run make -C docs clean && uv run make -C docs html  # build docs
 Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
 
 - Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use Optional for Sphinx compat` inline
+- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` inline
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
+- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter`, chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
 
 ## Tests
 
@@ -54,7 +55,15 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 
 ## Code Comments
 
-Place comments on the line preceding the code they document, not as trailing comments.
+Place comments on the line preceding the code they document, not as trailing
+comments.
+
+**Exception: `# type: ignore[...]` and `# pyright: ignore[...]`.** Each
+checker applies a trailing suppression only to the line it sits on. On a
+preceding line (e.g. an `@overload` decorator) the error still reports
+against the `def` below it, and pyright's
+`reportUnnecessaryTypeIgnoreComment` is off by default, so a misplaced
+ignore fails silently. Keep these two forms trailing.
 
 ## Language and Style
 
@@ -75,7 +84,9 @@ Place comments on the line preceding the code they document, not as trailing com
 
 ## Git Worktrees
 
-Use `.worktrees/` for isolated workspaces (project-local, gitignored).
+Use `.claude/worktrees/` for isolated workspaces (project-local, gitignored).
+
+Keep `.claude/` a real directory — only `.claude/skills` is a symlink into `.agents/skills`. If `.claude/` itself is a symlink, the native worktree tool refuses to run.
 
 After switching to a worktree, run the autohooks activate command (see Commands) to install the pre-commit hook for that worktree.
 
