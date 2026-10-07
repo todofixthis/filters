@@ -434,15 +434,15 @@ def test_filter_repeater_copy_with_restrict_keys(
 
 def test_filter_repeater_copy_preserves_base_attributes():
     """Copying a FilterRepeater preserves BaseFilter attributes."""
-    parent = f.FilterRepeater(f.Int())
+    handler = f.MemoryHandler()
     repeater = f.FilterRepeater(f.Int())
-    repeater._parent = parent
+    repeater.parent = f.FilterRepeater(f.Int())
+    repeater.handler = handler
     repeater._key = "items"
-    repeater._handler = "dummy_handler"
 
     copied = copy.copy(repeater)
-    assert copied is not parent
-    assert copied._parent is parent
-    assert copied._key == "items"
-    assert copied._handler == "dummy_handler"
 
+    assert copied is not repeater
+    assert copied._parent is repeater._parent
+    assert copied._key == "items"
+    assert copied.handler is handler

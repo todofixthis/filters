@@ -839,4 +839,3 @@ def test_filter_mapper_copy_is_independent():
     assert original.allow_missing_keys == {"id"}
     assert original.allow_extra_keys == {"foo"}
     assert set(original._filters) == {"id"}
-
