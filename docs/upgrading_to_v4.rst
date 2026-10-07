@@ -118,8 +118,8 @@ Filters v4:
 
 .. code-block:: python
 
-   def build_chain(extra=None):
-       return f.Unicode | (extra if extra is not None else f.NoOp)
+   def build_chain(extra=f.NoOp):
+       return f.Unicode | extra
 
 .. note::
 
