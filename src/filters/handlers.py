@@ -376,4 +376,6 @@ class FilterRunner(Generic[T_out]):
 
             return handler
 
+        # The filter already ran on this data; reuse its result rather than
+        # filtering again. ``apply()`` clears ``_handler`` to force a rerun.
         return self._handler
