@@ -16,6 +16,9 @@ class RequiredTestCase(BaseFilterTestCase):
     Concrete test case for exercising :py:meth:`assertFilterErrors`.
     """
 
+    # Keeps pytest from collecting this helper as a test of its own.
+    __test__ = False
+
     filter_type = f.Required
 
     def runTest(self) -> None:
