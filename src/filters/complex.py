@@ -70,7 +70,8 @@ class FilterRepeater(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self._filter_chain})"
 
-    # Suppressed for the reason ``FilterChain.__copy__`` gives.
+    # The ``reportIncompatibleMethodOverride`` suppression on the ``def`` is
+    # for the reason ``FilterChain.__copy__`` gives.
     @classmethod
     def __copy__(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
@@ -285,7 +286,8 @@ class FilterMapper(BaseFilter):
             + ")"
         )
 
-    # Suppressed for the reason ``FilterChain.__copy__`` gives.
+    # The ``reportIncompatibleMethodOverride`` suppression on the ``def`` is
+    # for the reason ``FilterChain.__copy__`` gives.
     # noinspection PyProtectedMember
     @classmethod
     def __copy__(  # pyright: ignore[reportIncompatibleMethodOverride]

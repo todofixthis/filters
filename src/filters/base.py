@@ -230,7 +230,6 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         #
         self._has_errors = False
 
-    # noinspection PyProtectedMember
     @classmethod
     def __copy__(cls, the_filter: Self) -> Self:
         """Creates a shallow copy of the object."""

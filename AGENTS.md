@@ -73,12 +73,27 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 Place comments on the line preceding the code they document, not as trailing
 comments.
 
+Write or update each comment — including one that describes code you move
+or change, wherever it sits — for a reader who never saw the diff: name what
+it refers to rather than pointing at the change ("now", "no longer", or
+"here" once the code has moved). Why the code is as it is belongs, whether a
+constraint it works around or an alternative it rejected; a narrative of
+earlier versions belongs in the commit message. Where history carries a
+reason, keep the reason and state it in the present tense: "raises rather
+than ignoring `None`, which hid an accidental `None`", not "used to be a
+no-op".
+
 **Exception: `# type: ignore[...]` and `# pyright: ignore[...]`.** Each
 checker applies a trailing suppression only to the line it sits on, so it
 must trail the line the checker reports — usually the `def`, but mypy
 reports `override` on an overloaded method at its first `@overload`. A
 misplaced ignore leaves the error standing and is itself reported unused.
 Keep these two forms trailing.
+
+`# noinspection` comments stay leading, and unlike the two forms above have
+no checker behind them: when you change or remove the code one covers (the
+next statement, or a whole function or class when it sits above one),
+re-check that it still applies, and delete it if not.
 
 ## Language and Style
 
