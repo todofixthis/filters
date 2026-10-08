@@ -934,6 +934,13 @@ class Optional(Widening[T_optional_default]):
     def _get_default(self) -> Any:
         """Returns the default value that should be used to replace an
         empty value.
+
+        Note:
+            Typed ``Any`` rather than ``T_optional_default``, which is bound
+            to ``default`` itself: when ``default`` is called, this returns
+            the call's result instead, e.g. a ``list`` for
+            ``Optional(list)``, which no annotation in terms of
+            ``T_optional_default`` can express. See the class's own Note.
         """
         if self.callable_default is not None:
             return self.callable_default()
