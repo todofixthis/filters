@@ -497,8 +497,8 @@ class Item(BaseFilter[Any]):
 
     def _apply_sequence(self, value: Sequence) -> Any:
         """Extracts value from incoming sequence."""
-        # A non-int target raises ``TypeError`` here, which ``apply``
-        # reports as an invalid value.
+        # Indexing ``value`` with a non-int target raises ``TypeError``,
+        # which ``apply`` reports as an invalid value.
         index = 0 if self.target is None else cast(int, self.target)
         try:
             return value[index]
