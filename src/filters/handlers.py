@@ -148,8 +148,10 @@ class MemoryHandler(BaseInvalidValueHandler):
         self.has_exceptions = True
 
         if self.capture_exc_info:
-            # The same tuple ``sys.exc_info()`` returns while ``exc`` is being
-            # handled, without its ``(None, None, None)`` case outside one.
+            # Built from ``exc`` rather than taken from ``sys.exc_info()``,
+            # which returns ``(None, None, None)`` when called outside an
+            # ``except`` block. While ``exc`` is the exception being handled,
+            # the two tuples are the same.
             self.exc_info.append((type(exc), exc, exc.__traceback__))
 
         return super().handle_exception(message, exc)
