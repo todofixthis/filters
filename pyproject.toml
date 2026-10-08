@@ -105,18 +105,15 @@ pre-commit = [
 include = ["src/*.py", "test/typing/*.py"]
 
 [tool.mypy]
-ignore_missing_imports = true
 check_untyped_defs = true
-warn_unused_ignores = true
 # A filter rejects a value by returning None from a non-Optional `_apply`;
 # re-enable once #121 makes rejection raise instead. See
 # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
 disable_error_code = ["return-value"]
+ignore_missing_imports = true
+warn_unused_ignores = true
 
 [tool.pyright]
-# The same exemption as mypy's `return-value` above, for the same reason.
-reportReturnType = false
-
 # Keeps each checker to its own suppressions. Most `# type: ignore[...]`
 # comments suppress mypy-only diagnostics, which
 # reportUnnecessaryTypeIgnoreComment below would otherwise misread as
@@ -125,6 +122,8 @@ reportReturnType = false
 # unused instead. Pyright-specific suppressions still use
 # `# pyright: ignore[code]`, which this setting does not affect.
 enableTypeIgnoreComments = false
+# The same exemption as mypy's `return-value` above, for the same reason.
+reportReturnType = false
 # Closes the gap where a suppression that stops being needed decays
 # silently. See docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
 reportUnnecessaryTypeIgnoreComment = "error"
