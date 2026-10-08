@@ -592,7 +592,6 @@ class NamedTuple(BaseFilter[T_tuple]):
         if not isinstance(value, self.type):
             if isinstance(value, Mapping):
                 # Check that the incoming value has exactly the right keys.
-                # noinspection PyProtectedMember
                 value = self._filter(
                     value,
                     FilterMapper(
@@ -609,7 +608,6 @@ class NamedTuple(BaseFilter[T_tuple]):
             else:
                 # Check that the incoming value has exactly the right number of
                 # values.
-                # noinspection PyProtectedMember
                 value = self._filter(value, Length(len(self._fields)))
 
                 if self._has_errors:
@@ -621,7 +619,6 @@ class NamedTuple(BaseFilter[T_tuple]):
         # Now we just need to figure out whether additional filtering is
         # necessary.
         if self.filter_mapper:
-            # noinspection PyProtectedMember
             filtered = self._filter(dict(zip(self._fields, value)), self.filter_mapper)
 
             if self._has_errors or filtered is None:
