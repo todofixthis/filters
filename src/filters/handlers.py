@@ -188,7 +188,7 @@ class FilterRunner(Generic[T_out]):
 
         filter_chain = BaseFilter.resolve_filter(starting_filter)
         if filter_chain is None:
-            raise TypeError("FilterRunner needs a filter, not None.")
+            raise TypeError("FilterRunner needs a filter, not None; use NoOp instead.")
 
         self.filter_chain = filter_chain
         self.data = incoming_data
