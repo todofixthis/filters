@@ -60,7 +60,8 @@ removes ADR 004's `annotation-unchecked` notes by checking those bodies.
 `mypy --strict` and pyright strict mode on top of Option 2.
 
 **Pros:** Meets ADR 004's trigger as written.
-**Cons:** 123 further mypy errors and some 340 pyright ones, nearly all
+**Cons:** Once Option 2's fixes land, 123 mypy errors and some 340 pyright
+ones remain, nearly all
 annotation coverage rather than type mismatches; the diff would touch every
 filter for little defect-finding return. `return-value` stays blocked on #121
 either way.
@@ -71,7 +72,8 @@ satisfy strict mode while hiding exactly what it exists to surface.
 
 Option 2. The twelve disabled categories are where wrong types hide, and
 clearing them found real bugs; strict mode's extra rules mostly measure
-annotation coverage, and can land separately when worth the diff.
+annotation coverage, and can land separately when worth the diff
+([#146][]).
 
 A newly surfaced error is fixed where the fix is local and honest, and
 otherwise suppressed inline, on the line the checker reports, with a comment
@@ -144,6 +146,10 @@ The rest of ADR 004 still holds, restated here since this ADR supersedes it:
   `x = SomeFilter | None` as a PEP 604 type alias and never checks `|`.
   Replaces the guard [ADR 009][] describes.
 - Smaller behaviour changes from the fixes:
+  - `T_next`, the `|` overloads' type variable for the right-hand filter,
+    gains `default=Any`: PEP 696 forbids a TypeVar without a default after
+    `FilterMeta.__or__`'s `T_out`, which has one. Every overload solves it
+    from the operand, so inference is unchanged.
   - `Round`'s `result_type` is typed `Callable[[Decimal], T_result]` rather
     than `type[T_result]`, so a converter function now type-checks too.
   - `Item` reports a missing mapping key under its `str()` form, so key `0`
@@ -156,6 +162,7 @@ The rest of ADR 004 still holds, restated here since this ADR supersedes it:
 
 [#119]: https://github.com/todofixthis/filters/issues/119
 [#121]: https://github.com/todofixthis/filters/issues/121
+[#146]: https://github.com/todofixthis/filters/issues/146
 [ADR 004]: 004-type-checking-in-ci.md
 [ADR 009]: 009-drop-none-as-an-operand-of-the-chaining-operator.md
 [ADR 013]: 013-copy-a-filters-own-mutable-containers-in-copy.md
