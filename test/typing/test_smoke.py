@@ -6,7 +6,7 @@ pyright infer for a filter or chain -- a regression here (e.g.
 ``FilterChain[str]`` silently degrading to ``FilterChain[Any]``) is invisible
 to a runtime test. Both checkers run against this directory in CI, under
 ``--warn-unused-ignores``/``reportUnnecessaryTypeIgnoreComment`` (see
-docs/adr/004-type-checking-in-ci.md), so an ignore that stops being needed
+docs/adr/015-hold-the-type-checkers-to-their-default-rules.md), so an ignore that stops being needed
 fails the build rather than silently going stale.
 
 Rule for negative cases (asserting a construct is *rejected*): guard the

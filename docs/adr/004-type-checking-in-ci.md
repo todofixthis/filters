@@ -1,9 +1,10 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-08-30
 scope: [pyproject.toml, .github/workflows/build.yml, test/typing/]
 summary: Run both mypy and pyright in CI, held to today's error set via disabled codes/rules rather than --strict, plus a test/typing/ assert_type harness checked by both.
 revisit-when: Phase 6 ratchets both checkers to full strictness and clears the disabled-code/rule lists this ADR adds.
+superseded-by: 15
 ---
 
 # 004: Type Checking in CI

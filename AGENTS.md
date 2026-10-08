@@ -51,7 +51,7 @@ Composable validation pipeline library. Filters chain via `|`. Source in `src/fi
 - Explicit imports with `__all__` throughout — no wildcard imports
 - Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` inline
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
-- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter`, chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
+- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter: Self` and returning `Self`, with `# pyright: ignore[reportIncompatibleMethodOverride]` on its `def` line (docs/adr/015-hold-the-type-checkers-to-their-default-rules.md), chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
 
 ## Tests
 
@@ -74,11 +74,11 @@ Place comments on the line preceding the code they document, not as trailing
 comments.
 
 **Exception: `# type: ignore[...]` and `# pyright: ignore[...]`.** Each
-checker applies a trailing suppression only to the line it sits on. On a
-preceding line (e.g. an `@overload` decorator) the error still reports
-against the `def` below it, and pyright's
-`reportUnnecessaryTypeIgnoreComment` is off by default, so a misplaced
-ignore fails silently. Keep these two forms trailing.
+checker applies a trailing suppression only to the line it sits on, so it
+must trail the line the checker reports — usually the `def`, but mypy
+reports `override` on an overloaded method at its first `@overload`. A
+misplaced ignore leaves the error standing and is itself reported unused.
+Keep these two forms trailing.
 
 ## Language and Style
 

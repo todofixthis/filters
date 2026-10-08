@@ -91,7 +91,6 @@ def filter_macro(
     filter_partial = partial(func, *args, **kwargs)
 
     class FilterMacroMeta(FilterMeta):
-        @staticmethod
         def __new__(mcs, name, bases, attrs):
             # This is as close as we can get to running
             # ``update_wrapper`` on a type.

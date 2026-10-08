@@ -1,4 +1,3 @@
-import sys
 from collections.abc import MutableMapping
 from logging import ERROR, Logger, LoggerAdapter
 from traceback import format_exc
@@ -119,7 +118,9 @@ class MemoryHandler(BaseInvalidValueHandler):
         self.messages: dict[str, list[FilterMessage]] = {}
         self.has_exceptions = False
         self.capture_exc_info = capture_exc_info
-        self.exc_info: list[tuple[type, Exception, TracebackType]] = []
+        self.exc_info: list[
+            tuple[type[Exception], Exception, Optional[TracebackType]]
+        ] = []
 
     def handle_invalid_value(
         self,
@@ -147,7 +148,9 @@ class MemoryHandler(BaseInvalidValueHandler):
         self.has_exceptions = True
 
         if self.capture_exc_info:
-            self.exc_info.append(sys.exc_info())
+            # The same tuple ``sys.exc_info()`` returns while ``exc`` is being
+            # handled, without its ``(None, None, None)`` case outside one.
+            self.exc_info.append((type(exc), exc, exc.__traceback__))
 
         return super().handle_exception(message, exc)
 
@@ -181,7 +184,11 @@ class FilterRunner(Generic[T_out]):
         """
         super().__init__()
 
-        self.filter_chain = BaseFilter.resolve_filter(starting_filter)
+        filter_chain = BaseFilter.resolve_filter(starting_filter)
+        if filter_chain is None:
+            raise TypeError("FilterRunner needs a filter, not None.")
+
+        self.filter_chain = filter_chain
         self.data = incoming_data
         self.capture_exc_info = capture_exc_info
 
@@ -311,18 +318,18 @@ class FilterRunner(Generic[T_out]):
             Whether any unhandled exceptions occurred while filtering
             the value.
         """
-        self.full_clean()
-        return self._handler.has_exceptions
+        return self._full_clean().has_exceptions
 
     @property
-    def exc_info(self) -> list[tuple[type, Exception, TracebackType]]:
+    def exc_info(
+        self,
+    ) -> list[tuple[type[Exception], Exception, Optional[TracebackType]]]:
         """Returns tracebacks from any exceptions that were captured.
 
         Returns:
             List of exception info tuples (type, exception, traceback).
         """
-        self.full_clean()
-        return self._handler.exc_info
+        return self._full_clean().exc_info
 
     @property
     def filter_messages(self) -> dict[
@@ -334,8 +341,7 @@ class FilterRunner(Generic[T_out]):
         Returns:
             Dict mapping keys to lists of FilterMessage objects.
         """
-        self.full_clean()
-        return self._handler.messages
+        return self._full_clean().messages
 
     def is_valid(self) -> bool:
         """Returns whether the payload successfully passed the Filter.
@@ -347,14 +353,25 @@ class FilterRunner(Generic[T_out]):
 
     def full_clean(self) -> None:
         """Applies the filter to the request data."""
+        self._full_clean()
+
+    def _full_clean(self) -> MemoryHandler:
+        """Applies the filter to the request data, if it hasn't been
+        already, and returns the handler holding the result's messages.
+        """
         if self._handler is None:
-            self._handler = MemoryHandler(self.capture_exc_info)
+            handler = MemoryHandler(self.capture_exc_info)
+            self._handler = handler
 
             # Inject our own handler (temporarily) while the Filter runs, so we
             # can capture error messages.
             prev_handler = self.filter_chain.handler
-            self.filter_chain.handler = self._handler
+            self.filter_chain.handler = handler
             try:
                 self._cleaned_data = self.filter_chain.apply(self.data)
             finally:
                 self.filter_chain.handler = prev_handler
+
+            return handler
+
+        return self._handler

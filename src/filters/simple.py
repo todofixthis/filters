@@ -8,7 +8,7 @@ from collections.abc import (
     Sized,
 )
 from datetime import date, datetime, time, tzinfo
-from typing import Any, Hashable
+from typing import Any, Hashable, cast
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
@@ -73,11 +73,14 @@ def selective_copy_mapping(
     """
     values = {key: source.get(key) for key in keys}
 
-    # Try to return the same type of value as what we received.
+    # Try to return the same type of value as what we received. ``Any``
+    # because a mapping's constructor signature is unknowable here; the
+    # ``TypeError`` fallback below covers one that rejects this call.
+    factory: Any = type(source)
     try:
         # This should work for just about every mapping.
         # noinspection PyArgumentList
-        return type(source)(values)
+        return factory(values)
     except TypeError:
         pass
 
@@ -116,11 +119,14 @@ def selective_copy_sequence(
         except IndexError:
             values.append(None)
 
-    # Try to return the same type of value as what we received.
+    # Try to return the same type of value as what we received. ``Any``
+    # because a sequence's constructor signature is unknowable here; the
+    # ``TypeError`` fallback below covers one that rejects this call.
+    factory: Any = type(source)
     try:
         # This should work for just about every sequence.
         # noinspection PyArgumentList
-        return type(source)(values)
+        return factory(values)
     except TypeError:
         pass
 
@@ -234,7 +240,7 @@ class ByteArray(BaseFilter[bytearray]):
             ),
         )
 
-        if self._has_errors:
+        if self._has_errors or filtered is None:
             return None
 
         return bytearray(filtered)
@@ -320,7 +326,7 @@ class _BaseDatetime(BaseFilter[T_out]):
         super().__init__()
 
         if not isinstance(timezone, tzinfo):
-            if timezone in [0, None]:
+            if timezone is None or timezone == 0:
                 timezone = utc
             else:
                 # Assume that we got an int/float instead.
@@ -486,13 +492,16 @@ class Item(BaseFilter[Any]):
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_MISSING_KEY,
-                sub_key=self.target,
+                sub_key=str(self.target),
             )
 
     def _apply_sequence(self, value: Sequence) -> Any:
         """Extracts value from incoming sequence."""
+        # A non-int target raises ``TypeError`` here, which ``apply``
+        # reports as an invalid value.
+        index = 0 if self.target is None else cast(int, self.target)
         try:
-            return value[0 if self.target is None else self.target]
+            return value[index]
         except IndexError:
             return self._invalid_value(
                 value=value,
@@ -860,9 +869,11 @@ class Optional(Widening[T_optional_default]):
 
     def __init__(
         self,
-        default: T_optional_default = None,
+        # mypy rejects any default for a parameter typed with a TypeVar, even
+        # one matching the TypeVar's own PEP 696 default; pyright accepts it.
+        default: T_optional_default = None,  # type: ignore[assignment]
         call_default: bool | None = None,
-    ):
+    ) -> None:
         """Initialises the Optional filter.
 
         Args:
@@ -893,12 +904,9 @@ class Optional(Widening[T_optional_default]):
 
         self.call_default = call_default
 
-        # Compat for Python 3.9: ``staticmethod.__wrapped__`` was added in
-        # Python 3.10, so we have to store the original value separately.
         self.actual_default = default
-        self.callable_default = (
-            # https://stackoverflow.com/a/41921291
-            staticmethod(default).__get__(object)
+        self.callable_default: Callable[[], Any] | None = (
+            cast(Callable[[], Any], default)
             if self.call_default is True
             or (self.call_default is None and callable(default))
             else None
@@ -923,24 +931,14 @@ class Optional(Widening[T_optional_default]):
         # ``None`` is considered empty by this filter.
         return self._get_default()
 
-    # Left unannotated: the compound condition below correlates
-    # ``self.call_default`` with ``self.callable_default`` in a way
-    # established back in ``__init__``, which mypy's checker cannot see
-    # across two attributes -- annotating this return type turns on body
-    # checking and produces a spurious "None not callable" here for a
-    # call that is safe at runtime. Its caller (`_apply_none`) is
-    # annotated, and calling an unannotated method returns ``Any``, which
-    # satisfies that annotation without masking a real error.
-    def _get_default(self):
+    def _get_default(self) -> Any:
         """Returns the default value that should be used to replace an
         empty value.
         """
-        return (
-            self.callable_default()
-            if self.call_default is True
-            or (self.call_default is None and self.callable_default is not None)
-            else self.actual_default
-        )
+        if self.callable_default is not None:
+            return self.callable_default()
+
+        return self.actual_default
 
 
 class Pick(BaseFilter[Any]):
@@ -1033,8 +1031,8 @@ class Pick(BaseFilter[Any]):
         """Returns whether the specified key is allowed to be omitted
         from the incoming value.
         """
-        if self.allow_missing_keys is True:
-            return True
+        if isinstance(self.allow_missing_keys, bool):
+            return self.allow_missing_keys
 
         try:
             return key in self.allow_missing_keys

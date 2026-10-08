@@ -100,3 +100,11 @@ def test_strip_fail_wrong_type(assert_filter_errors):
         ["  lots  ", "  of  ", "  whitespace  ", "  here  "],
         [f.Type.CODE_WRONG_TYPE],
     )
+
+
+def test_strip_str_without_leading_regex():
+    """
+    Disabling one end's regex leaves it out of the string
+    representation instead of raising.
+    """
+    assert str(f.Strip(leading="")).startswith("Strip(leading=None, ")

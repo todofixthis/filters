@@ -1,5 +1,5 @@
 from collections.abc import Callable, Generator, Iterable, Mapping
-from typing import Any, Hashable, TypeVar
+from typing import Any, Hashable, Optional, Self, TypeVar
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
@@ -12,18 +12,10 @@ __all__ = [
     "NamedTuple",
 ]
 
-# Plain ``typing.TypeVar``: neither type variable in this module declares a
-# ``default=``, the one PEP 696 feature needing ``typing_extensions`` while
-# ``requires-python`` stays below 3.13. See
+# Plain ``typing.TypeVar``: ``T_tuple`` declares no ``default=``, the one
+# PEP 696 feature needing ``typing_extensions`` while ``requires-python``
+# stays below 3.13. See
 # docs/adr/005-parameterise-filters-on-one-output-type.md.
-TFR = TypeVar("TFR", bound="FilterRepeater")
-"""The repeater :py:meth:`FilterRepeater.__copy__` was handed, and
-returns.
-"""
-
-TFM = TypeVar("TFM", bound="FilterMapper")
-"""The mapper :py:meth:`FilterMapper.__copy__` was handed, and returns."""
-
 T_tuple = TypeVar("T_tuple", bound=tuple)
 """The namedtuple type :py:class:`NamedTuple` returns, bound from its
 ``type_`` argument.
@@ -78,8 +70,12 @@ class FilterRepeater(BaseFilter):
     def __str__(self):
         return f"{type(self).__name__}({self._filter_chain})"
 
+    # Suppressed for the reason ``FilterChain.__copy__`` gives.
     @classmethod
-    def __copy__(cls, the_filter: TFR) -> TFR:
+    def __copy__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls,
+        the_filter: Self,
+    ) -> Self:
         """
         Creates a shallow copy of the object.
         """
@@ -95,7 +91,7 @@ class FilterRepeater(BaseFilter):
         return new_filter
 
     def _apply(self, value):
-        value: Iterable = self._filter(
+        value = self._filter(
             value,
             Type(Iterable),
         )
@@ -111,7 +107,7 @@ class FilterRepeater(BaseFilter):
 
         return result_type(self.iter(value))
 
-    def iter(self, value: Iterable) -> Generator[Any, None, None]:
+    def iter(self, value: Optional[Iterable]) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             if isinstance(value, Mapping):
@@ -289,9 +285,13 @@ class FilterMapper(BaseFilter):
             + ")"
         )
 
+    # Suppressed for the reason ``FilterChain.__copy__`` gives.
     # noinspection PyProtectedMember
     @classmethod
-    def __copy__(cls, the_filter: TFM) -> TFM:
+    def __copy__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls,
+        the_filter: Self,
+    ) -> Self:
         """
         Creates a shallow copy of the object.
         """
@@ -329,7 +329,10 @@ class FilterMapper(BaseFilter):
 
         return result_type(self.iter(value))
 
-    def iter(self, value: Mapping | list | tuple) -> Generator[Any, None, None]:
+    def iter(
+        self,
+        value: Optional[Mapping | list | tuple],
+    ) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             if isinstance(value, Mapping):
@@ -451,8 +454,8 @@ class FilterMapper(BaseFilter):
         """Returns whether the specified key is allowed to be omitted
         from the incoming value.
         """
-        if self.allow_missing_keys is True:
-            return True
+        if isinstance(self.allow_missing_keys, bool):
+            return self.allow_missing_keys
 
         try:
             return key in self.allow_missing_keys
@@ -461,8 +464,8 @@ class FilterMapper(BaseFilter):
 
     def _extra_key_allowed(self, key: Hashable) -> bool:
         """Returns whether the specified extra key is allowed."""
-        if self.allow_extra_keys is True:
-            return True
+        if isinstance(self.allow_extra_keys, bool):
+            return self.allow_extra_keys
 
         try:
             return key in self.allow_extra_keys
@@ -566,10 +569,19 @@ class NamedTuple(BaseFilter[T_tuple]):
 
         self.type = type_
 
-        if filter_map:
-            self.filter_mapper = FilterMapper(filter_map)
-        else:
-            self.filter_mapper = None
+        self.filter_mapper: Optional[FilterMapper] = (
+            FilterMapper(filter_map) if filter_map else None
+        )
+
+    @property
+    def _fields(self) -> tuple[str, ...]:
+        """The namedtuple's field names.
+
+        Note:
+            ``_fields`` is namedtuple's, which ``T_tuple``'s ``tuple``
+            bound cannot express.
+        """
+        return getattr(self.type, "_fields")
 
     def _apply(self, value: Any) -> T_tuple:
         value = self._filter(value, Type((Iterable, Mapping)))
@@ -584,13 +596,13 @@ class NamedTuple(BaseFilter[T_tuple]):
                 value = self._filter(
                     value,
                     FilterMapper(
-                        dict.fromkeys(self.type._fields),
+                        dict.fromkeys(self._fields),
                         allow_extra_keys=False,
                         allow_missing_keys=False,
                     ),
                 )
 
-                if self._has_errors:
+                if self._has_errors or value is None:
                     return None
 
                 value = self.type(**value)
@@ -598,7 +610,7 @@ class NamedTuple(BaseFilter[T_tuple]):
                 # Check that the incoming value has exactly the right number of
                 # values.
                 # noinspection PyProtectedMember
-                value = self._filter(value, Length(len(self.type._fields)))
+                value = self._filter(value, Length(len(self._fields)))
 
                 if self._has_errors:
                     return None
@@ -610,9 +622,9 @@ class NamedTuple(BaseFilter[T_tuple]):
         # necessary.
         if self.filter_mapper:
             # noinspection PyProtectedMember
-            filtered = self._filter(value._asdict(), self.filter_mapper)
+            filtered = self._filter(dict(zip(self._fields, value)), self.filter_mapper)
 
-            if self._has_errors:
+            if self._has_errors or filtered is None:
                 return None
 
             return self.type(**filtered)
