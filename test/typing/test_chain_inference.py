@@ -100,26 +100,20 @@ def test_chain_inference_rejects_none() -> None:
 
     Every suppression is load-bearing, for the reason
     ``test_chain_inference_rejects_a_non_filter_operand`` gives below:
-    remove any one and the checker it speaks for reports the mismatch.
+    re-adding a ``None`` arm leaves each one unused, which fails the
+    build.
     """
     with pytest.raises(TypeError):
-        assert_type(  # type: ignore[assert-type]
-            _StubTransform | None,  # pyright: ignore[reportAssertTypeFailure]
-            f.FilterChain[str],
-        )
+        # Annotated, or mypy reads a class `|` None as a type alias and
+        # never checks the operator.
+        _class_form: object = _StubTransform | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
 
     with pytest.raises(TypeError):
-        assert_type(  # type: ignore[assert-type]
-            _StubTransform() | None,  # pyright: ignore[reportAssertTypeFailure]
-            f.FilterChain[str],
-        )
+        _instance_form = _StubTransform() | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
 
     chain = _StubTransform() | _StubPassThrough()
     with pytest.raises(TypeError):
-        assert_type(  # type: ignore[assert-type]
-            chain | None,  # pyright: ignore[reportAssertTypeFailure]
-            f.FilterChain[str],
-        )
+        _chain_form = chain | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
 
 
 def test_chain_inference_callable_reports_what_it_returns() -> None:
@@ -139,18 +133,15 @@ def test_chain_inference_rejects_a_non_filter_operand() -> None:
     """Negative case: widening the overloads to swallow anything is the
     failure mode this file exists to catch.
 
-    Both suppressions are load-bearing — remove either and the checker it
-    speaks for reports the mismatch, because a rejected operand leaves the
-    expression ``Any`` (mypy) or ``Unknown`` (pyright) rather than
-    ``FilterChain[str]``. Kept inside ``pytest.raises`` because this module
-    is collected and run like any other, and ``resolve_filter`` raises on an
-    operand it cannot resolve.
+    Both suppressions are load-bearing: each checker reports an unused
+    suppression (``warn_unused_ignores``,
+    ``reportUnnecessaryTypeIgnoreComment``), so an overload that starts
+    accepting the operand fails here. Kept inside ``pytest.raises``
+    because this module is collected and run like any other, and
+    ``resolve_filter`` raises on an operand it cannot resolve.
     """
     with pytest.raises(TypeError):
-        assert_type(  # type: ignore[assert-type]
-            _StubTransform() | 42,  # pyright: ignore[reportAssertTypeFailure]
-            f.FilterChain[str],
-        )
+        _result = _StubTransform() | 42  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
 
 
 def test_chain_inference_widening_adds_to_output_type() -> None:

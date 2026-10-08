@@ -127,7 +127,9 @@ silent about `docs/`. Sweeping the paths it leaves out, `rg '\| None\b'` over
   leaves the expression `Any`/`Unknown`, so each pinned `assert_type` fails.
   That is the guard: re-adding a `None` arm returning `FilterChain[T_out]`
   would make the assertion pass again, and each checker would then report its
-  own suppression as unused and fail the build.
+  own suppression as unused and fail the build. [ADR 015][] swaps these for
+  `operator`/`reportOperatorIssue` suppressions on the chaining expression
+  itself, which guard the same way.
 - The class form's `TypeError` now names the operand's own class rather than
   the `FilterChain` wrapper `FilterMeta.__or__` builds internally: `f.Int |
   None` says `None is not compatible with Int in a filter chain`, matching
@@ -150,6 +152,7 @@ silent about `docs/`. Sweeping the paths it leaves out, `rg '\| None\b'` over
 
 [#34]: https://github.com/todofixthis/filters/issues/34
 [ADR 004]: 004-type-checking-in-ci.md
+[ADR 015]: 015-hold-the-type-checkers-to-their-default-rules.md
 [ADR 006]: 006-distinguish-filter-categories-by-marker-base-class.md
 [`FilterChain.__or__`]: ../../src/filters/base.py
 [the plan]: https://github.com/todofixthis/filters/pull/116

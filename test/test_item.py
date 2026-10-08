@@ -54,6 +54,18 @@ def test_item_fail_mapping_specific_key_missing(assert_filter_errors):
     )
 
 
+def test_item_fail_mapping_non_string_key_missing(assert_filter_errors):
+    """
+    A missing non-string key is reported as missing, not as an exception
+    from building the error's key.
+    """
+    assert_filter_errors(
+        f.Item(key=42),
+        {"foo": "bar"},
+        {"42": [f.Item.CODE_MISSING_KEY]},
+    )
+
+
 def test_item_pass_sequence_default(assert_filter_passes):
     """
     By default, returns the first item in a sequence.

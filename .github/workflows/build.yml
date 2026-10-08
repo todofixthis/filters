@@ -45,7 +45,8 @@ jobs:
           python-version-file: "pyproject.toml"
       - name: Install dependencies
         run: uv sync --group ci
-      # Baseline bar, not strict — see docs/adr/004-type-checking-in-ci.md.
+      # Default rules, not strict — see
+      # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
       # `src` and `test/typing` are checked separately: `test/typing` is the
       # assert_type harness and holds the rest of `test/` to a different
       # (currently unenforced) bar.

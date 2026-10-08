@@ -48,7 +48,7 @@ class BaseFilterTestCase(TestCase):
     cases.
     """
 
-    filter_type: Callable[..., BaseFilter[Any]] = None
+    filter_type: Callable[..., BaseFilter[Any]] | None = None
 
     class unmodified(object):
         """Used by assertFilterPasses to omit expected_value parameter.
@@ -116,7 +116,7 @@ class BaseFilterTestCase(TestCase):
             The FilterRunner instance for further assertions.
         """
         if not isinstance(runner, FilterRunner):
-            runner: FilterRunner = self._filter(runner)
+            runner = self._filter(runner)
 
         # First check to make sure no unhandled exceptions occurred.
         if runner.has_exceptions:
@@ -128,7 +128,7 @@ class BaseFilterTestCase(TestCase):
                 f"Filter Messages:\n\n{pformat(dict(runner.filter_messages))}"
             )
 
-        if isinstance(expected_codes, list):
+        if not isinstance(expected_codes, Mapping):
             expected_codes = {"": expected_codes}
 
         if runner.error_codes != expected_codes:
