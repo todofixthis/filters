@@ -346,6 +346,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     def sub_key(self, sub_key: Optional[str]) -> str:
         """Returns a copy of this filter's key with an additional
         sub-key appended.
+
+        Args:
+            sub_key: The key part to append. ``None`` (or an empty
+                string) appends nothing, so the result is the same as
+                :py:attr:`key` — e.g. for an error on the filter's own
+                value rather than on one of its items.
         """
         return self._make_key(self._key_parts + [sub_key])
 
