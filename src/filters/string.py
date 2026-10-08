@@ -766,7 +766,7 @@ class Split(BaseFilter[T_split]):
                 return None
 
             # ``__init__``'s overloads tie ``T_split`` to whether ``keys``
-            # is set, which neither checker can follow into the body.
+            # is set, which neither type checker can follow into the body.
             return cast(T_split, dict(zip_longest(self.keys, split)))
         else:
             return cast(T_split, split)
