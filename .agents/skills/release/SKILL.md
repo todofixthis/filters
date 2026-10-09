@@ -38,7 +38,7 @@ Based on the changes, recommend a semver bump:
 - **minor** — new features or behaviour changes, fully backwards-compatible
 - **patch** — bug fixes only
 
-Where the next version carries a pre-release segment, bump only that segment (`4.0.0a2` → `4.0.0a3`) unless the developer says otherwise.
+Where the latest release and the next version share a pre-release cycle, bump only the pre-release segment (`4.0.0a2` → `4.0.0a3`) unless the developer says otherwise.
 
 **Stop here. Get explicit confirmation of the release notes and version number before continuing.** Once the version is confirmed, add or drop the `[!CAUTION]` block to match it (see _Writing Release Notes_).
 
