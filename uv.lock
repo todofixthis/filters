@@ -863,7 +863,7 @@ wheels = [
 
 [[package]]
 name = "phx-filters"
-version = "4.0.0a1"
+version = "4.0.0a2"
 source = { editable = "." }
 dependencies = [
     { name = "phx-class-registry" },
