@@ -1,27 +1,28 @@
 Upgrading to Filters v4
 =======================
 
-`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0a1>`_ makes
+`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0a2>`_ makes
 every filter generic over its output type, so a type checker can follow a value
 all the way through a chain. That part is free — your own filters need no
 changes. But three changes can break code that worked in Filters v3, and one of
-them fails silently.
+them fails silently. A few bug fixes also change results; see
+:ref:`upgrade-v4-bug-fixes`.
 
 .. note::
 
-   This guide covers the v4 alpha. Runtime behaviour is settled; the typing
-   surface may still shift before 4.0.0 final.
+   This guide covers the v4 alpha. The typing surface may still shift before
+   4.0.0 final.
 
 Installing the alpha
 --------------------
 Pre-release versions aren't selected by default, so ask for this one
 explicitly::
 
-    pip install --pre 'phx-filters==4.0.0a1'
+    pip install --pre 'phx-filters==4.0.0a2'
 
 Or, with `uv <https://docs.astral.sh/uv/>`_::
 
-    uv add 'phx-filters==4.0.0a1'
+    uv add 'phx-filters==4.0.0a2'
 
 If the alpha bites, going back is just as explicit::
 
@@ -244,6 +245,35 @@ public replacement — the shared base classes are private. Test against the pai
    produce the same output as they did in Filters v3, so code that simply *uses*
    them needs no changes.
 
+.. _upgrade-v4-bug-fixes:
+
+Bug Fixes That Change Results
+-----------------------------
+These bugs are present in Filters v3 too, so they don't break code that relied
+on documented behaviour. But fixing them changes what some code observes, so
+check your code if any of these apply:
+
+* :py:class:`filters.Item` with a key that isn't a :py:class:`str`, such as an
+  :py:class:`int` or a :py:class:`tuple`, missing from a mapping reported
+  ``exception`` instead of ``missing``. A falsy key such as ``0`` reported
+  ``missing`` but dropped out of the error's key. Every such key now reports
+  ``missing`` under ``str(key)``: ``f.Item(42)`` on ``{'a': 1}`` gives
+  ``{'42': ['missing']}`` where it gave ``{'': ['exception']}``.
+* ``FilterRunner(None)`` failed with :py:class:`AttributeError` on first use.
+  It now raises :py:class:`TypeError` as soon as it's constructed, even if the
+  runner is never used. Use :py:class:`filters.NoOp` instead.
+* A custom filter passing ``template_vars`` to ``_invalid_value()`` had that
+  mapping mutated with the error context, and a read-only mapping made the
+  filter report ``exception`` instead of its own error code. The mapping is
+  now left untouched.
+* With ``capture_exc_info=True``, ``exc_info`` on
+  :py:class:`filters.MemoryHandler` and
+  :py:class:`filters.FilterRunner` recorded ``sys.exc_info()``, which is
+  ``(None, None, None)`` outside an ``except`` block. It now records the
+  exception the filter reported. Where a custom filter catches one exception
+  and reports another, it holds the reported one, whose traceback is ``None``
+  unless it was raised.
+
 Type Parameters
 ---------------
 Now for the good news 😺
@@ -334,8 +364,9 @@ type instead:
 
    .. code-block:: python
 
-      # mypy infers ``types.UnionType``, and the chain's output degrades to
-      # ``Any``. There is no error — you just lose the type.
+      # mypy infers ``types.UnionType``, so passing ``chain`` to a filter or
+      # ``FilterRunner`` reports ``arg-type`` (``dict-item`` in a
+      # ``FilterMapper``'s map), and the output is ``Any``.
       chain = f.Unicode | f.Strip | f.NotEmpty
 
    Passing a chain straight into a filter, as in the examples above, is
@@ -384,7 +415,17 @@ Known Limitations
 * Neither mypy nor pyright runs at full strictness yet, so some strict typing
   warnings or errors in your own filters go unreported. Full strictness is
   expected by the 4.0.0 final release; progress is tracked in
-  `issue #119 <https://github.com/todofixthis/filters/issues/119>`_.
+  `issue #146 <https://github.com/todofixthis/filters/issues/146>`_.
+* A filter rejects a value by returning ``None``, which your ``_apply``'s return
+  annotation doesn't include: subclass ``BaseFilter[str]``, annotate ``_apply``
+  as returning :py:class:`str`, and ``return None`` reports ``return-value``
+  under mypy and ``reportReturnType`` under pyright. Widening ``_apply`` to
+  ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
+  rules on those lines, or disable them as Filters does for its own code.
+  ``_filter()`` returns an :py:obj:`~typing.Optional` too, so check
+  ``if self._has_errors or value is None:`` after it to narrow the result.
+  Filters will stop returning ``None`` to reject in
+  `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.

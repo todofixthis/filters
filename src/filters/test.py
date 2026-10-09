@@ -131,6 +131,17 @@ class BaseFilterTestCase(TestCase):
         if not isinstance(expected_codes, Mapping):
             expected_codes = {"": expected_codes}
 
+        # ``error_codes`` holds lists, so any other sequence of codes is
+        # converted to one before comparing. A bare ``str`` is a sequence
+        # of codes to a type checker but would split into characters here.
+        for key, codes in expected_codes.items():
+            if isinstance(codes, str):
+                raise TypeError(
+                    f"Expected error codes for {key!r} must be a sequence of "
+                    f"codes, not a single str; use [{codes!r}] instead."
+                )
+        expected_codes = {key: list(codes) for key, codes in expected_codes.items()}
+
         if runner.error_codes != expected_codes:
             self.fail(
                 f"Filter generated unexpected error codes (expected "
