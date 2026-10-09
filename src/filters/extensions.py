@@ -7,7 +7,7 @@ from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
-from typing import Any, Hashable
+from typing import Any, Hashable, cast
 
 from class_registry.entry_points import EntryPointClassRegistry
 
@@ -63,7 +63,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         """
         # create_instance returns the class itself (not an instance) when called
         # without args, so the runtime type is type[BaseFilter], not BaseFilter.
-        return self[item]
+        return cast(type[BaseFilter], self[item])
 
     def __repr__(self):
         return repr(self._get_cache())

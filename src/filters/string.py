@@ -7,7 +7,7 @@ from base64 import standard_b64decode, urlsafe_b64decode
 from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
-from typing import Any, Hashable, Optional, overload
+from typing import Any, Hashable, Optional, cast, overload
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
@@ -63,7 +63,7 @@ class Base64Decode(BaseFilter[bytes]):
         self.base64_re = regex.compile(b"^[-+_/A-Za-z0-9=]+$", regex.ASCII)
 
     def _apply(self, value: Any) -> bytes:
-        value: bytes = self._filter(value, Type(bytes))
+        value = self._filter(value, Type(bytes))
 
         if self._has_errors:
             return None
@@ -129,7 +129,7 @@ class CaseFold(BaseFilter[str]):
     """
 
     def _apply(self, value: Any) -> str:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -251,7 +251,7 @@ class IpAddress(BaseFilter[str]):
         )
 
     def _apply(self, value: Any) -> str:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -306,7 +306,7 @@ class JsonDecode(BaseFilter):
         self.decoder = decoder
 
     def _apply(self, value: Any) -> Any:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -387,7 +387,7 @@ class MaxBytes(BaseFilter[bytes]):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value: str = self._filter(
+        value = self._filter(
             value=value,
             filter_chain=(Type((bytes, str)) | Unicode(encoding=self.encoding)),
         )
@@ -580,7 +580,7 @@ class MaxChars(BaseFilter[str]):
         self.suffix = suffix
 
     def _apply(self, value: Any) -> str:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -631,7 +631,7 @@ class Regex(BaseFilter[list[str]]):
 
     pattern_types = (
         re.Pattern,
-        regex.regex.Pattern,
+        regex.Pattern,
     )
 
     def __init__(
@@ -658,7 +658,7 @@ class Regex(BaseFilter[list[str]]):
         return f"{type(self).__name__}({self.regex.pattern!r})"
 
     def _apply(self, value: Any) -> list[str]:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -749,7 +749,7 @@ class Split(BaseFilter[T_split]):
         return f"{type(self).__name__}({self.regex.pattern!r}, keys={self.keys!r})"
 
     def _apply(self, value: Any) -> T_split:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -758,14 +758,18 @@ class Split(BaseFilter[T_split]):
 
         if self.keys is not None:
             # The split value can have at most as many items as ``self.keys``.
-            split = self._filter(split, MaxLength(len(self.keys)))
+            # ``MaxLength`` passes its value through unchanged, so only the
+            # rejection matters here.
+            self._filter(split, MaxLength(len(self.keys)))
 
             if self._has_errors:
                 return None
 
-            return dict(zip_longest(self.keys, split))
+            # ``__init__``'s overloads tie ``T_split`` to whether ``keys``
+            # is set, which neither type checker can follow into the body.
+            return cast(T_split, dict(zip_longest(self.keys, split)))
         else:
-            return split
+            return cast(T_split, split)
 
 
 class Strip(BaseFilter[str]):
@@ -810,10 +814,12 @@ class Strip(BaseFilter[str]):
             self.trailing = None
 
     def __str__(self):
-        return f"{type(self).__name__}(leading={self.leading.pattern!r}, trailing={self.trailing.pattern!r})"
+        leading = self.leading.pattern if self.leading else None
+        trailing = self.trailing.pattern if self.trailing else None
+        return f"{type(self).__name__}(leading={leading!r}, trailing={trailing!r})"
 
     def _apply(self, value: Any) -> str:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -837,7 +843,7 @@ class TomlDecode(BaseFilter[dict[str, Any]]):
     }
 
     def _apply(self, value: Any) -> dict[str, Any]:
-        value: str = self._filter(value, Type(str))
+        value = self._filter(value, Type(str))
 
         if self._has_errors:
             return None
@@ -1073,7 +1079,7 @@ class Uuid(BaseFilter[UUID]):
         return f"{type(self).__name__}(version={self.version!r})"
 
     def _apply(self, value: Any) -> UUID:
-        value: str | UUID = self._filter(
+        value = self._filter(
             value,
             Type((str, UUID)),
         )

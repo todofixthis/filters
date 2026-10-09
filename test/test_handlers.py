@@ -41,6 +41,18 @@ def test_filter_runner_apply():
     assert runner.cleaned_data == 86
 
 
+def test_filter_runner_rejects_none():
+    """
+    A FilterRunner needs a filter to run; ``None`` is rejected up front
+    rather than failing on first use.
+
+    To run a value through without filtering it, pass ``NoOp`` instead of
+    ``None``.
+    """
+    with pytest.raises(TypeError, match="NoOp"):
+        f.FilterRunner(None)
+
+
 def test_exception_handler_invalid_value():
     """
     Sends an invalid value to the handler.

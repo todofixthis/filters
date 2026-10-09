@@ -10,7 +10,7 @@ Before writing code, check:
 
 ## Architecture Decision Records
 
-When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `writing-adrs` skill for the format and conventions. ADRs live in `docs/adr/`. Before writing, run `ls docs/adr/` to find the highest existing number and increment it.
+When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `phx:writing-adrs` skill (from the phx plugin, which `.claude/settings.json` enables) for the format, conventions and tooling: its `adr.py` allocates the number, generates `docs/adr/INDEX.md` and validates the corpus. Where the skill isn't available (outside Claude Code, or the plugin isn't loaded), read the [skill](https://github.com/todofixthis/phx-claude-siat/blob/0725567cec6bab6a227c2a3d569e64c226c33a4e/skills/writing-adrs/SKILL.md) and run the same tool as `phx-adr` (see Commands). Don't hand-edit the index, or add a repo-local ADR script, pre-commit hook or vendored copy of the tool (ADR 014). ADRs live in `docs/adr/`.
 
 If you find yourself about to establish a new cross-cutting pattern (something that will affect multiple domains or files, e.g. a testing convention, a shared utility, an error-handling approach), stop and write an ADR first even if the immediate task feels local. A pattern adopted once becomes the template for everything that follows.
 
@@ -29,14 +29,29 @@ uv run ruff check                                      # lint
 uv run make -C docs clean && uv run make -C docs html  # build docs
 ```
 
+The phx plugin's ADR tool, for use where the skill isn't available (keep every ref in this file in step with the `adrs` CI job):
+
+```bash
+# Scaffold the next ADR
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr new "Title" --summary "…" --scope path/
+# List the decisions binding a path, before changing it
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr for path/to/file
+# Mark an ADR superseded
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr supersede OLD --by NEW
+# Regenerate docs/adr/INDEX.md
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr index
+# Validate, as CI does
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr check
+```
+
 ## Architecture
 
 Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
 
 - Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` inline
+- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` on the line preceding the annotation (for a return type, the line before `) ->`, splitting a one-line signature to make one)
 - Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
-- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter`, chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
+- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter: Self` and returning `Self`, with `# pyright: ignore[reportIncompatibleMethodOverride]` on its `def` line (docs/adr/015-hold-the-type-checkers-to-their-default-rules.md), chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
 
 ## Tests
 
@@ -58,12 +73,27 @@ Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` s
 Place comments on the line preceding the code they document, not as trailing
 comments.
 
+Write or update each comment — including one that describes code you move
+or change, wherever it sits — for a reader who never saw the diff: name what
+it refers to rather than pointing at the change ("now", "no longer", or
+"here" once the code has moved). Why the code is as it is belongs, whether a
+constraint it works around or an alternative it rejected; a narrative of
+earlier versions belongs in the commit message. Where history carries a
+reason, keep the reason and state it in the present tense: "raises rather
+than ignoring `None`, which hid an accidental `None`", not "used to be a
+no-op".
+
 **Exception: `# type: ignore[...]` and `# pyright: ignore[...]`.** Each
-checker applies a trailing suppression only to the line it sits on. On a
-preceding line (e.g. an `@overload` decorator) the error still reports
-against the `def` below it, and pyright's
-`reportUnnecessaryTypeIgnoreComment` is off by default, so a misplaced
-ignore fails silently. Keep these two forms trailing.
+checker applies a trailing suppression only to the line it sits on, so it
+must trail the line the checker reports — usually the `def`, but mypy
+reports `override` on an overloaded method at its first `@overload`. A
+misplaced ignore leaves the error standing and is itself reported unused.
+Keep these two forms trailing.
+
+`# noinspection` comments stay leading, and unlike the two forms above have
+no checker behind them: when you change or remove the code one covers (the
+next statement, or a whole function or class when it sits above one),
+re-check that it still applies, and delete it if not.
 
 ## Language and Style
 

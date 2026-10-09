@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from copy import copy
-from typing import Any, Generic, Optional, Union, overload
+from typing import Any, Generic, Optional, Self, Union, cast, overload
 from weakref import ProxyTypes, proxy
 
 from typing_extensions import TypeAliasType, TypeVar
@@ -31,7 +31,11 @@ T_out = TypeVar("T_out", default=Any)
 T_widened = TypeVar("T_widened", default=Any)
 """The type a :py:class:`Widening` filter adds to a chain's output."""
 
-T_next = TypeVar("T_next")
+# ``default=Any`` only because ``FilterMeta.__or__``'s overloads list it after
+# ``T_out``, and PEP 696 forbids a TypeVar without a default following one
+# with. Every overload solves it from ``next_filter``, so the default never
+# applies.
+T_next = TypeVar("T_next", default=Any)
 """The output type of the filter being chained onto another."""
 
 T_filtered = TypeVar("T_filtered")
@@ -48,12 +52,6 @@ T_allowed2 = TypeVar("T_allowed2")
 
 T_allowed3 = TypeVar("T_allowed3")
 """The third type a :py:class:`Type` filter accepts."""
-
-TF = TypeVar("TF", bound="BaseFilter[Any]")
-"""The filter :py:meth:`BaseFilter.__copy__` was handed, and returns."""
-
-TFC = TypeVar("TFC", bound="FilterChain[Any]")
-"""The chain :py:meth:`FilterChain.__copy__` was handed, and returns."""
 
 # Note: Using typing.Optional/Union instead of PEP 604 syntax (X | Y) for
 # forward references to avoid Sphinx autodoc warnings. Sphinx cannot parse
@@ -86,10 +84,17 @@ normalised into an instance of a BaseFilter subclass.
 class FilterMeta(ABCMeta):
     """Metaclass for filters."""
 
-    # noinspection PyShadowingBuiltins
-    def __init__(cls, what, bases=None, dict=None, **kwargs):
+    templates: dict[str, str]
+
+    def __init__(
+        cls,
+        what: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> None:
         # noinspection PyArgumentList
-        super().__init__(what, bases, dict, **kwargs)
+        super().__init__(what, bases, namespace, **kwargs)
 
         if not hasattr(cls, "templates"):
             cls.templates = {}
@@ -97,7 +102,7 @@ class FilterMeta(ABCMeta):
         # Copy error templates from base class to derived class, but
         # in the event of a conflict, preserve the derived class'
         # template.
-        templates = {}
+        templates: dict[str, str] = {}
         for base in bases:
             if isinstance(base, FilterMeta):
                 templates.update(base.templates)
@@ -126,7 +131,12 @@ class FilterMeta(ABCMeta):
     # admits ``None``, but ``|`` does not — see
     # docs/adr/009-drop-none-as-an-operand-of-the-chaining-operator.md.
     #
-    @overload
+    # Returning a ``FilterChain`` rather than ``type.__or__``'s
+    # ``UnionType`` is the point of this method, so mypy's ``override``
+    # objection is suppressed rather than fixed. mypy reports it against
+    # the first ``@overload`` line, which is why the ignore sits there.
+    #
+    @overload  # type: ignore[override]
     def __or__(  # type: ignore[misc]
         cls: "type[BaseFilter[T_out]]",
         next_filter: "type[PassThrough]",
@@ -177,17 +187,18 @@ class FilterMeta(ABCMeta):
             TypeError: if ``next_filter`` is (or resolves to) ``None``.
         """
         # Checked here, naming ``cls``, rather than left to the
-        # ``FilterChain(cls) | next_filter`` delegation below: that
-        # raises the same error but names the wrapping ``FilterChain``
-        # instead of the class the caller actually wrote.
-        if cls.resolve_filter(next_filter) is None:
+        # ``FilterChain`` built below, whose error would name the wrapping
+        # ``FilterChain`` instead of the class the caller actually wrote.
+        filter_class = cast("type[BaseFilter[Any]]", cls)
+        if filter_class.resolve_filter(next_filter) is None:
             raise TypeError(
                 f"None is not compatible with {cls.__name__} in a filter "
                 f"chain; use NoOp instead, or Optional[{cls.__name__}] in "
                 f"a type annotation.",
             )
 
-        return FilterChain(cls) | next_filter
+        # noinspection PyProtectedMember
+        return FilterChain(filter_class)._add(next_filter)
 
 
 class BaseFilter(Generic[T_out], metaclass=FilterMeta):
@@ -219,12 +230,11 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         #
         self._has_errors = False
 
-    # noinspection PyProtectedMember
     @classmethod
-    def __copy__(cls, the_filter: TF) -> TF:
+    def __copy__(cls, the_filter: Self) -> Self:
         """Creates a shallow copy of the object."""
-        new_filter: TF = object.__new__(type(the_filter))
-        new_filter.__dict__.update(the_filter.__dict__)
+        new_filter = object.__new__(type(the_filter))
+        vars(new_filter).update(vars(the_filter))
 
         return new_filter
 
@@ -300,7 +310,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @property
     def parent(
         self,
-    ) -> Optional["BaseFilter[Any]"]:  # Use `Optional` instead of `|` for Sphinx compat
+        # Use `Optional` instead of `|` for Sphinx compat
+    ) -> Optional["BaseFilter[Any]"]:
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
@@ -332,21 +343,27 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         """Sets the key associated with this filter."""
         self._key = key
 
-    def sub_key(self, sub_key: str) -> str:
+    def sub_key(self, sub_key: Optional[str]) -> str:
         """Returns a copy of this filter's key with an additional
         sub-key appended.
+
+        Args:
+            sub_key: The key part to append. ``None`` (or an empty
+                string) appends nothing, so the result is the same as
+                :py:attr:`key` — e.g. for an error on the filter's own
+                value rather than on one of its items.
         """
         return self._make_key(self._key_parts + [sub_key])
 
     @property
-    def _key_parts(self) -> list[str]:
+    def _key_parts(self) -> list[Optional[str]]:
         """Assembles each key part in the filter hierarchy."""
-        key_parts = []
+        key_parts: list[Optional[str]] = []
 
         # Iterate up the parent chain and collect key parts.
         # Alternatively, we could just get ``self.parent._key_parts``,
         # but that is way less efficient.
-        parent = self
+        parent: Optional[BaseFilter[Any]] = self
         while parent:
             # As we move up the chain, push key parts onto the front of
             # the path (otherwise the key parts would be in reverse
@@ -361,9 +378,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         """Returns the invalid value handler for the filter."""
         if self._handler is None:
             # Attempt to return the parent filter's handler...
-            try:
-                return self.parent.handler
-            except AttributeError:
+            parent = self.parent
+            if parent is None:
                 #
                 # ... unless this filter has no parent, in which case
                 # it should use the default.
@@ -373,6 +389,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
                 # that has a different invalid value handler set.
                 #
                 return ExceptionHandler()
+
+            return parent.handler
 
         return self._handler
 
@@ -463,9 +481,9 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         reason: Union[str, Exception],
         replacement: Optional[Any] = None,
         exc_info: bool = False,
-        context: Optional[MutableMapping] = None,
+        context: Optional[MutableMapping[str, Any]] = None,
         sub_key: Optional[str] = None,
-        template_vars: Optional[Mapping] = None,
+        template_vars: Optional[Mapping[str, Any]] = None,
     ) -> Any:
         """Handles an invalid value.
 
@@ -503,10 +521,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         context["key"] = self.sub_key(sub_key)
         context["replacement"] = replacement
 
-        if not template_vars:
-            template_vars = {}
-
-        template_vars.update(context)
+        format_vars = {**(template_vars or {}), **context}
 
         if isinstance(reason, Exception):
             # Store the error code in the context so that the caller
@@ -523,12 +538,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
             # Add the context to the exception object so that loggers
             # can use it.
-            if not hasattr(reason, "context"):
-                reason.context = {}
-            reason.context.update(context)
+            reason_context: MutableMapping[str, Any] = getattr(reason, "context", {})
+            reason_context.update(context)
+            setattr(reason, "context", reason_context)
 
             handler.handle_exception(
-                message=self._format_message(context["code"], template_vars),
+                message=self._format_message(context["code"], format_vars),
                 exc=reason,
             )
         else:
@@ -538,7 +553,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             context["code"] = reason
 
             handler.handle_invalid_value(
-                message=self._format_message(reason, template_vars),
+                message=self._format_message(reason, format_vars),
                 exc_info=exc_info,
                 context=context,
             )
@@ -548,7 +563,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     def _format_message(
         self,
         key: str,
-        template_vars: Mapping[str, str],
+        template_vars: Mapping[str, Any],
     ) -> str:
         """Formats a message for the invalid value handler."""
         return self.templates[key].format(**template_vars)
@@ -560,9 +575,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         # Use `Optional` instead of `|` for Sphinx compat
         parent: Optional["BaseFilter[Any]"] = None,
         key: Optional[str] = None,
-    ) -> Optional[
-        "BaseFilter[T_resolved]"
-    ]:  # Use `Optional` instead of `|` for Sphinx compat
+        # Use `Optional` instead of `|` for Sphinx compat
+    ) -> Optional["BaseFilter[T_resolved]"]:
         """Converts a filter-compatible value into a consistent type."""
         if the_filter is not None:
             resolved: Optional[BaseFilter[T_resolved]]
@@ -597,7 +611,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         return None
 
     @staticmethod
-    def _make_key(key_parts: Iterable[str]) -> str:
+    def _make_key(key_parts: Iterable[Optional[str]]) -> str:
         """Assembles a dotted key value from its component parts."""
         return ".".join(filter(None, key_parts))
 
@@ -650,6 +664,13 @@ class FilterChain(BaseFilter[T_out]):
     # Same order as the other two sets: markers first, callable last, and
     # no ``None`` arm.
     #
+    # pyright 1.1.411 reports these out of order relative to BaseFilter's
+    # even though they repeat them verbatim. Dropping the first or the
+    # fourth overload from both sets silences it, so it appears to pair
+    # ``type[PassThrough]`` with ``type[BaseFilter[T_next]]``. The order is
+    # right (see ADR 006 above); mypy's ``override`` check still guards
+    # these against drifting from BaseFilter's.
+    #
     @overload
     def __or__(self, next_filter: "type[PassThrough]") -> "FilterChain[T_out]": ...
 
@@ -677,7 +698,10 @@ class FilterChain(BaseFilter[T_out]):
         next_filter: "Callable[[], BaseFilter[T_next]]",
     ) -> "FilterChain[T_next]": ...
 
-    def __or__(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[Any]":
+    def __or__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        next_filter: "FilterCompatible[Any]",
+    ) -> "FilterChain[Any]":
         """Chains a filter with this one.
 
         This method creates a new FilterChain object without modifying
@@ -697,8 +721,16 @@ class FilterChain(BaseFilter[T_out]):
         new_chain._add(next_filter)
         return new_chain
 
+    # ``the_filter: Self`` narrows the base's parameter, which pyright
+    # rightly calls unsound for a classmethod; ``copy()`` only ever passes
+    # an instance of ``cls``, so it holds in practice. Every ``__copy__``
+    # override (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
+    # carries the same suppression.
     @classmethod
-    def __copy__(cls, the_filter: TFC) -> TFC:
+    def __copy__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls,
+        the_filter: Self,
+    ) -> Self:
         """Creates a shallow copy of the object."""
         new_filter = super().__copy__(the_filter)
         new_filter._filters = the_filter._filters[:]
@@ -738,7 +770,7 @@ class BaseInvalidValueHandler(metaclass=ABCMeta):
         self,
         message: str,
         exc_info: bool,
-        context: MutableMapping,
+        context: MutableMapping[str, Any],
     ) -> Any:
         """Handles an invalid value.
 
@@ -774,7 +806,7 @@ class FilterError(ValueError):
         # around for compatibility with Python 2.
         # noinspection PyArgumentList
         super().__init__(*args, **kwargs)
-        self.context = {}
+        self.context: MutableMapping[str, Any] = {}
 
 
 class ExceptionHandler(BaseInvalidValueHandler):
@@ -784,7 +816,7 @@ class ExceptionHandler(BaseInvalidValueHandler):
         self,
         message: str,
         exc_info: bool,
-        context: MutableMapping,
+        context: MutableMapping[str, Any],
     ) -> None:
         error = FilterError(message)
         error.context = context

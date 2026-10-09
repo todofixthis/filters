@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from decimal import Decimal as DecimalType, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
@@ -70,7 +71,7 @@ class Decimal(BaseFilter[DecimalType]):
         return f"{type(self).__name__}(max_precision={self.max_precision!r})"
 
     def _apply(self, value: Any) -> DecimalType:
-        allowed_types = (
+        allowed_types: tuple[type, ...] = (
             str,
             int,
             float,
@@ -130,9 +131,9 @@ class Int(BaseFilter[int]):
     }
 
     def _apply(self, value: Any) -> int:
-        decimal: DecimalType = self._filter(value, Decimal)
+        decimal = self._filter(value, Decimal)
 
-        if self._has_errors:
+        if self._has_errors or decimal is None:
             return None
 
         # Do not allow floats.
@@ -271,8 +272,10 @@ class Round(BaseFilter[T_result]):
         self,
         to_nearest: int | str | DecimalType = 1,
         rounding: str = ROUND_HALF_UP,
-        result_type: type[T_result] = DecimalType,
-    ):
+        # mypy rejects any default for a parameter typed with a TypeVar, even
+        # one matching the TypeVar's own PEP 696 default; pyright accepts it.
+        result_type: Callable[[DecimalType], T_result] = DecimalType,  # type: ignore[assignment]
+    ) -> None:
         """Initialises the Round filter.
 
         Args:
@@ -284,7 +287,8 @@ class Round(BaseFilter[T_result]):
                 that you provide it as a string or Decimal, to avoid
                 floating point precision errors.
             rounding: Controls how to round values.
-            result_type: The type of result to return.
+            result_type: Converts the rounded ``Decimal`` to the result,
+                e.g. ``int`` or ``float``.
         """
         super().__init__()
 
@@ -298,7 +302,7 @@ class Round(BaseFilter[T_result]):
         self.rounding = rounding
 
     def _apply(self, value: Any) -> T_result:
-        value: DecimalType = self._filter(value, Decimal)
+        value = self._filter(value, Decimal)
 
         if self._has_errors:
             return None
