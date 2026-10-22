@@ -42,7 +42,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version-file: "pyproject.toml"
+          # Newest version in the test matrix. Reading `requires-python` from
+          # pyproject.toml resolves to the latest CPython, which can outrun
+          # dependency wheels.
+          python-version: "3.14"
       - name: Install dependencies
         run: uv sync --group ci
       # Default rules, not strict — see
@@ -70,7 +73,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version-file: "pyproject.toml"
+          # Newest version in the test matrix. Reading `requires-python` from
+          # pyproject.toml resolves to the latest CPython, which can outrun
+          # dependency wheels.
+          python-version: "3.14"
       - name: Install dependencies
         run: uv sync --group ci
       - name: Check docs build
