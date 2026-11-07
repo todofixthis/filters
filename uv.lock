@@ -854,11 +854,14 @@ wheels = [
 
 [[package]]
 name = "phx-class-registry"
-version = "5.1.1"
+version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ad/e1/4038dc8b09e66b1f850913c05fe1c039f8d9c0ef61347af37c75bbe77e3f/phx_class_registry-5.1.1.tar.gz", hash = "sha256:06c9af198b846a7530406314f63f8d83441daf42d29ee25d8c0b19a9dbc37939", size = 32115, upload-time = "2024-10-17T19:41:56.63Z" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/bf/3e6172307841ade6403000e11a58f9deca1480f04c45be2134177173de69/phx_class_registry-6.0.0.tar.gz", hash = "sha256:7253cc4598bb84dbd83bb83e75b6cb121bfdfba8aaa899f9d975ebefeedd35c2", size = 323118, upload-time = "2026-11-07T19:59:45.119Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/85/67eb86f25b1857a7669c4ad7a46b439e55c5301cbcb08b9ce8fa9125700d/phx_class_registry-5.1.1-py3-none-any.whl", hash = "sha256:b093ecc1dad34c5dc6eda2530046d956f2303a5cfaa543bf7fba35ce3c7b1672", size = 15732, upload-time = "2024-10-17T19:41:54.592Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/e5/6da6d558f27752eb1672e79ce3a9675220b098221dc15086e8a2e9d51c6f/phx_class_registry-6.0.0-py3-none-any.whl", hash = "sha256:9aaac6c595d3c920a7a8ef866c0c8e912ae53bd9bfbf2cc41c2d6ef015898d95", size = 17091, upload-time = "2026-11-07T19:59:43.109Z" },
 ]
 
 [[package]]
@@ -910,7 +913,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "phx-class-registry", specifier = ">=5,<6" },
+    { name = "phx-class-registry", specifier = ">=6,<7" },
     { name = "phx-filters-django", marker = "extra == 'django'" },
     { name = "phx-filters-iso", marker = "extra == 'iso'" },
     { name = "python-dateutil", specifier = ">=4,<5" },
