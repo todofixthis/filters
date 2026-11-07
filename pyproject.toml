@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: Text Processing :: Filters",
 ]
 dependencies = [
-    "phx-class-registry>=5,<6",
+    "phx-class-registry>=6,<7",
     "python-dateutil>=4,<5",
     "pytz>=2025",
     "regex>=2024",

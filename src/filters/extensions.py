@@ -7,7 +7,7 @@ from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
-from typing import Any, Hashable, cast
+from typing import Any, cast
 
 from class_registry.entry_points import EntryPointClassRegistry
 
@@ -68,7 +68,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
     def __repr__(self):
         return repr(self._get_cache())
 
-    def _get_cache(self) -> dict[Hashable, type[BaseFilter]]:
+    def _get_cache(self) -> dict[str, type[BaseFilter]]:
         if self._cache is None:
             self._cache = {}
 
