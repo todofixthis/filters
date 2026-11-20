@@ -45,7 +45,7 @@ jobs:
           # Newest version in the test matrix. Reading `requires-python` from
           # pyproject.toml resolves to the latest CPython, which can outrun
           # dependency wheels.
-          python-version: "3.14"
+          python-version: "3.15"
       - name: Install dependencies
         run: uv sync --group ci
       # Default rules, not strict — see
@@ -76,7 +76,7 @@ jobs:
           # Newest version in the test matrix. Reading `requires-python` from
           # pyproject.toml resolves to the latest CPython, which can outrun
           # dependency wheels.
-          python-version: "3.14"
+          python-version: "3.15"
       - name: Install dependencies
         run: uv sync --group ci
       - name: Check docs build
