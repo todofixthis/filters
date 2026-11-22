@@ -105,10 +105,11 @@ pre-commit = [
 include = ["src/*.py", "test/typing/*.py"]
 
 [tool.mypy]
-# A filter rejects a value by returning None from a non-Optional `_apply`;
-# re-enable once #121 makes rejection raise instead. See
+# A filter rejects a value by returning `_invalid_value()`'s result (`Any`,
+# `None` by default) from a non-Optional `_apply`. Re-enable both codes once
+# #121 makes rejection raise instead. See
 # docs/adr/016-run-the-type-checkers-in-strict-mode.md.
-disable_error_code = ["return-value"]
+disable_error_code = ["no-any-return", "return-value"]
 ignore_missing_imports = true
 strict = true
 
@@ -121,7 +122,7 @@ strict = true
 # unused instead. Pyright-specific suppressions still use
 # `# pyright: ignore[code]`, which this setting does not affect.
 enableTypeIgnoreComments = false
-# The same exemption as mypy's `return-value` above, for the same reason.
+# The same exemption as mypy's two codes above, for the same reason.
 reportReturnType = false
 # Closes the gap where a suppression that stops being needed decays
 # silently. See docs/adr/016-run-the-type-checkers-in-strict-mode.md.

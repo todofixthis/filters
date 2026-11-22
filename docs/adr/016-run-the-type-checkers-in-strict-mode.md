@@ -2,8 +2,8 @@
 status: Accepted
 date: 2026-11-22
 scope: [pyproject.toml, .github/workflows/build.yml, src/filters/, test/typing/]
-summary: Run mypy --strict and pyright strict mode in CI on src and test/typing, disabling only return-value and reportReturnType until filters stop returning None to reject, and annotate _invalid_value as returning the filter's output type so that the documented rejection type-checks, rather than each checker's default rules, a hand-picked subset of strict rules, or disabling no-any-return; fix a new error, or suppress it inline with a comment saying why, never by disabling a code or by annotating Any where a narrower type is true.
-revisit-when: Filters stop returning None to reject a value (#121), so return-value and reportReturnType can be re-enabled and _invalid_value retyped; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; the suppressions for checker limitations in src grow well past the 22 this ADR records.
+summary: Run mypy --strict and pyright strict mode in CI on src and test/typing, disabling only return-value, no-any-return and reportReturnType until filters stop returning None to reject, rather than each checker's default rules, a hand-picked subset of strict rules, retyping _invalid_value, or an inline suppression at each rejection path; fix a new error, or suppress it inline with a comment saying why, never by disabling a code or by annotating Any where a narrower type is true.
+revisit-when: Filters stop returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; the suppressions for checker limitations in src grow well past the 13 this ADR records.
 ---
 
 # 016: Run the Type Checkers in Strict Mode
@@ -34,7 +34,7 @@ Measured on `develop` on 2026-11-22, with mypy 2.4.0 and pyright 1.1.411:
 - `test/typing` adds 6 from pyright and 4 from mypy, 3 of the 4 in
   `test/__init__.py`, which it imports.
 
-`_invalid_value` returned `Any`, and `return self._invalid_value(...)` is how
+`_invalid_value` returns `Any`, and `return self._invalid_value(...)` is how
 a filter rejects a value, here and in every consumer's filter, as
 `docs/writing_filters.rst` teaches. mypy reports `no-any-return` on each such
 line: 21 of the 38. The other 17 return a value the checker sees as `Any`
@@ -54,37 +54,49 @@ package's signatures, with no fix available to them short of a suppression.
 **Risks:** The first report arrives after 4.0.0, when an annotation fix needs
 a patch release.
 
-### Option 2: Strict mode, with `_invalid_value` typed to the filter's output (Accepted)
+### Option 2: Strict mode in both checkers, three rules disabled (Accepted)
 
 Set `strict = true` and `typeCheckingMode = "strict"` once, over `src` and
-`test/typing`. Keep `return-value` and `reportReturnType` disabled until
-#121, as ADR 015 did. Annotate `_invalid_value` as returning `T_out`, and
-clear the remaining `no-any-return` errors site by site.
+`test/typing`. Disable `no-any-return` beside `return-value` and
+`reportReturnType` until #121. `filters-django` and `filters-iso` already
+disable the two mypy rules together for this mechanism.
 
-**Pros:** One setting per checker, and no new disabled rule. The documented
-rejection type-checks in a consumer's filter under `mypy --strict` as well.
-**Cons:** `_invalid_value` returns its `replacement`, usually `None`, so the
-annotation is untrue. It is the mismatch `_apply` already carries by
-returning `None`.
-**Risks:** A caller that uses `_invalid_value`'s result, rather than
-returning it, is told it holds a `T_out`.
+**Pros:** One setting per checker, with no list of rules to maintain. No
+annotation a consumer already checks against changes its meaning.
+**Cons:** With `no-any-return` off, a function that returns `Any` where it
+declares a type goes unreported, in new code as well as on rejection paths.
+A consumer under `mypy --strict` has to disable the rule too, or suppress
+each rejection path.
+**Risks:** #121 clears the 21 rejection paths but not every other
+`no-any-return` error, so the rule may stay off after it lands.
 
-### Option 3: Strict mode, with `no-any-return` disabled
+### Option 3: Strict mode, with `_invalid_value` retyped
 
-As Option 2, but leave `_invalid_value` returning `Any` and disable
-`no-any-return` beside `return-value` until #121. `filters-django` and
-`filters-iso` configure mypy this way.
+Keep `no-any-return` enabled, and change `_invalid_value`'s return
+annotation so that `return self._invalid_value(...)` type-checks. Two
+annotations were tried:
 
-**Pros:** The smallest diff: no filter body changes.
-**Cons:** A function that returns `Any` where it declares a type goes
-unreported, in new code as well as on rejection paths. A consumer under
-`mypy --strict` has to disable the rule too.
-**Risks:** #121 does not clear the 17 errors that are not rejection paths,
-so the rule may stay off after it lands.
+- **`T_out`, the filter's output type.** Clean in `_apply` under
+  `mypy --strict`, here and in a consumer's parameterised filter.
+- **A type variable used nowhere else in the signature**, so that each call
+  takes the type its context expects. Clean in every return position under
+  mypy, default and strict, and under pyright's default rules.
+
+**Pros:** `no-any-return` stays on, and the documented rejection needs no
+suppression from a consumer.
+**Cons:** With `T_out`, `return self._invalid_value(...)` from a helper
+whose return type differs, such as `-> int`, reports `return-value` and
+`reportReturnType` at each checker's default rules, where 4.0.0a2 reported
+nothing. An unparameterised subclass still reports `no-any-return`. With the
+lone type variable, pyright strict mode reports the result as `Unknown`
+wherever the context is `Any`, and both checkers report the definition
+itself as a misuse.
+**Risks:** Consumers who upgrade from an alpha meet new errors with no code
+change, at settings where this package promised none.
 
 ### Option 4: Strict mode, with each rejection path suppressed inline
 
-As Option 3, but keep `no-any-return` enabled and put
+As Option 2, but keep `no-any-return` enabled and put
 `# type: ignore[no-any-return]` on each `return self._invalid_value(...)`.
 
 **Pros:** A new `Any` return outside a rejection path is reported.
@@ -106,21 +118,21 @@ a subset saves little work and leaves a list of exemptions to justify.
 
 Option 2. Strict mode removes implicit `Any` and `Unknown` from this
 package's signatures, and the work was annotation coverage, as ADR 015
-predicted. Nothing checks the consumer's view directly:
-`pyright --verifytypes filters` still counts unannotated attributes and class
-constants as ambiguous, and CI runs no consumer-side strict check.
+predicted: the backlog cleared with 13 suppressions in `src`, each a checker
+limitation rather than a hidden defect. Nothing checks the consumer's view
+directly: `pyright --verifytypes filters` still counts unannotated attributes
+and class constants as ambiguous, and CI runs no consumer-side strict check.
 
-Typing `_invalid_value` as `T_out` is what lets `no-any-return` stay on. It
-adds no new kind of untruth, clears the 21 rejection-path errors here and in
-consumers' filters, and #121 removes it together with the `None` returns.
-Options 3 and 4 both leave the consumer to work around the same line.
-
-The other 17 errors were cleared one by one. Two were annotation gaps. Five
-string filters and `Decimal` return a typed local or `None` where they
-returned the `Any` parameter. Eight are suppressed, each a value whose type
-is a runtime fact a checker cannot follow, such as `Type._apply` returning
-the value it has just checked. A ninth suppression sits inside
-`_invalid_value`, which passes on whatever a handler returns.
+`no-any-return` joins the two disabled rules because 21 of its 38 errors are
+the rejection mechanism, and ADR 015's reasoning for disabling `return-value`
+globally applies to those unchanged. Option 3 was implemented with `T_out`
+and withdrawn: it trades an error that only strict mode reports for one that
+default settings report. Of the other 17 errors, 9 are fixed: two annotation
+gaps, and five string filters and `Decimal` that returned the `Any`
+parameter. The remaining 8 stay hidden. Each returns a value whose type is a
+runtime fact a checker cannot follow, such as `Type._apply` returning the
+value it has just checked, and each needs a suppression when the rule comes
+back on.
 
 A new error is fixed where the fix is local and honest, and otherwise
 suppressed on the line the checker reports, with a comment saying why. Never
@@ -135,8 +147,8 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
   leaves its blind spots unguarded.
 - The `test/typing/` `assert_type` harness, checked by both: a runtime test
   cannot see a chain type collapse to `Any`.
-- `return-value` and `reportReturnType` disabled globally rather than at each
-  rejection path, on the comment beside each setting in `pyproject.toml`.
+- The return rules disabled globally rather than at each rejection path, on
+  the comment beside each setting in `pyproject.toml`.
 - Checkers pinned below the next minor release (`mypy>=2.4,<2.5`,
   `pyright>=1.1.411,<1.2`). pyright ships every release as 1.1.x, so for it
   `uv.lock` is what holds the version, including against a release that adds
@@ -155,15 +167,21 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
 
 ## Consequences
 
-- `src` gains 22 suppressions: 13 for pyright and 9 for mypy's
-  `no-any-return`. Each new `isinstance()` on an `Any` value is likely to
-  need another, which is a standing cost to contributors.
+- A consumer who runs `mypy --strict` on their own filters gets
+  `no-any-return` on each `return self._invalid_value(...)`, and on
+  `return value` after `value = self._filter(value, ...)`. The upgrade
+  guide's Known Limitations covers both.
+- #121 is necessary to re-enable `no-any-return` but not sufficient: it has
+  to suppress or restructure the 8 other sites as well.
+- `src` gains 13 `# pyright: ignore` suppressions. Each new `isinstance()` on
+  an `Any` value is likely to need another, which is a standing cost to
+  contributors.
 - pyright narrows a value through `isinstance()`, or reads `type()` of an
   `Any` value, as a type with `Unknown` type arguments; mypy reads `Any`. A
   `cast` to the same type with `Any` arguments satisfies pyright and fails
-  mypy's `redundant-cast`, so 11 of the 13 pyright suppressions sit on such
-  a line. The other 2 are `reportPrivateUsage` where the chaining operators
-  call `FilterChain._add`.
+  mypy's `redundant-cast`, so 11 of the 13 suppressions sit on such a line.
+  The other 2 are `reportPrivateUsage` where the chaining operators call
+  `FilterChain._add`.
 - black re-wraps a line that overflows only because of a `# pyright: ignore`
   comment, which moves the comment off the line pyright reports. A few
   statements are split in two to keep the line short, and one site in
@@ -172,10 +190,7 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
 - The pre-commit hook runs mypy and not pyright, so a pyright error first
   appears in CI or tox unless the author runs pyright. AGENTS.md lists the
   command and the rules above.
-- `filters-django` and `filters-iso` can drop `no-any-return` from their
-  disabled codes once they require a release with this change.
 - Annotation changes a caller's checker can observe:
-  - `_invalid_value` returns `T_out`, where it returned `Any`.
   - `FilterError.__init__` drops `**kwargs`. `ValueError` rejects keyword
     arguments, so passing one raised `TypeError` before and still does.
   - `FilterMeta.__init__` takes its three arguments positionally only, as
@@ -195,13 +210,16 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
 - `FilterRepeater` and `FilterMapper` create their result generator before
   the `isinstance` check that picks the result type. Nothing runs until the
   result type consumes it, so behaviour is unchanged.
-- `Decimal._apply` returns `None` where it returned the rejected value from
-  its type check, which was `None` already.
+- `CaseFold`, `IpAddress`, `MaxBytes`, `MaxChars` and `Strip` hold the
+  result of `_filter()` in a typed local, guarded with
+  `if self._has_errors or text is None`. `Decimal._apply` returns `None`
+  where it returned the rejected value from its type check, which was `None`
+  already.
 - In `test/typing`, the four negative cases also suppress
   `reportUnknownVariableType`, since the rejected expression has no type.
   Three more suppressions are new: `reportPrivateUsage` on a `_filter` call,
   `reportUntypedNamedTuple`, and `no-untyped-def` on a macro left
-  unannotated on purpose. A new case pins `_invalid_value`'s return type.
+  unannotated on purpose.
 
 [#121]: https://github.com/todofixthis/filters/issues/121
 [#146]: https://github.com/todofixthis/filters/issues/146

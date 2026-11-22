@@ -485,8 +485,9 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 Known Limitations
 -----------------
 * Filters checks its own code with mypy and pyright in strict mode, except for
-  two rules: mypy's ``return-value`` and pyright's ``reportReturnType``. Both
-  report the way a filter rejects a value, which the next item covers.
+  three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
+  ``reportReturnType``. All three report the way a filter rejects a value,
+  which the next item covers.
 * A filter rejects a value by returning ``None``, which your ``_apply``'s return
   annotation doesn't include: subclass ``BaseFilter[str]``, annotate ``_apply``
   as returning :py:class:`str`, and ``return None`` reports ``return-value``
@@ -494,13 +495,16 @@ Known Limitations
   ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
   rules on those lines, or disable them as Filters does for its own code.
   ``return self._invalid_value(...)`` reports neither, because
-  ``_invalid_value()`` is annotated as returning your filter's output type.
-  Under ``mypy --strict``, ``return value`` after
-  ``value = self._filter(value, ...)`` reports ``no-any-return``, because
-  ``value`` is still the :py:obj:`~typing.Any` parameter. Assign the result of
-  ``_filter()`` to a new name instead. That result is an
-  :py:obj:`~typing.Optional`, so check
-  ``if self._has_errors or result is None:`` after it to narrow the result.
+  ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
+  it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
+  ``no-any-return`` on those lines, or disable it for the modules that hold
+  your filters, as Filters does.
+  ``mypy --strict`` reports ``no-any-return`` on ``return value`` after
+  ``value = self._filter(value, ...)`` too, because ``value`` is still the
+  :py:obj:`~typing.Any` parameter. To clear that one, assign the result of
+  ``_filter()`` to a new name. That result is an :py:obj:`~typing.Optional`,
+  so check ``if self._has_errors or result is None:`` after it to narrow the
+  result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and

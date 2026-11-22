@@ -183,9 +183,8 @@ class BaseFilterTestCase(TestCase):
 
         # Return the ``FilterRunner`` instance, so that we can do some
         # additional checks if needed. Its type argument is unknown to
-        # pyright, and to mypy it is still the ``Any`` parameter; see the
-        # ``isinstance`` check at the top of this method.
-        return runner  # type: ignore[no-any-return]  # pyright: ignore[reportUnknownVariableType]
+        # pyright; see the ``isinstance`` check at the top of this method.
+        return runner  # pyright: ignore[reportUnknownVariableType]
 
     def _filter(self, *args: Any, **kwargs: Any) -> FilterRunner[Any]:
         """Applies the Filter to the specified value.

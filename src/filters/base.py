@@ -483,9 +483,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
                 self._has_errors = self._has_errors or filter_chain._has_errors
                 return filtered
         else:
-            # There is no filter to apply, so the value passes through with
-            # whatever type it had.
-            return value  # type: ignore[no-any-return]
+            return value
 
     def _invalid_value(
         self,
@@ -496,7 +494,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         context: Optional[MutableMapping[str, Any]] = None,
         sub_key: Optional[str] = None,
         template_vars: Optional[Mapping[str, Any]] = None,
-    ) -> T_out:
+    ) -> Any:
         """Handles an invalid value.
 
         This method works as both a logging method and an exception
@@ -510,13 +508,6 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         Returns:
             Replacement value to use instead of the invalid value
             (usually ``None``).
-
-        Note:
-            Annotated as returning the filter's output type, which the
-            replacement rarely is, so that ``return
-            self._invalid_value(...)`` type-checks in ``_apply``. This is
-            the same mismatch as returning ``None`` from ``_apply``, and
-            goes away with it (issue #121).
         """
         handler = self.handler
 
@@ -524,9 +515,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             # FilterErrors should be sent directly to the handler.
             # This allows complex Filters to properly catch and handle
             # FilterErrors raised by the Filters they control.
-            #
-            # A handler may return anything in place of the invalid value.
-            return handler.handle_invalid_value(  # type: ignore[no-any-return]
+            return handler.handle_invalid_value(
                 message=str(reason),
                 exc_info=True,
                 context=getattr(reason, "context", {}),
@@ -780,10 +769,7 @@ class FilterChain(BaseFilter[T_out]):
             if self._has_errors:
                 break
 
-        # The last filter's output, which the chaining operators hold to
-        # ``T_out``. ``_filters`` stores each filter as ``BaseFilter[Any]``,
-        # so a checker cannot follow that.
-        return value  # type: ignore[no-any-return]
+        return value
 
     def _apply_none(self) -> Optional[T_out]:
         return self._apply(None)
@@ -975,9 +961,7 @@ class Type(BaseFilter[T_out]):
                 },
             )
 
-        # Checked against ``allowed_types`` at runtime, which a checker
-        # cannot follow.
-        return value  # type: ignore[no-any-return]
+        return value
 
     def get_allowed_type_names(self, aliased: bool = True) -> str:
         """Returns a string with all the allowed types."""

@@ -85,12 +85,9 @@ def selective_copy_mapping(
     # ``TypeError`` fallback below covers one that rejects this call.
     factory: Any = type(source)
     try:
-        # This should work for just about every mapping. The result is
-        # whatever ``source``'s own type builds, which a checker cannot
-        # follow through ``factory``.
-        #
+        # This should work for just about every mapping.
         # noinspection PyArgumentList
-        return factory(values)  # type: ignore[no-any-return]
+        return factory(values)
     except TypeError:
         pass
 
@@ -134,12 +131,9 @@ def selective_copy_sequence(
     # ``TypeError`` fallback below covers one that rejects this call.
     factory: Any = type(source)
     try:
-        # This should work for just about every sequence. The result is
-        # whatever ``source``'s own type builds, which a checker cannot
-        # follow through ``factory``.
-        #
+        # This should work for just about every sequence.
         # noinspection PyArgumentList
-        return factory(values)  # type: ignore[no-any-return]
+        return factory(values)
     except TypeError:
         pass
 
@@ -948,9 +942,8 @@ class Optional(Widening[T_optional_default]):
         return self._get_default()
 
     def _apply_none(self) -> T_optional_default | None:
-        # ``None`` is considered empty by this filter. ``_get_default`` is
-        # typed ``Any`` for the reason its docstring gives.
-        return self._get_default()  # type: ignore[no-any-return]
+        # ``None`` is considered empty by this filter.
+        return self._get_default()
 
     def _get_default(self) -> Any:
         """Returns the default value that should be used to replace an
