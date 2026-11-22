@@ -327,6 +327,38 @@ separate stubs package.
    missing marker, mypy's ``warn_unused_ignores`` reports that comment as
    unused, so remove it.
 
+.. tip::
+
+   To give each key a type of its own, try
+   `phx-filters-pydantic <https://phx-filters-pydantic.readthedocs.io/>`_. A
+   :py:class:`filters.FilterMapper` yields :py:obj:`~typing.Any`, so a type
+   checker learns nothing about the values in its output. With
+   ``phx-filters-pydantic``, you declare each key as a field of a
+   `pydantic <https://docs.pydantic.dev/>`_ model and attach its chain to the
+   field, so the checker knows the type of every field:
+
+   .. code-block:: python
+
+      from typing import Annotated
+
+      import filters as f
+      from filters_pydantic import FilterField
+      from pydantic import BaseModel
+
+      class Person(BaseModel):
+          id: Annotated[int, FilterField(f.Int)]
+          name: Annotated[str, FilterField(f.Unicode | f.Strip)]
+
+      person = Person.model_validate({"id": "42", "name": " Phoenix "})
+
+      # Inferred as ``int``.
+      person.id
+
+   Its v1 is in alpha alongside Filters v4, so ask for the pre-release
+   explicitly::
+
+       pip install --pre phx-filters-pydantic
+
 .. note::
 
    Not every filter can declare an output type. A validator that passes its
