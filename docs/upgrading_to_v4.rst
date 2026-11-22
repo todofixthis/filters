@@ -354,6 +354,13 @@ separate stubs package.
       # Inferred as ``int``.
       person.id
 
+   A model is stricter than the mapper it replaces, so check these before you
+   port a spec. A model rejects a missing key or a ``None`` value unless you
+   declare the field as optional with a default, where a mapper passes
+   ``None`` through. A model drops keys that it doesn't declare, where a mapper
+   keeps them by default. And a model raises pydantic's ``ValidationError``,
+   which carries each filter's message but not its error code.
+
    Its v1 is in alpha alongside Filters v4, so ask for the pre-release
    explicitly::
 
