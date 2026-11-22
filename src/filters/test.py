@@ -14,7 +14,19 @@ __all__ = [
 ]
 
 
-def sorted_dict(value: Mapping) -> Any:
+def _sorted_mapping(value: Mapping[Any, Any]) -> dict[Any, Any]:
+    """Sorts a mapping's keys, at all levels."""
+    # Note: ``dict`` preserves key insertion order since Python 3.6.
+    # https://docs.python.org/3/library/stdtypes.html#dict
+    return {key: sorted_dict(value[key]) for key in sorted(value.keys())}
+
+
+def _sorted_sequence(value: Sequence[Any]) -> list[Any]:
+    """Sorts the keys of every mapping in a sequence, at all levels."""
+    return list(map(sorted_dict, value))
+
+
+def sorted_dict(value: Any) -> Any:
     """Sorts a dict's keys for easier comparison.
 
     Sorts a dict's keys, to make it easier to compare filter messages
@@ -26,13 +38,14 @@ def sorted_dict(value: Mapping) -> Any:
     Returns:
         The value with sorted dict keys at all levels.
     """
+    # ``isinstance`` narrows an ``Any`` value to a collection whose type
+    # arguments pyright cannot know, hence the suppressions and the typed
+    # helpers that take over from there.
     if isinstance(value, Mapping):
-        # Note: ``dict`` preserves key insertion order since Python 3.6.
-        # https://docs.python.org/3/library/stdtypes.html#dict
-        return dict((key, sorted_dict(value[key])) for key in sorted(value.keys()))
+        return _sorted_mapping(value)  # pyright: ignore[reportUnknownArgumentType]
 
     elif isinstance(value, Sequence) and not isinstance(value, str):
-        return list(map(sorted_dict, value))
+        return _sorted_sequence(value)  # pyright: ignore[reportUnknownArgumentType]
 
     else:
         return value
@@ -78,7 +91,7 @@ class BaseFilterTestCase(TestCase):
         self,
         runner: Any,
         expected_value: Any = unmodified,
-    ) -> FilterRunner:
+    ) -> FilterRunner[Any]:
         """Asserts that the FilterRunner returns the value without errors.
 
         Args:
@@ -101,7 +114,7 @@ class BaseFilterTestCase(TestCase):
         runner: Any,
         expected_codes: Mapping[str, Sequence[str]] | Sequence[str],
         expected_value: Any = None,
-    ) -> FilterRunner:
+    ) -> FilterRunner[Any]:
         """Asserts that the FilterRunner generates the specified errors.
 
         Args:
@@ -115,6 +128,9 @@ class BaseFilterTestCase(TestCase):
         Returns:
             The FilterRunner instance for further assertions.
         """
+        # ``isinstance`` narrows ``runner`` to a ``FilterRunner`` whose type
+        # argument pyright cannot know, hence the two suppressions further
+        # down this method.
         if not isinstance(runner, FilterRunner):
             runner = self._filter(runner)
 
@@ -149,21 +165,25 @@ class BaseFilterTestCase(TestCase):
                 f"{pformat(dict(runner.filter_messages))}",
             )
 
-        check_value = (self.skip_value_check is not True) and (
-            expected_value is not self.skip_value_check
+        # Read as ``Any`` because a test case may set
+        # ``skip_value_check = True`` to skip the check in every assertion,
+        # which the nested class's own type rules out.
+        skip_value_check: Any = self.skip_value_check
+        check_value = (skip_value_check is not True) and (
+            expected_value is not skip_value_check
         )
 
         if check_value:
             self._check_filter_value(
-                runner.cleaned_data,
+                runner.cleaned_data,  # pyright: ignore[reportUnknownMemberType]
                 runner.data if expected_value is self.unmodified else expected_value,
             )
 
         # Return the ``FilterRunner`` instance, so that we can do some
         # additional checks if needed.
-        return runner
+        return runner  # pyright: ignore[reportUnknownVariableType]
 
-    def _filter(self, *args, **kwargs) -> FilterRunner:
+    def _filter(self, *args: Any, **kwargs: Any) -> FilterRunner[Any]:
         """Applies the Filter to the specified value.
 
         Generally, you don't have to use this method in your test
@@ -203,7 +223,7 @@ class BaseFilterTestCase(TestCase):
             capture_exc_info=True,
         )
 
-    def _check_filter_value(self, cleaned_data, expected):
+    def _check_filter_value(self, cleaned_data: Any, expected: Any) -> None:
         """Checks the value returned by the Filter.
 
         Used by ``assertFilterPasses``.

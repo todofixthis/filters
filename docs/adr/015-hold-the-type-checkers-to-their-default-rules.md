@@ -1,9 +1,10 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-10-08
 scope: [pyproject.toml, .github/workflows/build.yml, src/filters/, test/typing/]
 summary: Run mypy and pyright in CI on src and test/typing at each checker's default rules plus mypy's check_untyped_defs, disabling only return-value and reportReturnType until filters stop returning None to reject, rather than a per-code baseline or --strict and pyright strict mode; fix a new error, or suppress it inline with a comment saying why, never by disabling a code.
 revisit-when: Filters stop returning None to reject a value (#121), so return-value and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations leaking into their own strict checking.
+superseded-by: 16
 ---
 
 # 015: Hold the Type Checkers to Their Default Rules

@@ -16,7 +16,7 @@ __all__ = [
 # PEP 696 feature needing ``typing_extensions`` while ``requires-python``
 # stays below 3.13. See
 # docs/adr/005-parameterise-filters-on-one-output-type.md.
-T_tuple = TypeVar("T_tuple", bound=tuple)
+T_tuple = TypeVar("T_tuple", bound=tuple[Any, ...])
 """The namedtuple type :py:class:`NamedTuple` returns, bound from its
 ``type_`` argument.
 """
@@ -39,13 +39,16 @@ class FilterRepeater(BaseFilter):
         CODE_EXTRA_KEY: 'Unexpected key "{key}".',
     }
 
-    mapping_result_type = dict
-    sequence_result_type = list
+    # Annotated because a bare ``dict`` or ``list`` leaves its type
+    # parameters ``Unknown`` to pyright. A subclass may substitute any class
+    # that accepts the same iterable.
+    mapping_result_type: type[Any] = dict
+    sequence_result_type: type[Any] = list
 
     def __init__(
         self,
         filter_chain: FilterCompatible,
-        restrict_keys: Iterable | None = None,
+        restrict_keys: Iterable[Any] | None = None,
     ) -> None:
         """Initialises the FilterRepeater filter.
 
@@ -67,7 +70,7 @@ class FilterRepeater(BaseFilter):
 
         self.restrict_keys = None if restrict_keys is None else set(restrict_keys)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self._filter_chain})"
 
     # The ``reportIncompatibleMethodOverride`` suppression on the ``def`` is
@@ -91,14 +94,21 @@ class FilterRepeater(BaseFilter):
         # noinspection PyTypeChecker
         return new_filter
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         value = self._filter(
             value,
-            Type(Iterable),
+            # Explicit type argument, because pyright otherwise infers
+            # ``Iterable``'s own type parameter as ``Unknown``.
+            Type[Iterable[Any]](Iterable),
         )
 
         if self._has_errors:
             return None
+
+        # Created before the ``isinstance`` check, which leaves ``value``
+        # partly ``Unknown`` to pyright. ``iter`` is a generator, so nothing
+        # runs until ``result_type`` consumes it.
+        items = self.iter(value)
 
         result_type = (
             self.mapping_result_type
@@ -106,13 +116,15 @@ class FilterRepeater(BaseFilter):
             else self.sequence_result_type
         )
 
-        return result_type(self.iter(value))
+        return result_type(items)
 
-    def iter(self, value: Optional[Iterable]) -> Generator[Any, None, None]:
+    def iter(self, value: Optional[Iterable[Any]]) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
             if isinstance(value, Mapping):
-                for k, v in value.items():
+                # ``isinstance`` narrows ``value`` to a ``Mapping`` whose
+                # value type pyright cannot know.
+                for k, v in value.items():  # pyright: ignore[reportUnknownVariableType]
                     u_key = self.unicodify_key(k)
 
                     if (self.restrict_keys is None) or (k in self.restrict_keys):
@@ -200,8 +212,11 @@ class FilterMapper(BaseFilter):
         CODE_MISSING_KEY: "{key} is required.",
     }
 
-    mapping_result_type = dict
-    sequence_result_type = list
+    # Annotated because a bare ``dict`` or ``list`` leaves its type
+    # parameters ``Unknown`` to pyright. A subclass may substitute any class
+    # that accepts the same iterable.
+    mapping_result_type: type[Any] = dict
+    sequence_result_type: type[Any] = list
 
     def __init__(
         self,
@@ -237,7 +252,7 @@ class FilterMapper(BaseFilter):
         """
         super().__init__()
 
-        self._filters = {}
+        self._filters: dict[Any, Optional[BaseFilter[Any]]] = {}
 
         self.allow_missing_keys = (
             set(allow_missing_keys)
@@ -277,7 +292,7 @@ class FilterMapper(BaseFilter):
             isinstance(key, int) and not isinstance(key, bool) for key in self._filters
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}("
             + ", ".join(
@@ -316,12 +331,19 @@ class FilterMapper(BaseFilter):
         # noinspection PyTypeChecker
         return new_filter
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         allowed_types = (Mapping, list, tuple) if self._is_positional else Mapping
-        value = self._filter(value, Type(allowed_types))
+        # Explicit type argument, because pyright otherwise infers the
+        # collections' own type parameters as ``Unknown``.
+        value = self._filter(value, Type[Any](allowed_types))
 
         if self._has_errors:
             return None
+
+        # Created before the ``isinstance`` check, which leaves ``value``
+        # partly ``Unknown`` to pyright. ``iter`` is a generator, so nothing
+        # runs until ``result_type`` consumes it.
+        items = self.iter(value)
 
         result_type = (
             self.mapping_result_type
@@ -329,11 +351,11 @@ class FilterMapper(BaseFilter):
             else self.sequence_result_type
         )
 
-        return result_type(self.iter(value))
+        return result_type(items)
 
     def iter(
         self,
-        value: Optional[Mapping | list | tuple],
+        value: Optional[Mapping[Any, Any] | list[Any] | tuple[Any, ...]],
     ) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply`."""
         if value is not None:
@@ -344,7 +366,7 @@ class FilterMapper(BaseFilter):
 
     def _iter_mapping(
         self,
-        value: Mapping,
+        value: Mapping[Any, Any],
     ) -> Generator[tuple[Hashable, Any], None, None]:
         """Iterator version of :py:meth:`apply` for mapping input."""
         # Apply filtered values first.
@@ -389,7 +411,7 @@ class FilterMapper(BaseFilter):
 
     def _iter_sequence(
         self,
-        value: list | tuple,
+        value: list[Any] | tuple[Any, ...],
     ) -> Generator[Any, None, None]:
         """Iterator version of :py:meth:`apply` for sequence input.
 
@@ -518,7 +540,7 @@ class FilterSwitch(BaseFilter):
         self.cases = cases
         self.default = default
 
-    def _apply(self, value):
+    def _apply(self, value: Any) -> Any:
         gotten: Hashable = self.getter(value)
 
         if not self.default:
@@ -583,7 +605,9 @@ class NamedTuple(BaseFilter[T_tuple]):
             ``_fields`` is namedtuple's, which ``T_tuple``'s ``tuple``
             bound cannot express.
         """
-        return getattr(self.type, "_fields")
+        fields: tuple[str, ...] = getattr(self.type, "_fields")
+
+        return fields
 
     def _apply(self, value: Any) -> T_tuple:
         value = self._filter(value, Type((Iterable, Mapping)))

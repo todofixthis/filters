@@ -12,7 +12,9 @@ from typing import Any, Optional, assert_type
 import filters as f
 from filters.base import FilterCompatible
 
-Colour = namedtuple("Colour", ("r", "g", "b"))
+# Untyped on purpose: ``collections.namedtuple`` is the form that
+# ``NamedTuple``'s own docstring uses.
+Colour = namedtuple("Colour", "r g b")  # pyright: ignore[reportUntypedNamedTuple]
 
 
 def test_filter_mapper_repeater_switch_stay_untyped() -> None:

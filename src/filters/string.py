@@ -56,7 +56,7 @@ class Base64Decode(BaseFilter[bytes]):
         CODE_INVALID: "Base64-encoded value expected.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.whitespace_re = regex.compile(b"[ \t\r\n]+", regex.ASCII)
@@ -182,7 +182,7 @@ class Choice(BaseFilter[T_choice]):
             else:
                 self.choice_map[CaseFold().apply(choice)] = choice
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({sorted(map(str, self.choice_map.values()))!r})"
 
     # Constructor-typed rather than pass-through: in case-insensitive mode the
@@ -229,7 +229,7 @@ class IpAddress(BaseFilter[str]):
         self.ipv4 = ipv4
         self.ipv6 = ipv6
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(ipv4={self.ipv4!r}, ipv6={self.ipv6!r})"
 
     @property
@@ -294,7 +294,7 @@ class JsonDecode(BaseFilter):
         CODE_INVALID: "This value is not valid JSON.",
     }
 
-    def __init__(self, decoder: Callable = json.loads) -> None:
+    def __init__(self, decoder: Callable[[str], Any] = json.loads) -> None:
         """Initialises the JsonDecode filter.
 
         Args:
@@ -375,7 +375,7 @@ class MaxBytes(BaseFilter[bytes]):
         self.suffix = suffix
         self.encoding = encoding
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.max_bytes!r}, encoding={self.encoding!r})"
 
     def _apply(self, value: Any) -> bytes:
@@ -636,7 +636,7 @@ class Regex(BaseFilter[list[str]]):
 
     def __init__(
         self,
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str],
     ) -> None:
         """Initialises the Regex filter.
 
@@ -654,7 +654,7 @@ class Regex(BaseFilter[list[str]]):
             else regex.compile(pattern, regex.UNICODE)
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.regex.pattern!r})"
 
     def _apply(self, value: Any) -> list[str]:
@@ -693,21 +693,21 @@ class Split(BaseFilter[T_split]):
     @overload
     def __init__(
         self: "Split[list[str]]",
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str],
         keys: None = None,
     ) -> None: ...
 
     @overload
     def __init__(
         self: "Split[dict[str, str]]",
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str],
         keys: Sequence[str],
     ) -> None: ...
 
     # noinspection PyProtectedMember
     def __init__(
         self,
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str],
         keys: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialises the Split filter.
@@ -745,7 +745,7 @@ class Split(BaseFilter[T_split]):
 
         self.keys = keys
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.regex.pattern!r}, keys={self.keys!r})"
 
     def _apply(self, value: Any) -> T_split:
@@ -813,7 +813,7 @@ class Strip(BaseFilter[str]):
         else:
             self.trailing = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         leading = self.leading.pattern if self.leading else None
         trailing = self.trailing.pattern if self.trailing else None
         return f"{type(self).__name__}(leading={leading!r}, trailing={trailing!r})"
@@ -904,7 +904,7 @@ class _BaseDecoder(BaseFilter[T_out]):
             #
             self.npr = regex.compile(r"[^\P{C}\s]+", regex.UNICODE)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(encoding={self.encoding!r})"
 
     def _decode(self, value: Any) -> str:
@@ -930,7 +930,13 @@ class _BaseDecoder(BaseFilter[T_out]):
             elif isinstance(value, Element):
                 # There's no way (that I know of) to get
                 # :py:meth:`ElementTree.tostring` to return a str.
-                decoded = tostring(value, "utf-8").decode("utf-8")
+                #
+                # The cast supplies only the type argument: ``isinstance``
+                # narrows ``value`` to an ``Element`` whose tag type pyright
+                # cannot know, and a pyright suppression would not fit on
+                # the line it has to trail.
+                element = cast("Element[str]", value)
+                decoded = tostring(element, "utf-8").decode("utf-8")
 
             elif hasattr(value, "__bytes__"):
                 decoded = bytes(value).decode(self.encoding)
@@ -1075,7 +1081,7 @@ class Uuid(BaseFilter[UUID]):
 
         self.version = version
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(version={self.version!r})"
 
     def _apply(self, value: Any) -> UUID:

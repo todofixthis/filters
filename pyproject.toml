@@ -63,7 +63,7 @@ dev = [
     # at a major one — so the range stops at today's minor, and only patch
     # releases flow in without a manual bump. pyright ships every release
     # as 1.1.x, so uv.lock is what holds it. See
-    # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
+    # docs/adr/016-run-the-type-checkers-in-strict-mode.md.
     "mypy>=2.4,<2.5",
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
@@ -76,7 +76,7 @@ dev = [
 ]
 ci = [
     # Same patch-level pin as the dev group above; see
-    # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
+    # docs/adr/016-run-the-type-checkers-in-strict-mode.md.
     "mypy>=2.4,<2.5",
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
@@ -101,17 +101,17 @@ pre-commit = [
 [tool.autohooks.plugins.mypy]
 # Matches the CI scope: `src` and the `test/typing` assert_type harness,
 # not the rest of `test/`. See
-# docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
+# docs/adr/016-run-the-type-checkers-in-strict-mode.md.
 include = ["src/*.py", "test/typing/*.py"]
 
 [tool.mypy]
-check_untyped_defs = true
-# A filter rejects a value by returning None from a non-Optional `_apply`;
-# re-enable once #121 makes rejection raise instead. See
-# docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-disable_error_code = ["return-value"]
+# A filter rejects a value by returning `_invalid_value()`'s result (`Any`,
+# `None` by default) from a non-Optional `_apply`. Re-enable both codes once
+# #121 makes rejection raise instead. See
+# docs/adr/016-run-the-type-checkers-in-strict-mode.md.
+disable_error_code = ["no-any-return", "return-value"]
 ignore_missing_imports = true
-warn_unused_ignores = true
+strict = true
 
 [tool.pyright]
 # Keeps each checker to its own suppressions. Most `# type: ignore[...]`
@@ -122,11 +122,12 @@ warn_unused_ignores = true
 # unused instead. Pyright-specific suppressions still use
 # `# pyright: ignore[code]`, which this setting does not affect.
 enableTypeIgnoreComments = false
-# The same exemption as mypy's `return-value` above, for the same reason.
+# The same exemption as mypy's two codes above, for the same reason.
 reportReturnType = false
 # Closes the gap where a suppression that stops being needed decays
-# silently. See docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
+# silently. See docs/adr/016-run-the-type-checkers-in-strict-mode.md.
 reportUnnecessaryTypeIgnoreComment = "error"
+typeCheckingMode = "strict"
 
 [tool.hatch.build.targets.sdist]
 include = [
