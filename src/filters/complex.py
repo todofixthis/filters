@@ -652,4 +652,6 @@ class NamedTuple(BaseFilter[T_tuple]):
 
             return self.type(**filtered)
         else:
-            return value
+            # An instance of ``self.type``: checked or built above, which a
+            # checker cannot follow through the ``Any`` parameter.
+            return value  # type: ignore[no-any-return]

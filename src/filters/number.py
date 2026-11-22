@@ -88,7 +88,7 @@ class Decimal(BaseFilter[DecimalType]):
         value = self._filter(value, Type(allowed_types))
 
         if self._has_errors:
-            return value
+            return None
 
         try:
             d = DecimalType(value)

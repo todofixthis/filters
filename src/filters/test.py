@@ -129,8 +129,8 @@ class BaseFilterTestCase(TestCase):
             The FilterRunner instance for further assertions.
         """
         # ``isinstance`` narrows ``runner`` to a ``FilterRunner`` whose type
-        # argument pyright cannot know, hence the two suppressions further
-        # down this method.
+        # argument pyright cannot know, which it reports wherever ``runner``
+        # is read after this point.
         if not isinstance(runner, FilterRunner):
             runner = self._filter(runner)
 
@@ -175,13 +175,17 @@ class BaseFilterTestCase(TestCase):
 
         if check_value:
             self._check_filter_value(
+                # ``runner``'s type argument is unknown to pyright; see the
+                # ``isinstance`` check at the top of this method.
                 runner.cleaned_data,  # pyright: ignore[reportUnknownMemberType]
                 runner.data if expected_value is self.unmodified else expected_value,
             )
 
         # Return the ``FilterRunner`` instance, so that we can do some
-        # additional checks if needed.
-        return runner  # pyright: ignore[reportUnknownVariableType]
+        # additional checks if needed. Its type argument is unknown to
+        # pyright, and to mypy it is still the ``Any`` parameter; see the
+        # ``isinstance`` check at the top of this method.
+        return runner  # type: ignore[no-any-return]  # pyright: ignore[reportUnknownVariableType]
 
     def _filter(self, *args: Any, **kwargs: Any) -> FilterRunner[Any]:
         """Applies the Filter to the specified value.

@@ -129,12 +129,12 @@ class CaseFold(BaseFilter[str]):
     """
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        return value.casefold()
+        return text.casefold()
 
 
 class Choice(BaseFilter[T_choice]):
@@ -251,23 +251,23 @@ class IpAddress(BaseFilter[str]):
         )
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
         # http://stackoverflow.com/a/4017219
         if self.ipv4:
             try:
-                socket.inet_pton(socket.AF_INET, value)
+                socket.inet_pton(socket.AF_INET, text)
             except socket.error:
                 pass
             else:
-                return value
+                return text
 
         if self.ipv6:
             try:
-                n = socket.inet_pton(socket.AF_INET6, value)
+                n = socket.inet_pton(socket.AF_INET6, text)
             except socket.error:
                 pass
             else:
@@ -387,15 +387,15 @@ class MaxBytes(BaseFilter[bytes]):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value = self._filter(
+        text = self._filter(
             value=value,
             filter_chain=(Type((bytes, str)) | Unicode(encoding=self.encoding)),
         )
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        bytes_value = value.encode(self.encoding)
+        bytes_value = text.encode(self.encoding)
 
         if self.truncate:
             # Truncated values are considered valid.
@@ -580,12 +580,12 @@ class MaxChars(BaseFilter[str]):
         self.suffix = suffix
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        if len(value) > self.max_chars:
+        if len(text) > self.max_chars:
             if self.truncate:
                 target_chars = self.max_chars - len(self.suffix)
 
@@ -594,7 +594,7 @@ class MaxChars(BaseFilter[str]):
                 if target_chars < 0:
                     return self.suffix[0 : self.max_chars]
 
-                return (self.prefix + value)[0:target_chars] + self.suffix
+                return (self.prefix + text)[0:target_chars] + self.suffix
 
             return self._invalid_value(
                 value=value,
@@ -604,7 +604,7 @@ class MaxChars(BaseFilter[str]):
                 },
             )
 
-        return value
+        return text
 
 
 class Regex(BaseFilter[list[str]]):
@@ -819,18 +819,22 @@ class Strip(BaseFilter[str]):
         return f"{type(self).__name__}(leading={leading!r}, trailing={trailing!r})"
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
+        # Declared ``str`` because ``regex`` ships no type information, so
+        # ``sub()`` would otherwise turn the result into ``Any``.
+        stripped: str = text
+
         if self.leading:
-            value = self.leading.sub("", value)
+            stripped = self.leading.sub("", stripped)
 
         if self.trailing:
-            value = self.trailing.sub("", value)
+            stripped = self.trailing.sub("", stripped)
 
-        return value
+        return stripped
 
 
 class TomlDecode(BaseFilter[dict[str, Any]]):

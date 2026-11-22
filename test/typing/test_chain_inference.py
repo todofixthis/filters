@@ -192,3 +192,27 @@ def test_chain_inference_type_binds_from_its_argument() -> None:
     assert_type(f.Type((str, int, float)), f.Type[Union[str, int, float]])
     # Tuples stop at three; a longer one degrades rather than erroring.
     assert_type(f.Type((str, int, float, bool)), f.Type[Any])
+
+
+class _StubRejecting(f.BaseFilter[str]):
+    """Stands in for a filter that rejects every value the documented way."""
+
+    CODE_REJECTED = "rejected"
+
+    templates = {
+        CODE_REJECTED: "Rejected.",
+    }
+
+    def _apply(self, value: Any) -> str:
+        return self._invalid_value(value, self.CODE_REJECTED)
+
+
+def test_chain_inference_rejecting_needs_no_suppression() -> None:
+    """``_invalid_value`` is annotated as returning the filter's own output
+    type, so ``_StubRejecting._apply`` above type-checks as written.
+
+    The pin is that ``return``, not the assertion below: annotated as
+    ``Any``, it reports mypy's ``no-any-return``, which fails the build.
+    """
+    runner = f.FilterRunner(_StubRejecting(), "anything")
+    assert runner.error_codes == {"": [_StubRejecting.CODE_REJECTED]}
