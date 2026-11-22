@@ -49,3 +49,23 @@ def test_handlers_filter_runner_cleaned_data_matches_the_issue() -> None:
 
     if runner.is_valid():
         assert_type(runner.cleaned_data, int)
+
+
+def test_handlers_filter_runner_accepts_an_explicit_type_argument() -> None:
+    """Issue #98's own form: the caller names ``cleaned_data``'s type, and
+    passes filter classes rather than instances.
+    """
+    runner = f.FilterRunner[int](f.Int, "42")
+
+    assert_type(runner, f.FilterRunner[int])
+    assert_type(runner.cleaned_data, int)
+
+
+def test_handlers_filter_runner_infers_from_a_chain_of_classes() -> None:
+    """Chaining filter classes, not instances, still solves the type
+    parameter, so the explicit type argument is optional.
+    """
+    runner = f.FilterRunner(f.Unicode | f.Strip, " kia ora ")
+
+    assert_type(runner, f.FilterRunner[str])
+    assert_type(runner.cleaned_data, str)

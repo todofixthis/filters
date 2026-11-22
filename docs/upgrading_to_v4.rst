@@ -6,7 +6,9 @@ every filter generic over its output type, so a type checker can follow a value
 all the way through a chain. That part is free — your own filters need no
 changes. But three changes can break code that worked in Filters v3, and one of
 them fails silently. A few bug fixes also change results; see
-:ref:`upgrade-v4-bug-fixes`.
+:ref:`upgrade-v4-bug-fixes`. And if you run mypy, it checks your calls into
+Filters for the first time, which can report errors in code you haven't
+touched; see :ref:`upgrade-v4-type-parameters`.
 
 .. note::
 
@@ -274,6 +276,8 @@ check your code if any of these apply:
   and reports another, it holds the reported one, whose traceback is ``None``
   unless it was raised.
 
+.. _upgrade-v4-type-parameters:
+
 Type Parameters
 ---------------
 Now for the good news 😺
@@ -293,6 +297,74 @@ Chains and :py:class:`filters.FilterRunner` infer real types instead of
 
 The library ships a ``py.typed`` marker, so you get this without installing a
 separate stubs package.
+
+.. warning::
+
+   The marker also makes mypy check your own calls into Filters for the first
+   time. Filters v3 had no marker, so mypy treated everything you imported from
+   it as :py:obj:`~typing.Any`. A project that type-checked cleanly against
+   Filters v3 can report new errors after you upgrade, without any change to
+   its code. A common one is a :py:class:`filters.FilterMapper` spec held
+   in a variable. Unless every value in the spec is a bare filter class, mypy
+   infers ``dict[str, object]`` for the variable, then reports ``arg-type``
+   where you pass it:
+
+   .. code-block:: python
+
+      spec = {"id": f.Int, "name": f.Unicode | f.Strip}
+
+      # error: Argument 1 to "FilterMapper" has incompatible type
+      # "dict[str, object]"
+      f.FilterMapper(spec)
+
+   Annotate the variable as ``dict[str, f.FilterCompatible]`` to clear the
+   error, or pass the spec inline. pyright infers a usable type either way.
+
+   These errors change nothing at runtime, where the code behaves as it did
+   under Filters v3.
+
+   If a ``# type: ignore`` comment on your ``import filters`` line silenced the
+   missing marker, mypy's ``warn_unused_ignores`` reports that comment as
+   unused, so remove it.
+
+.. tip::
+
+   To give each key a type of its own, try
+   `phx-filters-pydantic <https://phx-filters-pydantic.readthedocs.io/>`_. A
+   :py:class:`filters.FilterMapper` yields :py:obj:`~typing.Any`, so a type
+   checker learns nothing about the values in its output. With
+   ``phx-filters-pydantic``, you declare each key as a field of a
+   `pydantic <https://docs.pydantic.dev/>`_ model and attach its chain to the
+   field, so the checker knows the type of every field:
+
+   .. code-block:: python
+
+      from typing import Annotated
+
+      import filters as f
+      from filters_pydantic import FilterField
+      from pydantic import BaseModel
+
+      class Person(BaseModel):
+          id: Annotated[int, FilterField(f.Int)]
+          name: Annotated[str, FilterField(f.Unicode | f.Strip)]
+
+      person = Person.model_validate({"id": "42", "name": " Phoenix "})
+
+      # Inferred as ``int``.
+      person.id
+
+   A model is stricter than the mapper it replaces, so check these before you
+   port a spec. A model rejects a missing key or a ``None`` value unless you
+   declare the field as optional with a default, where a mapper passes
+   ``None`` through. A model drops keys that it doesn't declare, where a mapper
+   keeps them by default. And a model raises pydantic's ``ValidationError``,
+   which carries each filter's message but not its error code.
+
+   Its v1 is in alpha alongside Filters v4, so ask for the pre-release
+   explicitly::
+
+       pip install --pre phx-filters-pydantic
 
 .. note::
 
@@ -429,9 +501,10 @@ Known Limitations
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.
-* The two checkers disagree in two places, both covered above: an unannotated
-  macro, and a chain of bare classes assigned to a variable. pyright infers the
-  real type in each; mypy needs the annotation.
+* The two checkers disagree in three places, all covered above: an unannotated
+  macro, a chain of bare classes assigned to a variable, and a
+  :py:class:`filters.FilterMapper` spec assigned to a variable. pyright infers
+  a usable type in each; mypy needs the annotation.
 
 If you hit something this guide doesn't cover,
 `post in the Filters issue tracker <https://github.com/todofixthis/filters/issues>`_
