@@ -1,9 +1,9 @@
 ---
 status: Accepted
 date: 2026-11-22
-scope: [pyproject.toml, .github/workflows/build.yml, src/filters/, test/typing/]
+scope: [pyproject.toml, .github/workflows/build.yml, src/filters/, test/typing/, test/__init__.py]
 summary: Run mypy --strict and pyright strict mode in CI on src and test/typing, disabling only return-value, no-any-return and reportReturnType until filters stop returning None to reject, rather than each checker's default rules, a hand-picked subset of strict rules, retyping _invalid_value, or an inline suppression at each rejection path; fix a new error, or suppress it inline with a comment saying why, never by disabling a code or by annotating Any where a narrower type is true.
-revisit-when: Filters stop returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; the suppressions for checker limitations in src grow well past the 13 this ADR records.
+revisit-when: Filters stop returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions, against 16 when this ADR was written.
 ---
 
 # 016: Run the Type Checkers in Strict Mode
@@ -61,8 +61,8 @@ Set `strict = true` and `typeCheckingMode = "strict"` once, over `src` and
 `reportReturnType` until #121. `filters-django` and `filters-iso` already
 disable the two mypy rules together for this mechanism.
 
-**Pros:** One setting per checker, with no list of rules to maintain. No
-annotation a consumer already checks against changes its meaning.
+**Pros:** One setting per checker, with no list of rules to maintain.
+`_invalid_value` keeps the annotation consumers already check against.
 **Cons:** With `no-any-return` off, a function that returns `Any` where it
 declares a type goes unreported, in new code as well as on rejection paths.
 A consumer under `mypy --strict` has to disable the rule too, or suppress
@@ -89,8 +89,8 @@ whose return type differs, such as `-> int`, reports `return-value` and
 `reportReturnType` at each checker's default rules, where 4.0.0a2 reported
 nothing. An unparameterised subclass still reports `no-any-return`. With the
 lone type variable, pyright strict mode reports the result as `Unknown`
-wherever the context is `Any`, and both checkers report the definition
-itself as a misuse.
+wherever the context is `Any`, mypy needs an annotation wherever the result
+is assigned, and both checkers report the definition itself as a misuse.
 **Risks:** Consumers who upgrade from an alpha meet new errors with no code
 change, at settings where this package promised none.
 
@@ -100,8 +100,8 @@ As Option 2, but keep `no-any-return` enabled and put
 `# type: ignore[no-any-return]` on each `return self._invalid_value(...)`.
 
 **Pros:** A new `Any` return outside a rejection path is reported.
-**Cons:** 21 suppressions, and one more with each rejection path a new
-filter adds. A consumer still has to add their own.
+**Cons:** 29 suppressions, 21 of them rejection paths, and one more with
+each rejection path a new filter adds. A consumer still has to add their own.
 **Risks:** The suppressions become noise that reviewers stop reading.
 
 ### Option 5: A hand-picked subset of strict rules
@@ -118,8 +118,8 @@ a subset saves little work and leaves a list of exemptions to justify.
 
 Option 2. Strict mode removes implicit `Any` and `Unknown` from this
 package's signatures, and the work was annotation coverage, as ADR 015
-predicted: the backlog cleared with 13 suppressions in `src`, each a checker
-limitation rather than a hidden defect. Nothing checks the consumer's view
+predicted: the backlog cleared with 11 suppressions in `src`, none of them
+covering a hidden defect. Nothing checks the consumer's view
 directly: `pyright --verifytypes filters` still counts unannotated attributes
 and class constants as ambiguous, and CI runs no consumer-side strict check.
 
@@ -173,20 +173,22 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
   guide's Known Limitations covers both.
 - #121 is necessary to re-enable `no-any-return` but not sufficient: it has
   to suppress or restructure the 8 other sites as well.
-- `src` gains 13 `# pyright: ignore` suppressions. Each new `isinstance()` on
-  an `Any` value is likely to need another, which is a standing cost to
-  contributors.
+  `uv run mypy --enable-error-code no-any-return src` lists them all, 29
+  with the rejection paths, and shows any that new code adds.
+- `src` gains 11 `# pyright: ignore` suppressions, which makes 16. Each new
+  `isinstance()` on an `Any` value is likely to need another, or a `cast`,
+  which is a standing cost to contributors.
 - pyright narrows a value through `isinstance()`, or reads `type()` of an
   `Any` value, as a type with `Unknown` type arguments; mypy reads `Any`. A
-  `cast` to the same type with `Any` arguments satisfies pyright and fails
-  mypy's `redundant-cast`, so 11 of the 13 suppressions sit on such a line.
-  The other 2 are `reportPrivateUsage` where the chaining operators call
-  `FilterChain._add`.
+  `cast` that supplies the arguments satisfies pyright, and
+  `BaseFilterTestCase` and the string decoders each use one. Where mypy has narrowed
+  to the same type already, it rejects the cast as `redundant-cast`, so 9 of
+  the 11 suppressions sit on such a line. The other 2 are
+  `reportPrivateUsage` where the chaining operators call `FilterChain._add`,
+  which is deliberate.
 - black re-wraps a line that overflows only because of a `# pyright: ignore`
   comment, which moves the comment off the line pyright reports. A few
-  statements are split in two to keep the line short, and one site in
-  `string.py` casts to `Element[str]`, which mypy accepts because it differs
-  from the type mypy inferred.
+  statements are split in two to keep the line short.
 - The pre-commit hook runs mypy and not pyright, so a pyright error first
   appears in CI or tox unless the author runs pyright. AGENTS.md lists the
   command and the rules above.
@@ -212,7 +214,9 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
   result type consumes it, so behaviour is unchanged.
 - `CaseFold`, `IpAddress`, `MaxBytes`, `MaxChars` and `Strip` hold the
   result of `_filter()` in a typed local, guarded with
-  `if self._has_errors or text is None`. `Decimal._apply` returns `None`
+  `if self._has_errors or text is None`. `MaxBytes` reports that decoded
+  text in its error context, as before, and a test pins it.
+  `Decimal._apply` returns `None`
   where it returned the rejected value from its type check, which was `None`
   already.
 - In `test/typing`, the four negative cases also suppress

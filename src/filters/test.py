@@ -3,7 +3,7 @@ from collections.abc import Callable, Mapping, Sequence
 from itertools import starmap
 from pprint import pformat
 from traceback import format_exception
-from typing import Any
+from typing import Any, cast
 from unittest import TestCase
 
 from filters.base import BaseFilter
@@ -128,11 +128,13 @@ class BaseFilterTestCase(TestCase):
         Returns:
             The FilterRunner instance for further assertions.
         """
-        # ``isinstance`` narrows ``runner`` to a ``FilterRunner`` whose type
-        # argument pyright cannot know, which it reports wherever ``runner``
-        # is read after this point.
         if not isinstance(runner, FilterRunner):
             runner = self._filter(runner)
+
+        # The cast supplies only the type argument: ``isinstance`` narrows
+        # ``runner`` to a ``FilterRunner`` whose type argument pyright cannot
+        # know.
+        runner = cast("FilterRunner[Any]", runner)
 
         # First check to make sure no unhandled exceptions occurred.
         if runner.has_exceptions:
@@ -175,16 +177,13 @@ class BaseFilterTestCase(TestCase):
 
         if check_value:
             self._check_filter_value(
-                # ``runner``'s type argument is unknown to pyright; see the
-                # ``isinstance`` check at the top of this method.
-                runner.cleaned_data,  # pyright: ignore[reportUnknownMemberType]
+                runner.cleaned_data,
                 runner.data if expected_value is self.unmodified else expected_value,
             )
 
         # Return the ``FilterRunner`` instance, so that we can do some
-        # additional checks if needed. Its type argument is unknown to
-        # pyright; see the ``isinstance`` check at the top of this method.
-        return runner  # pyright: ignore[reportUnknownVariableType]
+        # additional checks if needed.
+        return runner
 
     def _filter(self, *args: Any, **kwargs: Any) -> FilterRunner[Any]:
         """Applies the Filter to the specified value.

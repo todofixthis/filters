@@ -385,3 +385,14 @@ def test_max_bytes_error_max_bytes_too_small():
     """
     with pytest.raises(f.FilterError):
         f.MaxBytes(max_bytes=0)
+
+
+def test_max_bytes_fail_reports_decoded_value():
+    """
+    When a value is too long, the error context holds the decoded text
+    rather than the bytes that came in.
+    """
+    runner = f.FilterRunner(f.MaxBytes(max_bytes=4), "café au lait".encode("utf-8"))
+
+    assert runner.error_codes == {"": [f.MaxBytes.CODE_TOO_LONG]}
+    assert runner.filter_messages[""][0].context["value"] == "café au lait"

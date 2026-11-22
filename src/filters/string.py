@@ -404,7 +404,8 @@ class MaxBytes(BaseFilter[bytes]):
         if len(bytes_value) > self.max_bytes:
             # Else, too-long values are invalid.
             return self._invalid_value(
-                value=value,
+                # The decoded text, not the bytes that came in.
+                value=text,
                 reason=self.CODE_TOO_LONG,
                 context={
                     "encoding": self.encoding,
