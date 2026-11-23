@@ -181,11 +181,11 @@ The rest of ADR 015 still holds, restated here since this ADR supersedes it:
 - pyright narrows a value through `isinstance()`, or reads `type()` of an
   `Any` value, as a type with `Unknown` type arguments; mypy reads `Any`. A
   `cast` that supplies the arguments satisfies pyright, and
-  `BaseFilterTestCase` and the string decoders each use one. Where mypy has narrowed
-  to the same type already, it rejects the cast as `redundant-cast`, so 9 of
-  the 11 suppressions sit on such a line. The other 2 are
-  `reportPrivateUsage` where the chaining operators call `FilterChain._add`,
-  which is deliberate.
+  `BaseFilterTestCase` and the string decoders each use one. Where mypy has
+  narrowed to the same type already, it rejects the cast as
+  `redundant-cast`, so 9 of the 11 suppressions sit on such a line. The
+  other 2 are `reportPrivateUsage` where the chaining operators call
+  `FilterChain._add`, which is deliberate.
 - black re-wraps a line that overflows only because of a `# pyright: ignore`
   comment, which moves the comment off the line pyright reports. A few
   statements are split in two to keep the line short.
