@@ -972,16 +972,10 @@ class Type(BaseFilter[T_out]):
         )
 
     def get_type_name(self, type_: type[Any], aliased: bool = True) -> str:
-        """Returns the name of the specified type.
-
-        Note:
-            Reference: https://bugs.python.org/issue34422
-        """
-        # Depending on the type, it may require a bit of creativity to
-        # find the proper name.
-        # https://bugs.python.org/issue34422
+        """Returns the name of the specified type, or its alias."""
+        # ``str()`` covers a type with no ``__name__``, such as an
+        # ``int | str`` union before Python 3.14.
         possible_names: list[Optional[str]] = [
-            getattr(type_, "_name", None),
             getattr(type_, "__name__", None),
             str(type_),
         ]
