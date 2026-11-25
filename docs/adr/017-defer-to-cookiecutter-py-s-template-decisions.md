@@ -2,8 +2,9 @@
 status: Accepted
 date: 2026-11-25
 scope: [.agents/rules/project.md, .agents/rules/template-owned.md, .autohooks/, .copier-answers.yml, .github/workflows/, AGENTS.md, pyproject.toml, renovate.json, src/filters/, test/]
-summary: Filters follows the copier template todofixthis/cookiecutter-py, which writes and owns the files .agents/rules/template-owned.md lists, and defers to its decisions in them; cookiecutter-py ADR 019 replaces ADR 014 (ADR tooling), its ADRs 006 and 020 replace the archived ADRs 011 and 012 (prefixed autosectionlabel, strict docs builds in the hook and CI), and this ADR restates ADR 016 with mypy strict over src and all of test through the template's hook and type-check job at the template's major-range pin, pyright strict over src/filters and test/typing as a pyright job in .github/workflows/project.yml, both checkers moved by the weekly lock refresh rather than held below their next minor, and a mypy override for regex alone rather than a global ignore_missing_imports; diverging from a template decision on purpose needs an ADR here naming the cookiecutter-py ADR it departs from.
-revisit-when: Filters stops taking template updates; the template supersedes or renumbers one of the ADRs named here; mypy or pyright releases repeatedly turn the weekly lock refresh red; Regex and Split's pattern annotation accepts regex.Pattern, so types-regex can replace the regex override; filters stops returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions, against 16 when ADR 016 was written; another generated project with a consumer-facing generic API wants pyright, so it becomes a template question.
+summary: Filters follows the copier template todofixthis/cookiecutter-py, which writes and owns the files .agents/rules/template-owned.md lists, and defers to its decisions in them; cookiecutter-py ADR 019 replaces ADR 014 (ADR tooling), its ADRs 006 and 020 replace the archived ADRs 011 and 012 (prefixed autosectionlabel, strict docs builds in the hook and CI), and this ADR restates ADR 016 with mypy strict over src and all of test through the template's hook and type-check job at the template's major-range pin, pyright strict over src/filters and test/typing as a pyright job in .github/workflows/project.yml, both checkers moved by the weekly lock refresh rather than held below their next minor, and no global ignore_missing_imports (ADR 018 types regex through types-regex); diverging from a template decision on purpose needs an ADR here naming the cookiecutter-py ADR it departs from.
+revisit-when: Filters stops taking template updates; the template supersedes or renumbers one of the ADRs named here; mypy or pyright releases repeatedly turn the weekly lock refresh red; filters stops returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions, against 16 when ADR 016 was written; another generated project with a consumer-facing generic API wants pyright, so it becomes a template question.
+revisit-discharged-by: [18]
 ---
 
 # 017: Defer to cookiecutter-py's Template Decisions
@@ -111,14 +112,16 @@ What ADR 016 decided otherwise stands, restated here:
   defaults on Python 3.12, and `py.typed` in the wheel, so a consumer's
   checker reads these annotations at all.
 
-mypy's `ignore_missing_imports` narrows to an override for `regex`: a global
-setting would also hide a missing stub for any dependency added later.
-typeshed's `types-regex` would replace the override, but it surfaces two
+~~mypy's `ignore_missing_imports` narrows to an override for `regex`~~
+mypy sets no `ignore_missing_imports` at all, since ADR 018: a global setting
+would also hide a missing stub for any dependency added later.
+~~typeshed's `types-regex` would replace the override, but it surfaces two
 gaps in filters' own annotations: `Regex` and `Split` type `pattern` as
 `str | re.Pattern[str]`, rejecting the `regex.Pattern` they accept at
 runtime, and `Strip` assigns `None` to attributes mypy then infers as
 `Pattern[str]`. A consumer with `types-regex` installed already sees the
-first.
+first.~~ [ADR 018][] fixed both gaps and replaced the override with
+`types-regex`.
 
 ## Consequences
 
@@ -138,14 +141,15 @@ first.
   one by one; `typecheck`, which the template renames `type-check`, would
   then never report and block every PR. Make the switch before or with this
   adoption's merge.
-- Fixing the `Regex`, `Split` and `Strip` annotations, then swapping the
+- ~~Fixing the `Regex`, `Split` and `Strip` annotations, then swapping the
   `regex` override for `types-regex`, is a public-typing change for its own
-  PR.
+  PR.~~ Done in ADR 018.
 
 [ADR 011]: 011-enable-autosectionlabel-with-document-prefixed-labels.md
 [ADR 012]: 012-check-the-docs-build-in-the-pre-commit-hook.md
 [ADR 014]: 014-rely-on-the-phx-plugin-for-adr-tooling.md
 [ADR 016]: 016-run-the-type-checkers-in-strict-mode.md
+[ADR 018]: 018-type-regex-with-typeshed-s-stubs.md
 [`.agents/rules/template-owned.md`]: ../../.agents/rules/template-owned.md
 [cookiecutter-py ADR 006]: https://github.com/todofixthis/cookiecutter-py/blob/1.6.0/docs/adr/006-enable-autosectionlabel-with-document-prefixed-labels.md
 [cookiecutter-py ADR 015]: https://github.com/todofixthis/cookiecutter-py/blob/1.6.0/docs/adr/015-propagate-template-changes-with-copier-and-rotate-python-from-agent-sessions.md

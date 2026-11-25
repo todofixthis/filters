@@ -74,6 +74,13 @@ dev = [
     "tox-uv>=1,<2",
     "types-python-dateutil>=2,<3",
     "types-pytz>=2025",
+    # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
+    # Lift the cap, here and in the other group, once the locked pyright
+    # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
+    "types-regex>=2026,<2026.11.19.20261122",
 ]
 
 # Used by GitHub Actions and ReadTheDocs.
@@ -90,6 +97,13 @@ ci = [
     "tox-uv>=1,<2",
     "types-python-dateutil>=2,<3",
     "types-pytz>=2025",
+    # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
+    # Lift the cap, here and in the other group, once the locked pyright
+    # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
+    "types-regex>=2026,<2026.11.19.20261122",
 ]
 
 [tool.autohooks]
@@ -146,14 +160,6 @@ strict = true
 # #121 makes rejection raise instead. See
 # docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md.
 disable_error_code = ["no-any-return", "return-value"]
-
-[[tool.mypy.overrides]]
-# regex ships no type information. typeshed's types-regex would replace this
-# override, once `Regex` and `Split` type `pattern` to accept the
-# `regex.Pattern` they take at runtime, and `Strip` types its patterns as
-# optional (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
-module = ["regex", "regex.*"]
-ignore_missing_imports = true
 
 [tool.pyright]
 # Keeps each checker to its own suppressions. Most `# type: ignore[...]`
