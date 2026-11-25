@@ -1,5 +1,5 @@
-from collections.abc import Callable, Generator, Iterable, Mapping
-from typing import Any, Hashable, Optional, Self, TypeVar
+from collections.abc import Callable, Generator, Hashable, Iterable, Mapping
+from typing import Any, Optional, Self, TypeVar
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
@@ -607,7 +607,7 @@ class NamedTuple(BaseFilter[T_tuple]):
             ``_fields`` is namedtuple's, which ``T_tuple``'s ``tuple``
             bound cannot express.
         """
-        fields: tuple[str, ...] = getattr(self.type, "_fields")
+        fields: tuple[str, ...] = getattr(self.type, "_fields")  # noqa: B009
 
         return fields
 

@@ -4,10 +4,10 @@ import socket
 import tomllib
 import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Hashable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
-from typing import Any, Hashable, Optional, cast, overload
+from typing import Any, Optional, cast, overload
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
@@ -260,7 +260,7 @@ class IpAddress(BaseFilter[str]):
         if self.ipv4:
             try:
                 socket.inet_pton(socket.AF_INET, text)
-            except socket.error:
+            except OSError:
                 pass
             else:
                 return text
@@ -268,7 +268,7 @@ class IpAddress(BaseFilter[str]):
         if self.ipv6:
             try:
                 n = socket.inet_pton(socket.AF_INET6, text)
-            except socket.error:
+            except OSError:
                 pass
             else:
                 # Convert the binary value back into a string representation,

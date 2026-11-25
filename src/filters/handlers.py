@@ -44,7 +44,7 @@ class LogHandler(BaseInvalidValueHandler):
         )
 
 
-class FilterMessage(object):
+class FilterMessage:
     """Provides a consistent API for messages sent to MemoryHandler."""
 
     def __init__(
@@ -157,7 +157,8 @@ class MemoryHandler(BaseInvalidValueHandler):
         return super().handle_exception(message, exc)
 
 
-class FilterRunner(Generic[T_out]):
+# PEP 695 syntax can't give `T_out` its default before Python 3.13.
+class FilterRunner(Generic[T_out]):  # noqa: UP046
     """Wrapper for a filter that provides an API similar to what you would
     expect from a Django form -- at least, when it comes to methods
     related to data validation :)

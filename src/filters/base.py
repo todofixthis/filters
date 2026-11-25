@@ -1,10 +1,20 @@
-from abc import ABCMeta, abstractmethod as abstract_method
+from abc import ABCMeta
+from abc import abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from copy import copy
-from typing import Any, Generic, Optional, Self, Union, cast, overload
+from typing import (
+    Any,
+    Generic,
+    Optional,
+    Self,
+    TypeAliasType,
+    Union,
+    cast,
+    overload,
+)
 from weakref import ProxyTypes, proxy
 
-from typing_extensions import TypeAliasType, TypeVar
+from typing_extensions import TypeVar
 
 __all__ = [
     "BaseFilter",
@@ -325,8 +335,10 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
+            # Touching any attribute raises ReferenceError once the weakly
+            # referenced parent is gone.
             # noinspection PyStatementEffect
-            self._parent.__class__
+            self._parent.__class__  # noqa: B018
         except ReferenceError:
             return None
 
@@ -429,7 +441,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
         try:
             return self._apply_none() if value is None else self._apply(value)
-        except Exception as e:
+        # Any exception becomes an invalid value, which the handler reports.
+        except Exception as e:  # noqa: BLE001
             return self._invalid_value(value, e, exc_info=True)
 
     @abstract_method
@@ -476,7 +489,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         if filter_chain:
             try:
                 filtered = filter_chain.apply(value)
-            except Exception as e:
+            # Any exception becomes an invalid value, which the handler reports.
+            except Exception as e:  # noqa: BLE001
                 return self._invalid_value(value, e, exc_info=True)
             else:
                 # noinspection PyProtectedMember
@@ -550,7 +564,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             # can use it.
             reason_context: MutableMapping[str, Any] = getattr(reason, "context", {})
             reason_context.update(context)
-            setattr(reason, "context", reason_context)
+            # The strict type checkers don't know `context` on an exception.
+            setattr(reason, "context", reason_context)  # noqa: B010
 
             handler.handle_exception(
                 message=self._format_message(context["code"], format_vars),

@@ -1,5 +1,6 @@
 from collections.abc import Callable
-from decimal import Decimal as DecimalType, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, InvalidOperation
+from decimal import Decimal as DecimalType
 from typing import Any
 
 from typing_extensions import TypeVar
@@ -296,7 +297,7 @@ class Round(BaseFilter[T_result]):
 
         # Rounding to negative values isn't supported.
         # I'm not even sure if that concept is valid.
-        Min(DecimalType("0")).apply(self.to_nearest)
+        Min(DecimalType(0)).apply(self.to_nearest)
 
         self.result_type = result_type
         self.rounding = rounding
@@ -307,7 +308,7 @@ class Round(BaseFilter[T_result]):
         if self._has_errors:
             return None
 
-        one = DecimalType("1")
+        one = DecimalType(1)
 
         # Scale, round, unscale.
         # Note that we use :py:meth:`decimal.Decimal.quantize` instead of

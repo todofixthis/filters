@@ -23,7 +23,7 @@ def test_array_pass_none(
     assert_filter_passes(f.Array(), None)
 
 
-@pytest.mark.parametrize("value", [tuple(), list()])
+@pytest.mark.parametrize("value", [(), []])
 def test_array_pass_sequence(
     assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
 ) -> None:
@@ -54,7 +54,7 @@ def test_array_pass_custom_sequence_type(
     assert_filter_passes(f.Array(), CustomSequence())
 
 
-@pytest.mark.parametrize("value", [bytes(), str()])
+@pytest.mark.parametrize("value", [b"", ""])
 def test_array_fail_string(
     assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
 ) -> None:
@@ -70,7 +70,7 @@ def test_array_fail_mapping(
     """
     The incoming value is a mapping.
     """
-    assert_filter_errors(f.Array(), dict(), [f.Array.CODE_WRONG_TYPE])
+    assert_filter_errors(f.Array(), {}, [f.Array.CODE_WRONG_TYPE])
 
 
 def test_array_fail_set(assert_filter_errors: Callable[..., FilterRunner[Any]]) -> None:
@@ -87,7 +87,7 @@ def test_array_fail_custom_sequence_type(
     The incoming value looks like a Sequence, but it's not official.
     """
 
-    class CustomSequence(object):
+    class CustomSequence:
         """
         Walks, talks and quacks like a Sequence, but isn't.
         """

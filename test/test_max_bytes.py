@@ -34,7 +34,7 @@ def test_max_bytes_pass_string_short(
         f.MaxBytes(max_bytes=25),
         "Γειάσου Κόσμε",
         # The filter always returns bytes.
-        "Γειάσου Κόσμε".encode("utf-8"),
+        "Γειάσου Κόσμε".encode(),
     )
 
 
@@ -57,7 +57,7 @@ def test_max_bytes_pass_string_short_with_prefix(
         ),
         "Γειάσου Κόσμε",
         # The filter always returns bytes.
-        "Γειάσου Κόσμε".encode("utf-8"),
+        "Γειάσου Κόσμε".encode(),
     )
 
 
@@ -77,7 +77,7 @@ def test_max_bytes_pass_string_short_with_suffix(
         ),
         "Γειάσου Κόσμε",
         # The filter always returns bytes.
-        "Γειάσου Κόσμε".encode("utf-8"),
+        "Γειάσου Κόσμε".encode(),
     )
 
 
@@ -425,7 +425,7 @@ def test_max_bytes_fail_reports_decoded_value() -> None:
     When a value is too long, the error context holds the decoded text
     rather than the bytes that came in.
     """
-    runner = f.FilterRunner(f.MaxBytes(max_bytes=4), "café au lait".encode("utf-8"))
+    runner = f.FilterRunner(f.MaxBytes(max_bytes=4), "café au lait".encode())
 
     assert runner.error_codes == {"": [f.MaxBytes.CODE_TOO_LONG]}
     assert runner.filter_messages[""][0].context["value"] == "café au lait"

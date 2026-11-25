@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 __all__ = [
     "JSON_ALIASES",

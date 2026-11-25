@@ -103,7 +103,7 @@ def test_round_pass_round_to_big_value(
     assert_filter_passes(
         f.Round(to_nearest="20"),
         "386.428",
-        Decimal("380"),
+        Decimal(380),
     )
 
 
@@ -131,7 +131,7 @@ def test_round_pass_modify_rounding(
     assert_filter_passes(
         f.Round(rounding=ROUND_CEILING),
         "0.00000000001",
-        Decimal("1"),
+        Decimal(1),
     )
 
 

@@ -3,6 +3,8 @@ from importlib.metadata import DistributionFinder, PathDistribution
 from os import path
 from pathlib import Path
 
+_DEFAULT_CONTEXT = DistributionFinder.Context()
+
 
 class DummyDistributionFinder(DistributionFinder):
     """
@@ -16,11 +18,10 @@ class DummyDistributionFinder(DistributionFinder):
 
     @classmethod
     def install(cls) -> None:
-        for finder in sys.meta_path:
-            if isinstance(finder, cls):
-                # If we've already installed an instance of the class, then
-                # something is probably wrong with our tests.
-                raise ValueError(f"{cls.__name__} is already installed")
+        # If we've already installed an instance of the class, then
+        # something is probably wrong with our tests.
+        if any(isinstance(finder, cls) for finder in sys.meta_path):
+            raise ValueError(f"{cls.__name__} is already installed")
 
         sys.meta_path.append(cls())
 
@@ -30,13 +31,12 @@ class DummyDistributionFinder(DistributionFinder):
             if isinstance(finder, cls):
                 sys.meta_path.pop(i)
                 return
-        else:
-            # If we didn't find an installed instance of the class, then
-            # something is probably wrong with our tests.
-            raise ValueError(f"{cls.__name__} was not installed")
+        # If we didn't find an installed instance of the class, then
+        # something is probably wrong with our tests.
+        raise ValueError(f"{cls.__name__} was not installed")
 
     def find_distributions(
-        self, context: DistributionFinder.Context = DistributionFinder.Context()
+        self, context: DistributionFinder.Context = _DEFAULT_CONTEXT
     ) -> list[PathDistribution]:
         return [
             PathDistribution(

@@ -1,5 +1,6 @@
 from collections.abc import (
     Callable,
+    Hashable,
     Iterable,
     Mapping,
     MutableMapping,
@@ -8,7 +9,7 @@ from collections.abc import (
     Sized,
 )
 from datetime import date, datetime, time, tzinfo
-from typing import Any, Hashable, cast
+from typing import Any, cast
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
@@ -289,7 +290,8 @@ class Call(BaseFilter[T_callable]):
     def _apply(self, value: Any) -> T_callable:
         try:
             return self.callable(value, *self.extra_args, **self.extra_kwargs)
-        except Exception as e:
+        # Any exception the callable raises becomes an invalid value.
+        except Exception as e:  # noqa: BLE001
             return self._invalid_value(
                 value,
                 reason=e,
@@ -315,7 +317,7 @@ class _BaseDatetime(BaseFilter[T_out]):
 
     def __init__(
         self,
-        timezone: tzinfo | int | float | None = None,
+        timezone: tzinfo | float | None = None,
         naive: bool = False,
     ) -> None:
         """Initialises the filter.
@@ -846,7 +848,7 @@ class Omit(BaseFilter[Any]):
         """Filters items from an incoming mapping."""
         return selective_copy_mapping(
             value,
-            [key for key in value.keys() if key not in self.keys],
+            [key for key in value if key not in self.keys],
         )
 
     def _apply_sequence(self, value: Sequence[Any]) -> Sequence[Any]:
