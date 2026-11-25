@@ -98,9 +98,10 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         """Returns the class itself when called with no arguments.
 
         Overrides the default behaviour (which would instantiate the class)
-        so that extension filters behave consistently with
-        :py:meth:`filters.base.FilterMeta.__or__`, which chains uninstantiated
-        filter classes directly (e.g. ``filters.ext.MyFilter | OtherFilter``).
+        so that extension filters behave consistently with the ``|``
+        operator on :py:class:`filters.FilterMeta`, which chains
+        uninstantiated filter classes directly (e.g.
+        ``filters.ext.MyFilter | OtherFilter``).
 
         Args:
             class_: The filter class to return or instantiate.

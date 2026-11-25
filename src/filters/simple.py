@@ -27,15 +27,13 @@ T_callable = TypeVar("T_callable", default=Any)
 argument.
 """
 
+# Deliberately *not* named ``T_widened``: ``filters.base`` declares its own
+# module-level ``T_widened`` with a different default (``default=Any``) for
+# the ``|`` overloads, so two type variables of the same name and different
+# meaning would otherwise be in play whenever both modules are read together.
 T_optional_default = TypeVar("T_optional_default", default=None)
 """The type :py:class:`Optional` returns, bound from its ``default``
 argument.
-
-Deliberately *not* named ``T_widened``: :py:mod:`filters.base` declares
-its own module-level ``T_widened`` with a different default
-(``default=Any``) for the ``|`` overloads, so two type variables of the
-same name and different meaning would otherwise be in play whenever both
-modules are read together.
 """
 
 __all__ = [

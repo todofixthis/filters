@@ -52,7 +52,9 @@ T_filtered = TypeVar("T_filtered")
 """The output type of the filter :py:meth:`BaseFilter._filter` applies."""
 
 T_resolved = TypeVar("T_resolved")
-"""The output type of the filter :py:meth:`BaseFilter.resolve_filter` returns."""
+"""The output type of the filter
+:py:meth:`~filters.BaseFilter.resolve_filter` returns.
+"""
 
 T_allowed1 = TypeVar("T_allowed1")
 """The first type a :py:class:`Type` filter accepts."""
@@ -433,7 +435,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
 
         Note:
             The result is ``Optional`` because every rejection path runs
-            through :py:meth:`_invalid_value`, which returns its
+            through ``_invalid_value``, which returns its
             ``replacement`` (``None`` unless the caller overrode it)
             whenever the invalid value handler does not raise.
         """

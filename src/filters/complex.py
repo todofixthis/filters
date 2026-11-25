@@ -119,7 +119,7 @@ class FilterRepeater(BaseFilter):
         return result_type(items)
 
     def iter(self, value: Optional[Iterable[Any]]) -> Generator[Any, None, None]:
-        """Iterator version of :py:meth:`apply`."""
+        """Iterator version of :py:meth:`~filters.BaseFilter.apply`."""
         if value is not None:
             if isinstance(value, Mapping):
                 # ``isinstance`` narrows ``value`` to a ``Mapping`` whose
@@ -359,7 +359,7 @@ class FilterMapper(BaseFilter):
         self,
         value: Optional[Mapping[Any, Any] | list[Any] | tuple[Any, ...]],
     ) -> Generator[Any, None, None]:
-        """Iterator version of :py:meth:`apply`."""
+        """Iterator version of :py:meth:`~filters.BaseFilter.apply`."""
         if value is not None:
             if isinstance(value, Mapping):
                 yield from self._iter_mapping(value)
