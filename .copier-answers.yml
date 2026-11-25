@@ -1,0 +1,17 @@
+# Changes here will be overwritten by Copier
+_commit: 1.6.0
+_src_path: https://github.com/todofixthis/cookiecutter-py.git
+author_email: phx@phx.nz
+author_name: Phoenix Zerin
+copyright_holder: EFL Global
+copyright_year: 2016
+docs_site: true
+github_project_name: filters
+github_username: todofixthis
+package_name: filters
+project_name: Filters
+project_short_description: Validation and data pipelines made easy!
+pypi_project_name: phx-filters
+python_version: '3.14'
+readthedocs_slug: filters
+version: 4.0.0a2
