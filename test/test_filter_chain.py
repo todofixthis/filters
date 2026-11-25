@@ -3,12 +3,19 @@ Tests for the FilterChain filter.
 """
 
 import copy
+from collections.abc import Callable
+from typing import Any
 
-import filters as f
 import pytest
 
+import filters as f
+from filters.handlers import FilterRunner
 
-def test_filter_chain_implicit_chain(assert_filter_passes, assert_filter_errors):
+
+def test_filter_chain_implicit_chain(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Chaining two filters together creates a FilterChain.
     """
@@ -20,14 +27,16 @@ def test_filter_chain_implicit_chain(assert_filter_passes, assert_filter_errors)
 
 @pytest.mark.parametrize(
     "chain_none",
+    # Each case chains with ``None`` on purpose, which the type checkers
+    # rightly reject.
     [
-        lambda: f.Int() | None,
-        lambda: f.Int | None,
-        lambda: (f.Int() | f.Max(3)) | None,
+        lambda: f.Int() | None,  # type: ignore[operator]
+        lambda: f.Int | None,  # type: ignore[operator]
+        lambda: (f.Int() | f.Max(3)) | None,  # type: ignore[operator]
     ],
     ids=["instance", "class", "chain"],
 )
-def test_filter_chain_rejects_none(chain_none):
+def test_filter_chain_rejects_none(chain_none: Any) -> None:
     """
     Chaining a filter with ``None`` raises, whichever side of the
     operator the chain is on.
@@ -39,7 +48,7 @@ def test_filter_chain_rejects_none(chain_none):
         chain_none()
 
 
-def test_filter_chain_rejects_none_names_the_class_operand():
+def test_filter_chain_rejects_none_names_the_class_operand() -> None:
     """
     ``SomeFilter | None`` names ``SomeFilter`` in its error, not the
     ``FilterChain`` that ``FilterMeta.__or__`` wraps it in before
@@ -49,10 +58,12 @@ def test_filter_chain_rejects_none_names_the_class_operand():
     ``self`` there already is the filter the caller wrote.
     """
     with pytest.raises(TypeError, match=r"^None is not compatible with Int "):
-        f.Int | None
+        # Chains with ``None`` on purpose, which the type checkers rightly
+        # reject.
+        f.Int | None  # type: ignore[operator]
 
 
-def test_filter_chain_still_accepts_none_as_a_start_filter():
+def test_filter_chain_still_accepts_none_as_a_start_filter() -> None:
     """
     Only ``|`` rejects ``None``; ``FilterChain``'s own initialiser still
     treats it as "no filter yet", which is what ``FilterMapper`` and
@@ -64,7 +75,10 @@ def test_filter_chain_still_accepts_none_as_a_start_filter():
 
 
 # noinspection SpellCheckingInspection
-def test_filter_chain_chainception(assert_filter_passes, assert_filter_errors):
+def test_filter_chain_chainception(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can also chain FilterChains together.
     """
@@ -78,7 +92,9 @@ def test_filter_chain_chainception(assert_filter_passes, assert_filter_errors):
     assert_filter_errors(filter_instance, "Ned", [f.MinLength.CODE_TOO_SHORT])
 
 
-def test_filter_chain_stop_after_invalid_value(assert_filter_errors):
+def test_filter_chain_stop_after_invalid_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterChain stops processing the incoming value after any
     filter fails.
@@ -93,7 +109,10 @@ def test_filter_chain_stop_after_invalid_value(assert_filter_errors):
     assert_filter_errors(filter_instance, "foobar", [f.MaxLength.CODE_TOO_LONG])
 
 
-def test_filter_chain_copy(assert_filter_passes, assert_filter_errors):
+def test_filter_chain_copy(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """FilterChain can be shallow-copied via `copy.copy()`.
 
     The copied chain behaves identically to the original and retains

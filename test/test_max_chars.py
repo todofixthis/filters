@@ -2,26 +2,36 @@
 Tests for the MaxChars filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_max_chars_pass_none(assert_filter_passes):
+def test_max_chars_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
     """
     assert_filter_passes(f.MaxChars(max_chars=1), None)
 
 
-def test_max_chars_pass_string_short(assert_filter_passes):
+def test_max_chars_pass_string_short(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The string is short enough to fit within ``max_chars``.
     """
     assert_filter_passes(f.MaxChars(max_chars=13), "Hello, world!")
 
 
-def test_max_chars_pass_string_short_with_prefix_and_suffix(assert_filter_passes):
+def test_max_chars_pass_string_short_with_prefix_and_suffix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Neither prefix nor suffix are applied when the incoming string is short
     enough.
@@ -36,7 +46,9 @@ def test_max_chars_pass_string_short_with_prefix_and_suffix(assert_filter_passes
     )
 
 
-def test_max_chars_fail_string_too_long(assert_filter_errors):
+def test_max_chars_fail_string_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming string has too many characters.
     """
@@ -45,7 +57,9 @@ def test_max_chars_fail_string_too_long(assert_filter_errors):
     )
 
 
-def test_max_chars_pass_string_truncated(assert_filter_passes):
+def test_max_chars_pass_string_truncated(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to truncate too-long values.
     """
@@ -59,7 +73,9 @@ def test_max_chars_pass_string_truncated(assert_filter_passes):
     )
 
 
-def test_max_chars_pass_string_truncated_with_prefix(assert_filter_passes):
+def test_max_chars_pass_string_truncated_with_prefix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to apply a prefix to truncated values.
     """
@@ -75,7 +91,9 @@ def test_max_chars_pass_string_truncated_with_prefix(assert_filter_passes):
     )
 
 
-def test_max_chars_pass_string_truncated_with_suffix(assert_filter_passes):
+def test_max_chars_pass_string_truncated_with_suffix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to apply a suffix to truncated values.
     """
@@ -91,7 +109,9 @@ def test_max_chars_pass_string_truncated_with_suffix(assert_filter_passes):
     )
 
 
-def test_max_chars_pass_string_truncated_with_prefix_and_suffix(assert_filter_passes):
+def test_max_chars_pass_string_truncated_with_prefix_and_suffix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Putting it all together now.
     """
@@ -110,8 +130,8 @@ def test_max_chars_pass_string_truncated_with_prefix_and_suffix(assert_filter_pa
 
 
 def test_max_chars_pass_string_truncated_with_prefix_max_chars_too_small(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured with a ``prefix`` and a ``max_chars`` value
     that is too small to fit it.
@@ -131,8 +151,8 @@ def test_max_chars_pass_string_truncated_with_prefix_max_chars_too_small(
 
 
 def test_max_chars_pass_string_truncated_with_suffix_max_chars_too_small(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured with a ``suffix`` and a ``max_chars`` value
     that is too small to fit it.
@@ -149,8 +169,8 @@ def test_max_chars_pass_string_truncated_with_suffix_max_chars_too_small(
 
 
 def test_max_chars_pass_string_truncated_with_prefix_and_suffix_max_chars_too_small(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Because you know that SOMEONE is going to try it just to see what
     happens.
@@ -169,7 +189,9 @@ def test_max_chars_pass_string_truncated_with_prefix_and_suffix_max_chars_too_sm
     )
 
 
-def test_max_chars_fail_bytes(assert_filter_errors):
+def test_max_chars_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     This filter does not accept byte strings (``bytes`` type).
 
@@ -183,7 +205,9 @@ def test_max_chars_fail_bytes(assert_filter_errors):
     )
 
 
-def test_max_chars_fail_wrong_type(assert_filter_errors):
+def test_max_chars_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """
@@ -194,7 +218,7 @@ def test_max_chars_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_max_chars_error_max_chars_too_small():
+def test_max_chars_error_max_chars_too_small() -> None:
     """
     ``max_chars`` must be at least 1.
     """

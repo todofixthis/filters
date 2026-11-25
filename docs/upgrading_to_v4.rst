@@ -484,25 +484,34 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
-* Neither mypy nor pyright runs at full strictness yet, so some strict typing
-  warnings or errors in your own filters go unreported. Full strictness is
-  expected by the 4.0.0 final release; progress is tracked in
-  `issue #146 <https://github.com/todofixthis/filters/issues/146>`_.
+* Filters checks its own code with mypy and pyright in strict mode, except for
+  three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
+  ``reportReturnType``. All three report the way a filter rejects a value,
+  which the next item covers.
 * A filter rejects a value by returning ``None``, which your ``_apply``'s return
   annotation doesn't include: subclass ``BaseFilter[str]``, annotate ``_apply``
   as returning :py:class:`str`, and ``return None`` reports ``return-value``
   under mypy and ``reportReturnType`` under pyright. Widening ``_apply`` to
   ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
   rules on those lines, or disable them as Filters does for its own code.
-  ``_filter()`` returns an :py:obj:`~typing.Optional` too, so check
-  ``if self._has_errors or value is None:`` after it to narrow the result.
+  ``return self._invalid_value(...)`` reports neither, because
+  ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
+  it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
+  ``no-any-return`` on those lines, or disable it for the modules that hold
+  your filters, as Filters does.
+  ``mypy --strict`` reports ``no-any-return`` on ``return value`` after
+  ``value = self._filter(value, ...)`` too, because ``value`` is still the
+  :py:obj:`~typing.Any` parameter. To clear that one, assign the result of
+  ``_filter()`` to a new name. That result is an :py:obj:`~typing.Optional`,
+  so check ``if self._has_errors or result is None:`` after it to narrow the
+  result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.
-* The two checkers disagree in three places, all covered above: an unannotated
-  macro, a chain of bare classes assigned to a variable, and a
+* The two checkers infer different types in three places, all covered above:
+  an unannotated macro, a chain of bare classes assigned to a variable, and a
   :py:class:`filters.FilterMapper` spec assigned to a variable. pyright infers
   a usable type in each; mypy needs the annotation.
 

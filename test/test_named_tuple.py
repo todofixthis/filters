@@ -3,13 +3,18 @@ Tests for the NamedTuple filter.
 """
 
 from collections import namedtuple
+from collections.abc import Callable
+from typing import Any
 
 import filters as f
+from filters.handlers import FilterRunner
 
 Colour = namedtuple("Colour", ("r", "g", "b"))
 
 
-def test_named_tuple_success_none(assert_filter_passes):
+def test_named_tuple_success_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -20,7 +25,9 @@ def test_named_tuple_success_none(assert_filter_passes):
     assert_filter_passes(filter_instance, None)
 
 
-def test_named_tuple_success_namedtuple_correct_type(assert_filter_passes):
+def test_named_tuple_success_namedtuple_correct_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is already a namedtuple of the expected type.
     """
@@ -29,7 +36,9 @@ def test_named_tuple_success_namedtuple_correct_type(assert_filter_passes):
     assert_filter_passes(filter_instance, Colour(64, 128, 192))
 
 
-def test_named_tuple_success_namedtuple_different_type(assert_filter_passes):
+def test_named_tuple_success_namedtuple_different_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a namedtuple instance, but of a different type.
 
@@ -40,7 +49,7 @@ def test_named_tuple_success_namedtuple_different_type(assert_filter_passes):
 
     # Just to be tricky, we'll make it look very close to the expected
     # type.
-    AltColour = namedtuple("AltColour", Colour._fields)
+    AltColour = namedtuple("AltColour", ("r", "g", "b"))
 
     # noinspection PyArgumentList
     runner = assert_filter_passes(
@@ -52,7 +61,9 @@ def test_named_tuple_success_namedtuple_different_type(assert_filter_passes):
     assert isinstance(runner.cleaned_data, Colour)
 
 
-def test_named_tuple_success_iterable(assert_filter_passes):
+def test_named_tuple_success_iterable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is an iterable with correct values.
     """
@@ -62,7 +73,9 @@ def test_named_tuple_success_iterable(assert_filter_passes):
     assert_filter_passes(filter_instance, value, Colour(*value))
 
 
-def test_named_tuple_success_iterable_compat(assert_filter_passes):
+def test_named_tuple_success_iterable_compat(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is an iterable, formatted for compatibility with
     Python < 3.6 (even though technically we don't support it anymore;
@@ -74,7 +87,9 @@ def test_named_tuple_success_iterable_compat(assert_filter_passes):
     assert_filter_passes(filter_instance, value, Colour(*value))
 
 
-def test_named_tuple_success_mapping(assert_filter_passes):
+def test_named_tuple_success_mapping(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a mapping with correct keys.
     """
@@ -84,7 +99,9 @@ def test_named_tuple_success_mapping(assert_filter_passes):
     assert_filter_passes(filter_instance, value, Colour(**value))
 
 
-def test_named_tuple_fail_incompatible_type(assert_filter_errors):
+def test_named_tuple_fail_incompatible_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value has a type that we cannot work with.
     """
@@ -93,7 +110,9 @@ def test_named_tuple_fail_incompatible_type(assert_filter_errors):
     assert_filter_errors(filter_instance, 42, [f.Type.CODE_WRONG_TYPE])
 
 
-def test_named_tuple_fail_iterable_too_short(assert_filter_errors):
+def test_named_tuple_fail_iterable_too_short(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is an iterable that is missing one or more values.
     """
@@ -109,7 +128,9 @@ def test_named_tuple_fail_iterable_too_short(assert_filter_errors):
     )
 
 
-def test_named_tuple_fail_iterable_too_long(assert_filter_errors):
+def test_named_tuple_fail_iterable_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is an iterable that has too many values.
     """
@@ -122,7 +143,9 @@ def test_named_tuple_fail_iterable_too_long(assert_filter_errors):
     )
 
 
-def test_named_tuple_fail_mapping_missing_keys(assert_filter_errors):
+def test_named_tuple_fail_mapping_missing_keys(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a mapping that is missing one or more keys.
     """
@@ -139,7 +162,9 @@ def test_named_tuple_fail_mapping_missing_keys(assert_filter_errors):
     )
 
 
-def test_named_tuple_fail_mapping_extra_keys(assert_filter_errors):
+def test_named_tuple_fail_mapping_extra_keys(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a mapping that has extra keys that we don't know what
     to do with.
@@ -160,7 +185,9 @@ def test_named_tuple_fail_mapping_extra_keys(assert_filter_errors):
     )
 
 
-def test_named_tuple_success_filter_map(assert_filter_passes):
+def test_named_tuple_success_filter_map(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Applying a :py:class:`f.FilterMap` to the values in a namedtuple after
     converting (success case).
@@ -181,7 +208,9 @@ def test_named_tuple_success_filter_map(assert_filter_passes):
     )
 
 
-def test_named_tuple_fail_filter_map(assert_filter_errors):
+def test_named_tuple_fail_filter_map(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Applying a :py:class:`f.FilterMap` to the values in a namedtuple after
     converting (failure case).

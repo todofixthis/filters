@@ -2,10 +2,16 @@
 Tests for the ByteArray filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_byte_array_pass_none(assert_filter_passes):
+def test_byte_array_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +20,9 @@ def test_byte_array_pass_none(assert_filter_passes):
     assert_filter_passes(f.ByteArray(), None)
 
 
-def test_byte_array_pass_bytes(assert_filter_passes):
+def test_byte_array_pass_bytes(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string.
     """
@@ -49,7 +57,9 @@ def test_byte_array_pass_bytes(assert_filter_passes):
     )
 
 
-def test_byte_array_pass_string(assert_filter_passes):
+def test_byte_array_pass_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string.
 
@@ -91,7 +101,9 @@ def test_byte_array_pass_string(assert_filter_passes):
     )
 
 
-def test_byte_array_pass_string_alternate_encoding(assert_filter_passes):
+def test_byte_array_pass_string_alternate_encoding(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If you want to filter unicodes, you can specify the encoding to use.
     """
@@ -121,7 +133,9 @@ def test_byte_array_pass_string_alternate_encoding(assert_filter_passes):
     )
 
 
-def test_byte_array_pass_bytearray(assert_filter_passes):
+def test_byte_array_pass_bytearray(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is already a bytearray.
     """
@@ -150,7 +164,9 @@ def test_byte_array_pass_bytearray(assert_filter_passes):
     )
 
 
-def test_byte_array_pass_iterable(assert_filter_passes):
+def test_byte_array_pass_iterable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an iterable containing integers between 0 and
     255, inclusive.
@@ -162,7 +178,9 @@ def test_byte_array_pass_iterable(assert_filter_passes):
     )
 
 
-def test_byte_array_fail_iterable_wrong_types(assert_filter_errors):
+def test_byte_array_fail_iterable_wrong_types(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an iterable, but the values are not integers.
     """
@@ -201,7 +219,9 @@ def test_byte_array_fail_iterable_wrong_types(assert_filter_errors):
     )
 
 
-def test_byte_array_fail_iterable_out_of_bounds(assert_filter_errors):
+def test_byte_array_fail_iterable_out_of_bounds(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an iterable with integers, but it contains values
     outside the acceptable range.
@@ -221,8 +241,9 @@ def test_byte_array_fail_iterable_out_of_bounds(assert_filter_errors):
 
 
 def test_byte_array_fail_unencodable_unicode(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a unicode that cannot be encoded using the
     specified encoding.

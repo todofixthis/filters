@@ -2,13 +2,20 @@
 Tests for the MinLength filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_min_length_pass_none(assert_filter_passes):
+def test_min_length_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -20,7 +27,9 @@ def test_min_length_pass_none(assert_filter_passes):
     )
 
 
-def test_min_length_pass_long(assert_filter_passes):
+def test_min_length_pass_long(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has length greater than the minimum value.
     """
@@ -30,7 +39,9 @@ def test_min_length_pass_long(assert_filter_passes):
     )
 
 
-def test_min_length_pass_min_length(assert_filter_passes):
+def test_min_length_pass_min_length(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has length equal to the minimum value.
     """
@@ -40,7 +51,9 @@ def test_min_length_pass_min_length(assert_filter_passes):
     )
 
 
-def test_min_length_fail_short(assert_filter_errors):
+def test_min_length_fail_short(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has length less than the minimum value.
     """
@@ -51,7 +64,10 @@ def test_min_length_fail_short(assert_filter_errors):
     )
 
 
-def test_min_length_multi_byte_characters(assert_filter_passes, assert_filter_errors):
+def test_min_length_multi_byte_characters(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Multibyte characters are treated differently depending on whether you
     pass in a unicode or a byte string.
@@ -83,7 +99,9 @@ def test_min_length_multi_byte_characters(assert_filter_passes, assert_filter_er
         # etc.
     ],
 )
-def test_min_length_pass_long_collection(assert_filter_passes, min_length, value):
+def test_min_length_pass_long_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], min_length: Any, value: Any
+) -> None:
     """
     The incoming value is a collection with length greater than or equal to
     the minimum value.
@@ -100,7 +118,9 @@ def test_min_length_pass_long_collection(assert_filter_passes, min_length, value
         # etc.
     ],
 )
-def test_min_length_fail_short_collection(assert_filter_errors, min_length, value):
+def test_min_length_fail_short_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], min_length: Any, value: Any
+) -> None:
     """
     The incoming value is a collection with length less than the minimum
     value.

@@ -2,13 +2,20 @@
 Tests for the NotEmpty filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_not_empty_pass_none(assert_filter_passes):
+def test_not_empty_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, :py:class:`f.NotEmpty` will treat ``None`` as valid, just
     like every other filter.
@@ -22,7 +29,9 @@ def test_not_empty_pass_none(assert_filter_passes):
     )
 
 
-def test_not_empty_fail_none(assert_filter_errors):
+def test_not_empty_fail_none(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can configure the filter to reject null values.
     """
@@ -33,7 +42,9 @@ def test_not_empty_fail_none(assert_filter_errors):
     )
 
 
-def test_not_empty_pass_non_empty_string(assert_filter_passes):
+def test_not_empty_pass_non_empty_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a non-empty string.
     """
@@ -54,7 +65,9 @@ def test_not_empty_pass_non_empty_string(assert_filter_passes):
         # etc.
     ],
 )
-def test_not_empty_pass_non_empty_collection(assert_filter_passes, value):
+def test_not_empty_pass_non_empty_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length > 0.
     """
@@ -64,7 +77,9 @@ def test_not_empty_pass_non_empty_collection(assert_filter_passes, value):
     )
 
 
-def test_not_empty_pass_non_collection(assert_filter_passes):
+def test_not_empty_pass_non_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not have a length.
     """
@@ -74,7 +89,9 @@ def test_not_empty_pass_non_collection(assert_filter_passes):
     )
 
 
-def test_not_empty_fail_empty_string(assert_filter_errors):
+def test_not_empty_fail_empty_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty string.
     """
@@ -94,7 +111,9 @@ def test_not_empty_fail_empty_string(assert_filter_errors):
         # etc.
     ],
 )
-def test_not_empty_fail_empty_collection(assert_filter_errors, value):
+def test_not_empty_fail_empty_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length < 1.
     """
@@ -105,7 +124,9 @@ def test_not_empty_fail_empty_collection(assert_filter_errors, value):
     )
 
 
-def test_not_empty_zero_is_not_empty(assert_filter_passes):
+def test_not_empty_zero_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     PHP developers take note!
     """
@@ -115,7 +136,9 @@ def test_not_empty_zero_is_not_empty(assert_filter_passes):
     )
 
 
-def test_not_empty_false_is_not_empty(assert_filter_passes):
+def test_not_empty_false_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The boolean value ``False`` is NOT considered empty because it
     represents SOME kind of value.

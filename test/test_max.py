@@ -3,11 +3,14 @@ Tests for the Max filter.
 """
 
 import copy
+from collections.abc import Callable
+from typing import Any
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_max_pass_none(assert_filter_passes):
+def test_max_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this Filter.
 
@@ -16,21 +19,27 @@ def test_max_pass_none(assert_filter_passes):
     assert_filter_passes(f.Max(max_value=5), None)
 
 
-def test_max_pass_lesser_value(assert_filter_passes):
+def test_max_pass_lesser_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is smaller than the max value.
     """
     assert_filter_passes(f.Max(max_value=5), 3)
 
 
-def test_max_pass_equal_value(assert_filter_passes):
+def test_max_pass_equal_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is equal to the max value.
     """
     assert_filter_passes(f.Max(max_value=5), 5)
 
 
-def test_max_fail_equal_value_exclusive_comparison(assert_filter_errors):
+def test_max_fail_equal_value_exclusive_comparison(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is equal to the max value, but the Filter is
     configured to use an exclusive comparison.
@@ -47,7 +56,9 @@ def test_max_fail_equal_value_exclusive_comparison(assert_filter_errors):
     )
 
 
-def test_max_fail_greater_value(assert_filter_errors):
+def test_max_fail_greater_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is greater than the max value.
     """
@@ -58,7 +69,9 @@ def test_max_fail_greater_value(assert_filter_errors):
     )
 
 
-def test_max_string_comparison_oddness(assert_filter_errors):
+def test_max_string_comparison_oddness(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If the filter is being used on strings, the comparison is case
     sensitive.
@@ -79,7 +92,10 @@ def test_max_string_comparison_oddness(assert_filter_errors):
     )
 
 
-def test_max_copy(assert_filter_passes, assert_filter_errors):
+def test_max_copy(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """Max can be shallow-copied via `copy.copy()` without raising TypeError."""
     original = f.Max(max_value=5, exclusive=True)
     copied = copy.copy(original)

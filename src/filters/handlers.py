@@ -19,7 +19,7 @@ class LogHandler(BaseInvalidValueHandler):
 
     def __init__(
         self,
-        logger: Logger | LoggerAdapter,
+        logger: Logger | LoggerAdapter[Any],
         level: int = ERROR,
     ) -> None:
         """Initialises the LogHandler.
@@ -37,7 +37,7 @@ class LogHandler(BaseInvalidValueHandler):
         self,
         message: str,
         exc_info: bool,
-        context: MutableMapping,
+        context: MutableMapping[str, Any],
     ) -> None:
         self.logger.log(
             level=self.level, msg=message, exc_info=exc_info, extra={"context": context}
@@ -50,7 +50,7 @@ class FilterMessage(object):
     def __init__(
         self,
         message: str,
-        context: MutableMapping,
+        context: MutableMapping[str, Any],
         exc_info: str | None = None,
     ) -> None:
         """Initialises the FilterMessage.
@@ -64,16 +64,16 @@ class FilterMessage(object):
 
         self.message = message
         self.context = context
-        self.code = context.get("code") or message
+        self.code: str = context.get("code") or message
         self.exc_info = exc_info
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self.message!r}, {self.context!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
-    def as_dict(self, with_debug_info: bool = False) -> dict:
+    def as_dict(self, with_debug_info: bool = False) -> dict[str, Any]:
         """Returns a dict representation of the FilterMessage.
 
         Args:
@@ -84,7 +84,7 @@ class FilterMessage(object):
             Dict representation with code and message, and optionally
             context and exc_info if with_debug_info is True.
         """
-        res = {
+        res: dict[str, Any] = {
             "code": self.code,
             "message": self.message,
         }
@@ -126,7 +126,7 @@ class MemoryHandler(BaseInvalidValueHandler):
         self,
         message: str,
         exc_info: bool,
-        context: MutableMapping,
+        context: MutableMapping[str, Any],
     ) -> None:
         key = context.get("key", "")
         msg = FilterMessage(
@@ -197,7 +197,7 @@ class FilterRunner(Generic[T_out]):
         self._cleaned_data: Optional[T_out] = None
         self._handler: MemoryHandler | None = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.filter_chain)
 
     def apply(self, incoming_data: Any) -> None:

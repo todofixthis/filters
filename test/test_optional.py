@@ -2,15 +2,21 @@
 Tests for the Optional filter.
 """
 
+from collections.abc import Callable
 from functools import partial
+from typing import Any
 
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_optional_pass_none(assert_filter_passes):
+def test_optional_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     It'd be pretty silly to name a filter "Optional" if it rejects
     ``None``, wouldn't it?
@@ -18,7 +24,9 @@ def test_optional_pass_none(assert_filter_passes):
     assert_filter_passes(f.Optional(), None)
 
 
-def test_optional_pass_replace_none(assert_filter_passes):
+def test_optional_pass_replace_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The default replacement value is ``None``, but you can change it to
     something else.
@@ -30,7 +38,9 @@ def test_optional_pass_replace_none(assert_filter_passes):
     )
 
 
-def test_optional_pass_replace_empty_string(assert_filter_passes):
+def test_optional_pass_replace_empty_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty string.
     """
@@ -50,7 +60,9 @@ def test_optional_pass_replace_empty_string(assert_filter_passes):
         # etc.
     ],
 )
-def test_optional_replace_empty_collection(assert_filter_passes, value):
+def test_optional_replace_empty_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length < 1.
     """
@@ -58,7 +70,9 @@ def test_optional_replace_empty_collection(assert_filter_passes, value):
     assert_filter_passes(f.Optional(), value, None)
 
 
-def test_optional_pass_non_empty_string(assert_filter_passes):
+def test_optional_pass_non_empty_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a non-empty string.
     """
@@ -76,14 +90,18 @@ def test_optional_pass_non_empty_string(assert_filter_passes):
         # etc.
     ],
 )
-def test_optional_pass_non_empty_collection(assert_filter_passes, value):
+def test_optional_pass_non_empty_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length > 0.
     """
     assert_filter_passes(f.Optional(), value)
 
 
-def test_optional_pass_non_collection(assert_filter_passes):
+def test_optional_pass_non_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Any value that doesn't have a length is left alone.
     """
@@ -93,7 +111,9 @@ def test_optional_pass_non_collection(assert_filter_passes):
     )
 
 
-def test_optional_pass_zero_is_not_empty(assert_filter_passes):
+def test_optional_pass_zero_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     PHP developers take note!
     """
@@ -103,7 +123,9 @@ def test_optional_pass_zero_is_not_empty(assert_filter_passes):
     )
 
 
-def test_optional_pass_false_is_not_empty(assert_filter_passes):
+def test_optional_pass_false_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The boolean value ``False`` is NOT considered empty because it
     represents SOME kind of value.
@@ -114,7 +136,9 @@ def test_optional_pass_false_is_not_empty(assert_filter_passes):
     )
 
 
-def test_optional_pass_default_callable(assert_filter_passes):
+def test_optional_pass_default_callable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured with a callable value for ``default``.
     """
@@ -134,13 +158,15 @@ def test_optional_pass_default_callable(assert_filter_passes):
     assert runner1.cleaned_data is not runner2.cleaned_data
 
 
-def test_optional_pass_default_callable_partial(assert_filter_passes):
+def test_optional_pass_default_callable_partial(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     To pass args or kwargs to a callable ``default``, use a partial or a
     lambda.
     """
 
-    def power_of_two(power):
+    def power_of_two(power: int) -> int:
         return pow(2, power)
 
     # Use a partial:
@@ -158,7 +184,9 @@ def test_optional_pass_default_callable_partial(assert_filter_passes):
     )
 
 
-def test_optional_pass_default_callable_but_do_not_call_it(assert_filter_passes):
+def test_optional_pass_default_callable_but_do_not_call_it(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use ``default`` explicitly for replacement
     values.

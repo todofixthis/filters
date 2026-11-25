@@ -3,13 +3,18 @@ Tests for the Array filter.
 """
 
 import typing
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_array_pass_none(assert_filter_passes):
+def test_array_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -19,55 +24,65 @@ def test_array_pass_none(assert_filter_passes):
 
 
 @pytest.mark.parametrize("value", [tuple(), list()])
-def test_array_pass_sequence(assert_filter_passes, value):
+def test_array_pass_sequence(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a sequence.
     """
     assert_filter_passes(f.Array(), value)
 
 
-def test_array_pass_custom_sequence_type(assert_filter_passes):
+def test_array_pass_custom_sequence_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has a type that extends Sequence.
     """
 
-    class CustomSequence(typing.Sequence):
+    class CustomSequence(typing.Sequence[None]):
         """
         Technically, it's a Sequence. Technically.
         """
 
-        def __len__(self):
+        def __len__(self) -> int:
             return 0
 
-        def __getitem__(self, index):
+        def __getitem__(self, index: Any) -> Any:
             return None
 
     assert_filter_passes(f.Array(), CustomSequence())
 
 
 @pytest.mark.parametrize("value", [bytes(), str()])
-def test_array_fail_string(assert_filter_errors, value):
+def test_array_fail_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a string.
     """
     assert_filter_errors(f.Array(), value, [f.Array.CODE_WRONG_TYPE])
 
 
-def test_array_fail_mapping(assert_filter_errors):
+def test_array_fail_mapping(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a mapping.
     """
     assert_filter_errors(f.Array(), dict(), [f.Array.CODE_WRONG_TYPE])
 
 
-def test_array_fail_set(assert_filter_errors):
+def test_array_fail_set(assert_filter_errors: Callable[..., FilterRunner[Any]]) -> None:
     """
     The incoming value is a set.
     """
     assert_filter_errors(f.Array(), set(), [f.Array.CODE_WRONG_TYPE])
 
 
-def test_array_fail_custom_sequence_type(assert_filter_errors):
+def test_array_fail_custom_sequence_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value looks like a Sequence, but it's not official.
     """
@@ -77,10 +92,10 @@ def test_array_fail_custom_sequence_type(assert_filter_errors):
         Walks, talks and quacks like a Sequence, but isn't.
         """
 
-        def __len__(self):
+        def __len__(self) -> int:
             return 0
 
-        def __getitem__(self, index):
+        def __getitem__(self, index: Any) -> None:
             return None
 
     assert_filter_errors(f.Array(), CustomSequence(), [f.Array.CODE_WRONG_TYPE])

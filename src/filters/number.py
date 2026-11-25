@@ -67,7 +67,7 @@ class Decimal(BaseFilter[DecimalType]):
         self.max_precision = max_precision
         self.allow_tuples = allow_tuples
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(max_precision={self.max_precision!r})"
 
     def _apply(self, value: Any) -> DecimalType:
@@ -88,7 +88,7 @@ class Decimal(BaseFilter[DecimalType]):
         value = self._filter(value, Type(allowed_types))
 
         if self._has_errors:
-            return value
+            return None
 
         try:
             d = DecimalType(value)
@@ -180,7 +180,7 @@ class Max(PassThrough):
         self.max_value = max_value
         self.exclusive = exclusive
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}({self.max_value!r}, exclusive={self.exclusive!r})"
         )
@@ -239,7 +239,7 @@ class Min(PassThrough):
         self.min_value = min_value
         self.exclusive = exclusive
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}({self.min_value!r}, exclusive={self.exclusive!r})"
         )

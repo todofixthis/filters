@@ -2,15 +2,18 @@
 Tests for the Date filter.
 """
 
+from collections.abc import Callable
 from datetime import date, datetime
+from typing import Any
 
 from dateutil.tz import tzoffset
 from pytz import utc
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_date_pass_none(assert_filter_passes):
+def test_date_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -19,7 +22,9 @@ def test_date_pass_none(assert_filter_passes):
     assert_filter_passes(f.Date(), None)
 
 
-def test_date_pass_naive_timestamp(assert_filter_passes):
+def test_date_pass_naive_timestamp(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a naive timestamp (no timezone info).
     """
@@ -30,7 +35,9 @@ def test_date_pass_naive_timestamp(assert_filter_passes):
     )
 
 
-def test_date_pass_aware_timestamp(assert_filter_passes):
+def test_date_pass_aware_timestamp(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value includes timezone info.
     """
@@ -44,7 +51,9 @@ def test_date_pass_aware_timestamp(assert_filter_passes):
     )
 
 
-def test_date_pass_naive_timestamp_default_timezone(assert_filter_passes):
+def test_date_pass_naive_timestamp_default_timezone(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a naive timestamp, but the filter is configured
     not to treat naive timestamps as UTC.
@@ -62,7 +71,9 @@ def test_date_pass_naive_timestamp_default_timezone(assert_filter_passes):
     )
 
 
-def test_date_pass_aware_timestamp_default_timezone(assert_filter_passes):
+def test_date_pass_aware_timestamp_default_timezone(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter's default timezone has no effect if the incoming value
     already contains timezone info.
@@ -80,7 +91,9 @@ def test_date_pass_aware_timestamp_default_timezone(assert_filter_passes):
     )
 
 
-def test_date_pass_alternate_timezone_syntax(assert_filter_passes):
+def test_date_pass_alternate_timezone_syntax(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     When setting the default timezone for the filter, you can use an
     int/float offset (number of hours from UTC) instead of a tzoffset
@@ -95,7 +108,9 @@ def test_date_pass_alternate_timezone_syntax(assert_filter_passes):
     )
 
 
-def test_date_pass_datetime_utc(assert_filter_passes):
+def test_date_pass_datetime_utc(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a datetime object that is already set to UTC.
     """
@@ -106,7 +121,9 @@ def test_date_pass_datetime_utc(assert_filter_passes):
     )
 
 
-def test_date_pass_datetime_non_utc(assert_filter_passes):
+def test_date_pass_datetime_non_utc(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a datetime object with a non-UTC timezone.
     """
@@ -127,7 +144,9 @@ def test_date_pass_datetime_non_utc(assert_filter_passes):
     )
 
 
-def test_date_pass_datetime_naive(assert_filter_passes):
+def test_date_pass_datetime_naive(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a datetime object without timezone info.
     """
@@ -141,14 +160,16 @@ def test_date_pass_datetime_naive(assert_filter_passes):
     )
 
 
-def test_date_pass_date(assert_filter_passes):
+def test_date_pass_date(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     The incoming value is a date object.
     """
     assert_filter_passes(f.Date(), date(2015, 6, 27))
 
 
-def test_date_fail_invalid_value(assert_filter_errors):
+def test_date_fail_invalid_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value cannot be interpreted as a date.
 
@@ -161,7 +182,7 @@ def test_date_fail_invalid_value(assert_filter_errors):
     )
 
 
-def test_date_is_not_a_datetime_subclass():
+def test_date_is_not_a_datetime_subclass() -> None:
     """
     ``Date`` is a sibling of ``Datetime``, not a subclass of it.
 

@@ -2,12 +2,18 @@
 Tests for the IpAddress filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_ip_address_pass_none(assert_filter_passes):
+def test_ip_address_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -16,7 +22,9 @@ def test_ip_address_pass_none(assert_filter_passes):
     assert_filter_passes(f.IpAddress(), None)
 
 
-def test_ip_address_ipv4_success_happy_path(assert_filter_passes):
+def test_ip_address_ipv4_success_happy_path(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a valid IPv4 address.
     """
@@ -24,14 +32,18 @@ def test_ip_address_ipv4_success_happy_path(assert_filter_passes):
 
 
 @pytest.mark.parametrize("value", ["127.0.0.1/32", "256.0.0.1", "-1.0.0.1"])
-def test_ip_address_ipv4_error_invalid(assert_filter_errors, value):
+def test_ip_address_ipv4_error_invalid(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is not a valid IPv4 address.
     """
     assert_filter_errors(f.IpAddress(), value, [f.IpAddress.CODE_INVALID])
 
 
-def test_ip_address_ipv4_error_too_short(assert_filter_errors):
+def test_ip_address_ipv4_error_too_short(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Technically, an IPv4 address can contain less than 4 octets, but this
     filter always expects exactly 4.
@@ -39,7 +51,9 @@ def test_ip_address_ipv4_error_too_short(assert_filter_errors):
     assert_filter_errors(f.IpAddress(), "127.1", [f.IpAddress.CODE_INVALID])
 
 
-def test_ip_address_ipv4_error_too_long(assert_filter_errors):
+def test_ip_address_ipv4_error_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value looks like an IPv4 address, except it contains too
     many octets.
@@ -47,7 +61,9 @@ def test_ip_address_ipv4_error_too_long(assert_filter_errors):
     assert_filter_errors(f.IpAddress(), "127.0.0.1.32", [f.IpAddress.CODE_INVALID])
 
 
-def test_ip_address_ipv4_error_ipv6(assert_filter_errors):
+def test_ip_address_ipv4_error_ipv6(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, this filter does not accept IPv6 addresses.
     """
@@ -58,7 +74,9 @@ def test_ip_address_ipv4_error_ipv6(assert_filter_errors):
     )
 
 
-def test_ip_address_ipv6_success_happy_path(assert_filter_passes):
+def test_ip_address_ipv6_success_happy_path(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a valid IPv6 address.
     """
@@ -77,7 +95,9 @@ def test_ip_address_ipv6_success_happy_path(assert_filter_passes):
     )
 
 
-def test_ip_address_ipv6_success_case_insensitive(assert_filter_passes):
+def test_ip_address_ipv6_success_case_insensitive(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value uses mixed case for hex characters.
     """
@@ -91,7 +111,9 @@ def test_ip_address_ipv6_success_case_insensitive(assert_filter_passes):
     )
 
 
-def test_ip_address_ipv6_success_truncated_zeroes(assert_filter_passes):
+def test_ip_address_ipv6_success_truncated_zeroes(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     IPv6 supports truncating leading zeroes.
     """
@@ -105,7 +127,9 @@ def test_ip_address_ipv6_success_truncated_zeroes(assert_filter_passes):
     )
 
 
-def test_ip_address_ipv6_success_truncated_groups(assert_filter_passes):
+def test_ip_address_ipv6_success_truncated_groups(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Empty groups (all zeroes) can be omitted entirely.
     """
@@ -118,7 +142,9 @@ def test_ip_address_ipv6_success_truncated_groups(assert_filter_passes):
     )
 
 
-def test_ip_address_ipv6_success_dotted_quad(assert_filter_passes):
+def test_ip_address_ipv6_success_dotted_quad(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     IPv6 supports "dotted quad" notation for IPv4 addresses that are
     mid-transition.
@@ -130,7 +156,9 @@ def test_ip_address_ipv6_success_dotted_quad(assert_filter_passes):
     )
 
 
-def test_ip_address_ipv6_error_invalid(assert_filter_errors):
+def test_ip_address_ipv6_error_invalid(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Invalid IPv6 address is invalid.
     """
@@ -141,7 +169,9 @@ def test_ip_address_ipv6_error_invalid(assert_filter_errors):
     )
 
 
-def test_ip_address_ipv6_error_too_long(assert_filter_errors):
+def test_ip_address_ipv6_error_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If the incoming value has too many groups to be IPv6, it is invalid.
     """
@@ -156,7 +186,9 @@ def test_ip_address_ipv6_error_too_long(assert_filter_errors):
     )
 
 
-def test_ip_address_ipv6_error_ipv4(assert_filter_errors):
+def test_ip_address_ipv6_error_ipv4(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If the filter is configured only to accept IPv6 addresses, IPv4
     addresses are invalid.
@@ -177,7 +209,9 @@ def test_ip_address_ipv6_error_ipv4(assert_filter_errors):
         ("2001:0db8:85a3:0000:0000:8a2e:0370:7334", "2001:db8:85a3::8a2e:370:7334"),
     ],
 )
-def test_ip_address_pass_allow_ipv4_and_ipv6(assert_filter_passes, value, expected):
+def test_ip_address_pass_allow_ipv4_and_ipv6(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any, expected: Any
+) -> None:
     """
     You can configure the filter to accept both IPv4 and IPv6 addresses.
     """
@@ -188,7 +222,9 @@ def test_ip_address_pass_allow_ipv4_and_ipv6(assert_filter_passes, value, expect
     )
 
 
-def test_ip_address_fail_bytes(assert_filter_errors):
+def test_ip_address_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -196,7 +232,9 @@ def test_ip_address_fail_bytes(assert_filter_errors):
     assert_filter_errors(f.IpAddress(), b"127.0.0.1", [f.Type.CODE_WRONG_TYPE])
 
 
-def test_ip_address_fail_wrong_type(assert_filter_errors):
+def test_ip_address_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

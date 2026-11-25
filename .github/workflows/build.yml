@@ -48,8 +48,8 @@ jobs:
           python-version: "3.14"
       - name: Install dependencies
         run: uv sync --group ci
-      # Default rules, not strict — see
-      # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
+      # Strict mode, set in pyproject.toml — see
+      # docs/adr/016-run-the-type-checkers-in-strict-mode.md.
       # `src` and `test/typing` are checked separately: `test/typing` is the
       # assert_type harness and holds the rest of `test/` to a different
       # (currently unenforced) bar.

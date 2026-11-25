@@ -2,14 +2,20 @@
 Tests for the ByteString filter.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
 from xml.etree.ElementTree import Element
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Bytesy, Unicody
 
 
-def test_byte_string_pass_none(assert_filter_passes):
+def test_byte_string_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -18,7 +24,9 @@ def test_byte_string_pass_none(assert_filter_passes):
     assert_filter_passes(f.ByteString(), None)
 
 
-def test_byte_string_pass_unicode(assert_filter_passes):
+def test_byte_string_pass_unicode(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a unicode.
     """
@@ -30,7 +38,9 @@ def test_byte_string_pass_unicode(assert_filter_passes):
     )
 
 
-def test_byte_string_pass_bytes_utf8(assert_filter_passes):
+def test_byte_string_pass_bytes_utf8(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string, already encoded as UTF-8.
     """
@@ -40,7 +50,10 @@ def test_byte_string_pass_bytes_utf8(assert_filter_passes):
     )
 
 
-def test_byte_string_fail_bytes_non_utf8(assert_filter_passes, assert_filter_errors):
+def test_byte_string_fail_bytes_non_utf8(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string, but encoded using a different
     codec.
@@ -64,7 +77,9 @@ def test_byte_string_fail_bytes_non_utf8(assert_filter_passes, assert_filter_err
     )
 
 
-def test_byte_string_pass_string_like_object(assert_filter_passes):
+def test_byte_string_pass_string_like_object(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an object that can be cast as a unicode.
     """
@@ -78,7 +93,9 @@ def test_byte_string_pass_string_like_object(assert_filter_passes):
     )
 
 
-def test_byte_string_pass_bytes_like_object(assert_filter_passes):
+def test_byte_string_pass_bytes_like_object(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an object that can be cast as a byte string.
     """
@@ -94,14 +111,18 @@ def test_byte_string_pass_bytes_like_object(assert_filter_passes):
     assert_filter_passes(f.ByteString(), Bytesy(value), value)
 
 
-def test_byte_string_pass_boolean(assert_filter_passes):
+def test_byte_string_pass_boolean(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a boolean (treated as an int).
     """
     assert_filter_passes(f.ByteString(), True, b"1")
 
 
-def test_byte_string_pass_decimal_with_scientific_notation(assert_filter_passes):
+def test_byte_string_pass_decimal_with_scientific_notation(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a Decimal that was parsed from scientific
     notation.
@@ -115,7 +136,9 @@ def test_byte_string_pass_decimal_with_scientific_notation(assert_filter_passes)
     )
 
 
-def test_byte_string_pass_xml_element(assert_filter_passes):
+def test_byte_string_pass_xml_element(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an ElementTree XML Element.
     """
@@ -126,7 +149,9 @@ def test_byte_string_pass_xml_element(assert_filter_passes):
     )
 
 
-def test_byte_string_unicode_normalisation_off_by_default(assert_filter_passes):
+def test_byte_string_unicode_normalisation_off_by_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, the filter does not apply normalisation before encoding.
 
@@ -145,7 +170,9 @@ def test_byte_string_unicode_normalisation_off_by_default(assert_filter_passes):
     )
 
 
-def test_byte_string_unicode_normalisation_forced(assert_filter_passes):
+def test_byte_string_unicode_normalisation_forced(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter to apply normalisation before encoding.
 
@@ -167,7 +194,9 @@ def test_byte_string_unicode_normalisation_forced(assert_filter_passes):
     )
 
 
-def test_byte_string_remove_non_printables_off_by_default(assert_filter_passes):
+def test_byte_string_remove_non_printables_off_by_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, the filter does not remove non-printable characters.
     """
@@ -181,7 +210,9 @@ def test_byte_string_remove_non_printables_off_by_default(assert_filter_passes):
     )
 
 
-def test_byte_string_remove_non_printables_forced(assert_filter_passes):
+def test_byte_string_remove_non_printables_forced(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter to remove non-printable characters before
     encoding.
@@ -196,7 +227,9 @@ def test_byte_string_remove_non_printables_forced(assert_filter_passes):
     )
 
 
-def test_byte_string_newline_normalisation_off_by_default(assert_filter_passes):
+def test_byte_string_newline_normalisation_off_by_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, the filter does not normalise line endings.
     """
@@ -207,7 +240,9 @@ def test_byte_string_newline_normalisation_off_by_default(assert_filter_passes):
     )
 
 
-def test_byte_string_newline_normalisation_forced(assert_filter_passes):
+def test_byte_string_newline_normalisation_forced(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter to normalise line endings.
     """
@@ -218,7 +253,7 @@ def test_byte_string_newline_normalisation_forced(assert_filter_passes):
     )
 
 
-def test_byte_string_is_not_a_unicode_subclass():
+def test_byte_string_is_not_a_unicode_subclass() -> None:
     """
     ``ByteString`` is a sibling of ``Unicode``, not a subclass of it.
 

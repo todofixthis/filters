@@ -91,6 +91,9 @@ class FilterMeta(ABCMeta):
         what: str,
         bases: tuple[type, ...],
         namespace: dict[str, Any],
+        # Positional-only, matching ``type.__new__``: ``type.__call__``
+        # passes both the same arguments.
+        /,
         **kwargs: Any,
     ) -> None:
         # noinspection PyArgumentList
@@ -197,8 +200,11 @@ class FilterMeta(ABCMeta):
                 f"a type annotation.",
             )
 
+        # ``_add`` is kept out of ``FilterChain``'s public interface, and
+        # the chaining operators in this module are its only callers.
         # noinspection PyProtectedMember
-        return FilterChain(filter_class)._add(next_filter)
+        chain = FilterChain(filter_class)
+        return chain._add(next_filter)  # pyright: ignore[reportPrivateUsage]
 
 
 class BaseFilter(Generic[T_out], metaclass=FilterMeta):
@@ -293,10 +299,14 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         # immediately. It's a bit faster just to create a single
         # FilterChain instance and modify it in-place.
         #
+        # ``_add`` is kept out of ``FilterChain``'s public interface, and
+        # the chaining operators in this module are its only callers.
+        #
         # noinspection PyProtectedMember
-        return FilterChain(self)._add(next_filter)
+        chain = FilterChain(self)
+        return chain._add(next_filter)  # pyright: ignore[reportPrivateUsage]
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Returns a string representation of the Filter.
 
         Note:
@@ -582,7 +592,10 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             resolved: Optional[BaseFilter[T_resolved]]
 
             if isinstance(the_filter, BaseFilter):
-                resolved = the_filter
+                # pyright narrows ``FilterCompatible``'s ``Callable`` arm
+                # here too, as ``BaseFilter[Unknown]``: a callable could
+                # also be a filter instance, of a type it cannot name.
+                resolved = the_filter  # pyright: ignore[reportUnknownVariableType]
 
             elif callable(the_filter):
                 resolved = cls.resolve_filter(the_filter())
@@ -651,7 +664,7 @@ class FilterChain(BaseFilter[T_out]):
 
         self._add(start_filter)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({' | '.join(map(str, self._filters))})"
 
     #
@@ -798,14 +811,11 @@ class FilterError(ValueError):
     value was invalid.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object) -> None:
         """Provides a container to include additional variables and
         other information to help troubleshoot errors.
         """
-        # Exception kwargs are deprecated in Python 3, but keeping them
-        # around for compatibility with Python 2.
-        # noinspection PyArgumentList
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
         self.context: MutableMapping[str, Any] = {}
 
 
@@ -858,15 +868,15 @@ class Type(BaseFilter[T_out]):
         self: "Type[T_allowed1]",
         allowed_types: type[T_allowed1],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None: ...
 
     @overload
     def __init__(  # pyright: ignore[reportOverlappingOverload]
         self: "Type[Any]",
-        allowed_types: type,
+        allowed_types: type[Any],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None: ...
 
     @overload
@@ -874,7 +884,7 @@ class Type(BaseFilter[T_out]):
         self: "Type[Union[T_allowed1, T_allowed2]]",
         allowed_types: tuple[type[T_allowed1], type[T_allowed2]],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None: ...
 
     @overload
@@ -882,22 +892,22 @@ class Type(BaseFilter[T_out]):
         self: "Type[Union[T_allowed1, T_allowed2, T_allowed3]]",
         allowed_types: tuple[type[T_allowed1], type[T_allowed2], type[T_allowed3]],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None: ...
 
     @overload
     def __init__(
         self: "Type[Any]",
-        allowed_types: tuple[type, ...],
+        allowed_types: tuple[type[Any], ...],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        allowed_types: Union[type, tuple[type, ...]],
+        allowed_types: Union[type[Any], tuple[type[Any], ...]],
         allow_subclass: bool = True,
-        aliases: Optional[Mapping[type, str]] = None,
+        aliases: Optional[Mapping[type[Any], str]] = None,
     ) -> None:
         """Initialises the filter.
 
@@ -922,7 +932,7 @@ class Type(BaseFilter[T_out]):
 
         self.aliases = aliases or {}
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}({self.get_allowed_type_names(aliased=False)}, "
             f"allow_subclass={self.allow_subclass!r})"
@@ -936,11 +946,17 @@ class Type(BaseFilter[T_out]):
         )
 
         if not valid:
+            # pyright reads ``type()`` of an ``Any`` value as
+            # ``type[Unknown]``. ``get_name`` only keeps the suppression on
+            # the line pyright reports.
+            get_name = self.get_type_name
+            name = get_name(type(value))  # pyright: ignore[reportUnknownArgumentType]
+
             return self._invalid_value(
                 value=value,
                 reason=self.CODE_WRONG_TYPE,
                 template_vars={
-                    "incoming": self.get_type_name(type(value)),
+                    "incoming": name,
                     "allowed": self.get_allowed_type_names(),
                 },
             )
@@ -955,17 +971,11 @@ class Type(BaseFilter[T_out]):
             sorted({self.get_type_name(t, aliased) for t in self.allowed_types})
         )
 
-    def get_type_name(self, type_: type, aliased: bool = True) -> str:
-        """Returns the name of the specified type.
-
-        Note:
-            Reference: https://bugs.python.org/issue34422
-        """
-        # Depending on the type, it may require a bit of creativity to
-        # find the proper name.
-        # https://bugs.python.org/issue34422
-        possible_names = [
-            getattr(type_, "_name", None),
+    def get_type_name(self, type_: type[Any], aliased: bool = True) -> str:
+        """Returns the name of the specified type, or its alias."""
+        # ``str()`` covers a type with no ``__name__``, such as an
+        # ``int | str`` union before Python 3.14.
+        possible_names: list[Optional[str]] = [
             getattr(type_, "__name__", None),
             str(type_),
         ]

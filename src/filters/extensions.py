@@ -65,7 +65,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         # without args, so the runtime type is type[BaseFilter], not BaseFilter.
         return cast(type[BaseFilter], self[item])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self._get_cache())
 
     def _get_cache(self) -> dict[str, type[BaseFilter]]:
@@ -88,7 +88,7 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         return self._cache
 
     @staticmethod
-    def create_instance(class_: type, *args, **kwargs) -> Any:
+    def create_instance(class_: type, *args: Any, **kwargs: Any) -> Any:
         """Returns the class itself when called with no arguments.
 
         Overrides the default behaviour (which would instantiate the class)
@@ -127,7 +127,9 @@ def is_filter_type(target: Any) -> bool | str:
     if not issubclass(target, BaseFilter):
         return "does not extend BaseFilter"
 
-    if is_abstract(target):
+    # ``issubclass`` narrows ``target`` to a filter class whose type argument
+    # pyright cannot know.
+    if is_abstract(target):  # pyright: ignore[reportUnknownArgumentType]
         return "abstract class"
 
     return True

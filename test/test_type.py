@@ -2,10 +2,14 @@
 Tests for the Type filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_type_pass_none(assert_filter_passes):
+def test_type_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -17,7 +21,9 @@ def test_type_pass_none(assert_filter_passes):
     )
 
 
-def test_type_pass_matching_type(assert_filter_passes):
+def test_type_pass_matching_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has the expected type.
     """
@@ -27,7 +33,9 @@ def test_type_pass_matching_type(assert_filter_passes):
     )
 
 
-def test_type_fail_non_matching_type(assert_filter_errors):
+def test_type_fail_non_matching_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not have the expected type.
     """
@@ -38,7 +46,10 @@ def test_type_fail_non_matching_type(assert_filter_errors):
     )
 
 
-def test_type_multiple_allowed_types(assert_filter_passes, assert_filter_errors):
+def test_type_multiple_allowed_types(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can configure the filter to allow multiple types.
     """
@@ -59,7 +70,9 @@ def test_type_multiple_allowed_types(assert_filter_passes, assert_filter_errors)
     )
 
 
-def test_type_pass_subclass_allowed(assert_filter_passes):
+def test_type_pass_subclass_allowed(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value's type is a subclass of an allowed type.
     """
@@ -70,7 +83,9 @@ def test_type_pass_subclass_allowed(assert_filter_passes):
     )
 
 
-def test_type_fail_subclass_not_allowed(assert_filter_errors):
+def test_type_fail_subclass_not_allowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can configure the filter to require exact type matches.
     """
@@ -81,7 +96,9 @@ def test_type_fail_subclass_not_allowed(assert_filter_errors):
     )
 
 
-def test_type_fail_types_are_not_instances(assert_filter_errors):
+def test_type_fail_types_are_not_instances(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter checks that the value is an INSTANCE of its allowed type(s).
     It will reject the type(s) themselves.

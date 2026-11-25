@@ -2,12 +2,18 @@
 Tests for the CaseFold filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_case_fold_pass_none(assert_filter_passes):
+def test_case_fold_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -16,7 +22,9 @@ def test_case_fold_pass_none(assert_filter_passes):
     assert_filter_passes(f.CaseFold(), None)
 
 
-def test_case_fold_pass_ascii(assert_filter_passes):
+def test_case_fold_pass_ascii(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is ASCII.
     """
@@ -34,14 +42,18 @@ def test_case_fold_pass_ascii(assert_filter_passes):
         ("İstanbul", "i\u0307stanbul"),
     ],
 )
-def test_case_fold_pass_unicode(assert_filter_passes, value, expected):
+def test_case_fold_pass_unicode(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any, expected: Any
+) -> None:
     """
     The incoming value is not ASCII.
     """
     assert_filter_passes(f.CaseFold(), value, expected)
 
 
-def test_case_fold_pass_unfoldable(assert_filter_passes):
+def test_case_fold_pass_unfoldable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     There are some Unicode characters that look foldable but actually
     aren't.
@@ -52,7 +64,9 @@ def test_case_fold_pass_unfoldable(assert_filter_passes):
     assert_filter_passes(f.CaseFold(), "\u1d2e\u1d35\u1d33\u1d2e\u1d35\u1d3f\u1d30")
 
 
-def test_case_fold_fail_bytes(assert_filter_errors):
+def test_case_fold_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -64,7 +78,9 @@ def test_case_fold_fail_bytes(assert_filter_errors):
     )
 
 
-def test_case_fold_fail_wrong_type(assert_filter_errors):
+def test_case_fold_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

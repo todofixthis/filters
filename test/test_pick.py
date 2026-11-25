@@ -3,13 +3,16 @@ Tests for the Pick filter.
 """
 
 from collections import OrderedDict
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_pick_pass_none(assert_filter_passes):
+def test_pick_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -21,7 +24,9 @@ def test_pick_pass_none(assert_filter_passes):
     )
 
 
-def test_pick_pass_mapping(assert_filter_passes):
+def test_pick_pass_mapping(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Using the filter to pick specific keys from a mapping.
     """
@@ -32,7 +37,9 @@ def test_pick_pass_mapping(assert_filter_passes):
     )
 
 
-def test_pick_pass_mapping_exact_match(assert_filter_passes):
+def test_pick_pass_mapping_exact_match(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming contains only the keys to be picked.
     """
@@ -42,7 +49,9 @@ def test_pick_pass_mapping_exact_match(assert_filter_passes):
     )
 
 
-def test_pick_pass_mapping_ordered_keys(assert_filter_passes):
+def test_pick_pass_mapping_ordered_keys(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     When keys are provided in an ordered collection, the order of keys
     determines the order of the items in the result.
@@ -56,7 +65,9 @@ def test_pick_pass_mapping_ordered_keys(assert_filter_passes):
     assert list(runner.cleaned_data.keys()) == ["actor", "name", "job"]
 
 
-def test_pick_pass_mapping_missing_values(assert_filter_passes):
+def test_pick_pass_mapping_missing_values(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Any keys not present in the incoming value are set to ``None``.
     """
@@ -67,7 +78,9 @@ def test_pick_pass_mapping_missing_values(assert_filter_passes):
     )
 
 
-def test_pick_pass_mapping_empty(assert_filter_passes):
+def test_pick_pass_mapping_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An empty mapping always passes this filter by default.
 
@@ -82,7 +95,9 @@ def test_pick_pass_mapping_empty(assert_filter_passes):
     )
 
 
-def test_pick_pass_mapping_match_type(assert_filter_passes):
+def test_pick_pass_mapping_match_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Whenever practical, the filter will try to return the same type of
     value that it received.
@@ -96,7 +111,9 @@ def test_pick_pass_mapping_match_type(assert_filter_passes):
     assert isinstance(runner.cleaned_data, OrderedDict)
 
 
-def test_pick_fail_mapping_allow_missing_keys_false(assert_filter_errors):
+def test_pick_fail_mapping_allow_missing_keys_false(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is missing one or more requested keys, and the filter
     was initialised with ``allow_missing_keys=False``.
@@ -115,7 +132,9 @@ def test_pick_fail_mapping_allow_missing_keys_false(assert_filter_errors):
     )
 
 
-def test_pick_pass_mapping_allow_missing_keys_iterable(assert_filter_passes):
+def test_pick_pass_mapping_allow_missing_keys_iterable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An incoming value is missing one or more requested keys, but they are
     allowed to be missing because of ``allow_missing_keys``.
@@ -130,7 +149,9 @@ def test_pick_pass_mapping_allow_missing_keys_iterable(assert_filter_passes):
     )
 
 
-def test_pick_pass_sequence(assert_filter_passes):
+def test_pick_pass_sequence(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Using the filter to pick specific indices from a sequence.
     """
@@ -141,14 +162,18 @@ def test_pick_pass_sequence(assert_filter_passes):
     )
 
 
-def test_pick_pass_sequence_exact_match(assert_filter_passes):
+def test_pick_pass_sequence_exact_match(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming sequence contains only the indices to be picked.
     """
     assert_filter_passes(f.Pick(keys=[0, 1, 2]), ["foo", "bar", "baz"])
 
 
-def test_pick_pass_sequence_ordered_keys(assert_filter_passes):
+def test_pick_pass_sequence_ordered_keys(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     When keys are provided in an ordered collection, the order of keys
     determines the order of the items in the result.
@@ -160,7 +185,9 @@ def test_pick_pass_sequence_ordered_keys(assert_filter_passes):
     )
 
 
-def test_pick_pass_sequence_missing_values(assert_filter_passes):
+def test_pick_pass_sequence_missing_values(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Any indices not present in the incoming value are set to ``None``.
     """
@@ -171,7 +198,9 @@ def test_pick_pass_sequence_missing_values(assert_filter_passes):
     )
 
 
-def test_pick_pass_sequence_empty(assert_filter_passes):
+def test_pick_pass_sequence_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An empty sequence always passes this filter.
 
@@ -186,7 +215,9 @@ def test_pick_pass_sequence_empty(assert_filter_passes):
     )
 
 
-def test_pick_pass_sequence_match_type(assert_filter_passes):
+def test_pick_pass_sequence_match_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Whenever practical, the filter will try to return the same type of
     value that it received.
@@ -200,7 +231,9 @@ def test_pick_pass_sequence_match_type(assert_filter_passes):
     assert isinstance(runner.cleaned_data, tuple)
 
 
-def test_pick_fail_sequence_allow_missing_keys_false(assert_filter_errors):
+def test_pick_fail_sequence_allow_missing_keys_false(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is missing one or more requested indices, and the filter
     was initialised with ``allow_missing_keys=False``.
@@ -219,7 +252,9 @@ def test_pick_fail_sequence_allow_missing_keys_false(assert_filter_errors):
     )
 
 
-def test_pick_pass_sequence_allow_missing_keys_iterable(assert_filter_passes):
+def test_pick_pass_sequence_allow_missing_keys_iterable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An incoming value is missing one or more requested indices, but they
     are allowed to be missing because of ``allow_missing_keys``.
@@ -234,7 +269,9 @@ def test_pick_pass_sequence_allow_missing_keys_iterable(assert_filter_passes):
     )
 
 
-def test_pick_fail_wrong_type(assert_filter_errors):
+def test_pick_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is neither a mapping nor a sequence.
     """
@@ -245,7 +282,7 @@ def test_pick_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_pick_error_empty_keys():
+def test_pick_error_empty_keys() -> None:
     """
     The ``keys`` param must not be empty.
     """

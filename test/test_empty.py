@@ -2,13 +2,20 @@
 Tests for the Empty filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_empty_pass_none(assert_filter_passes):
+def test_empty_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` shall pass.
 
@@ -19,7 +26,9 @@ def test_empty_pass_none(assert_filter_passes):
     assert_filter_passes(f.Empty(), None)
 
 
-def test_empty_pass_empty_string(assert_filter_passes):
+def test_empty_pass_empty_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty string.
     """
@@ -35,14 +44,18 @@ def test_empty_pass_empty_string(assert_filter_passes):
         # etc.
     ],
 )
-def test_empty_pass_empty_collection(assert_filter_passes, value):
+def test_empty_pass_empty_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length < 1.
     """
     assert_filter_passes(f.Empty(), value)
 
 
-def test_empty_fail_non_empty_string(assert_filter_errors):
+def test_empty_fail_non_empty_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a non-empty string.
     """
@@ -64,14 +77,18 @@ def test_empty_fail_non_empty_string(assert_filter_errors):
         # etc.
     ],
 )
-def test_empty_fail_non_empty_collection(assert_filter_errors, value):
+def test_empty_fail_non_empty_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length > 0.
     """
     assert_filter_errors(f.Empty(), value, [f.Empty.CODE_NOT_EMPTY])
 
 
-def test_empty_fail_non_collection(assert_filter_errors):
+def test_empty_fail_non_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not have a length.
     """
@@ -80,14 +97,18 @@ def test_empty_fail_non_collection(assert_filter_errors):
     assert_filter_errors(f.Empty(), object(), [f.Empty.CODE_NOT_EMPTY])
 
 
-def test_empty_zero_is_not_empty(assert_filter_errors):
+def test_empty_zero_is_not_empty(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     PHP developers take note!
     """
     assert_filter_errors(f.Empty(), 0, [f.Empty.CODE_NOT_EMPTY])
 
 
-def test_empty_false_is_not_empty(assert_filter_errors):
+def test_empty_false_is_not_empty(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The boolean value ``False`` is NOT considered empty because it
     represents SOME kind of value.

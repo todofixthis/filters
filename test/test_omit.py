@@ -2,12 +2,16 @@
 Tests for the Omit filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_omit_pass_none(assert_filter_passes):
+def test_omit_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -16,7 +20,9 @@ def test_omit_pass_none(assert_filter_passes):
     assert_filter_passes(f.Omit(keys={"test"}), None)
 
 
-def test_omit_pass_mapping(assert_filter_passes):
+def test_omit_pass_mapping(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a mapping.
     """
@@ -27,7 +33,9 @@ def test_omit_pass_mapping(assert_filter_passes):
     )
 
 
-def test_omit_pass_mapping_no_items_omitted(assert_filter_passes):
+def test_omit_pass_mapping_no_items_omitted(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a mapping, and it doesn't have any of the keys to be
     omitted.
@@ -38,7 +46,9 @@ def test_omit_pass_mapping_no_items_omitted(assert_filter_passes):
     )
 
 
-def test_omit_pass_mapping_empty(assert_filter_passes):
+def test_omit_pass_mapping_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An empty mapping always passes this filter by default.
 
@@ -51,7 +61,9 @@ def test_omit_pass_mapping_empty(assert_filter_passes):
     )
 
 
-def test_omit_pass_sequence(assert_filter_passes):
+def test_omit_pass_sequence(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a sequence.
     """
@@ -62,7 +74,9 @@ def test_omit_pass_sequence(assert_filter_passes):
     )
 
 
-def test_omit_pass_sequence_no_items_omitted(assert_filter_passes):
+def test_omit_pass_sequence_no_items_omitted(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is a sequence, and it doesn't have any of the indices to
     be omitted.
@@ -73,7 +87,9 @@ def test_omit_pass_sequence_no_items_omitted(assert_filter_passes):
     )
 
 
-def test_omit_pass_sequence_empty(assert_filter_passes):
+def test_omit_pass_sequence_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An empty sequence always passes this filter by default.
 
@@ -83,7 +99,9 @@ def test_omit_pass_sequence_empty(assert_filter_passes):
     assert_filter_passes(f.Omit(keys=[3, 4, 5, 6]), [])
 
 
-def test_omit_fail_wrong_type(assert_filter_errors):
+def test_omit_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Incoming value is not a mapping nor sequence.
     """
@@ -94,7 +112,7 @@ def test_omit_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_omit_error_empty_keys():
+def test_omit_error_empty_keys() -> None:
     """
     The ``keys`` param must not be empty.
     """
