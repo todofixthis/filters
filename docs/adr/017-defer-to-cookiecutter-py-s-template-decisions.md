@@ -1,9 +1,9 @@
 ---
 status: Accepted
 date: 2026-11-25
-scope: [.agents/rules/project.md, .agents/rules/template-owned.md, .copier-answers.yml, .github/workflows/, AGENTS.md, pyproject.toml, src/filters/, test/]
-summary: Filters follows the copier template todofixthis/cookiecutter-py, which writes and owns the files .agents/rules/template-owned.md lists, and defers to its decisions in them; cookiecutter-py ADR 019 replaces ADR 014 (ADR tooling), its ADRs 006 and 020 replace the archived ADRs 011 and 012 (prefixed autosectionlabel, strict docs builds in the hook and CI), and this ADR restates ADR 016 with mypy strict over src and all of test through the template's hook and type-check job at the template's major-range pin, pyright strict over src/filters and test/typing as a pyright job in .github/workflows/project.yml at a patch-level pin, and a mypy override for regex alone rather than a global ignore_missing_imports; diverging from a template decision on purpose needs an ADR here naming the cookiecutter-py ADR it departs from.
-revisit-when: Filters stops taking template updates; the template supersedes or renumbers one of the ADRs named here; ADRs here are routinely authored in a harness other than Claude Code; filters stops returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions; another generated project with a consumer-facing generic API wants pyright, so it becomes a template question.
+scope: [.agents/rules/project.md, .agents/rules/template-owned.md, .autohooks/, .copier-answers.yml, .github/workflows/, AGENTS.md, pyproject.toml, renovate.json, src/filters/, test/]
+summary: Filters follows the copier template todofixthis/cookiecutter-py, which writes and owns the files .agents/rules/template-owned.md lists, and defers to its decisions in them; cookiecutter-py ADR 019 replaces ADR 014 (ADR tooling), its ADRs 006 and 020 replace the archived ADRs 011 and 012 (prefixed autosectionlabel, strict docs builds in the hook and CI), and this ADR restates ADR 016 with mypy strict over src and all of test through the template's hook and type-check job at the template's major-range pin, pyright strict over src/filters and test/typing as a pyright job in .github/workflows/project.yml, both checkers moved by the weekly lock refresh rather than held below their next minor, and a mypy override for regex alone rather than a global ignore_missing_imports; diverging from a template decision on purpose needs an ADR here naming the cookiecutter-py ADR it departs from.
+revisit-when: Filters stops taking template updates; the template supersedes or renumbers one of the ADRs named here; mypy or pyright releases repeatedly turn the weekly lock refresh red; Regex and Split's pattern annotation accepts regex.Pattern, so types-regex can replace the regex override; filters stops returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions, against 16 when ADR 016 was written; another generated project with a consumer-facing generic API wants pyright, so it becomes a template question.
 ---
 
 # 017: Defer to cookiecutter-py's Template Decisions
@@ -60,7 +60,11 @@ and the revisit triggers of the template's ADRs sit in its index. This ADR
 names template ADRs by number, which goes stale if the template supersedes
 or renumbers one; the links pin the 1.6.0 tag. mypy, at the template's
 `>=2,<3`, can take a minor release with new diagnostics in a weekly lock
-refresh, where ADR 016 held it below the next minor.
+refresh, where ADR 016 held it below the next minor. pyright, which
+releases far more often, does too: its `>=1.1.411,<1.2` bound admits every
+1.1.x release, and with the template's weekly lock refresh nothing holds
+`uv.lock` at one. Each new diagnostic from either checker turns that
+refresh red and holds back every other update in it until fixed.
 
 ### Option 3: Option 2, but keep mypy pinned below the next minor
 
@@ -72,18 +76,19 @@ and isn't merged until fixed.
 ## Decision
 
 Option 2. The template owns these files, so it owns the decisions about
-them, and a second copy here can only fall behind. Option 3's pin buys
-little over the lock refresh failing visibly.
+them, and a second copy here can only fall behind. A failing lock refresh shows a
+new diagnostic as surely as a pin would, at the cost of holding back the
+refresh until it is fixed; a pin would conflict more often, on every
+template change to the mypy lines.
 
 Pyright stays filters' own, in a `pyright` job in
 `.github/workflows/project.yml` that `gate` requires, rather than in the
 template: most users' editors run pyright, which reads some of filters'
-generics differently from mypy, as ADR 004 recorded, and a library whose
+generics differently from mypy, as ADR 004 recorded: VS Code's Pylance
+runs pyright, while mypy is what most consumers' CI runs. A library whose
 types are its interface needs both readings checked. No other generated
 project has that need yet, so adding pyright to every project would charge
-all of them for a benefit only filters has. pyright keeps ADR 016's
-patch-level pin: it ships every release as 1.1.x, so `uv.lock` is what
-holds its version.
+all of them for a benefit only filters has.
 
 What ADR 016 decided otherwise stands, restated here:
 
@@ -98,14 +103,21 @@ What ADR 016 decided otherwise stands, restated here:
   through `strict`, so a suppression that stops being needed fails the
   build; `enableTypeIgnoreComments = false` keeps each checker reading only
   its own suppressions.
+- The three return codes disabled globally, on the comment beside each
+  setting in `pyproject.toml`, rather than suppressed at each rejection
+  path.
 - `typing_extensions` as a runtime dependency, for PEP 696 `TypeVar`
-  defaults on Python 3.12.
+  defaults on Python 3.12, and `py.typed` in the wheel, so a consumer's
+  checker reads these annotations at all.
 
 mypy's `ignore_missing_imports` narrows to an override for `regex`: a global
 setting would also hide a missing stub for any dependency added later.
-typeshed's `types-regex` is not the fix, since it types `Regex` and
-`Split`'s `pattern` against `re.Pattern` alone, rejecting the
-`regex.Pattern` they accept at runtime.
+typeshed's `types-regex` would replace the override, but it surfaces two
+gaps in filters' own annotations: `Regex` and `Split` type `pattern` as
+`str | re.Pattern[str]`, rejecting the `regex.Pattern` they accept at
+runtime, and `Strip` assigns `None` to attributes mypy then infers as
+`Pattern[str]`. A consumer with `types-regex` installed already sees the
+first.
 
 ## Consequences
 
@@ -117,13 +129,17 @@ typeshed's `types-regex` is not the fix, since it types `Regex` and
   naming the template ADR it departs from.
 - The pre-commit hook runs mypy over every staged Python file, `test/`
   included, and still not pyright; `project.md` gives the pyright command.
+  tox runs the template's commands, so pyright runs on Python 3.14 alone,
+  in the `pyright` job, where it ran under tox on 3.12 and 3.13 too. Nothing
+  in `src` branches on the Python version today.
 - The `develop` and `main` rulesets must require the template's `gate`
   job. Filters' CI had no `gate`, so a ruleset requiring checks named them
   one by one; `typecheck`, which the template renames `type-check`, would
   then never report and block every PR. Make the switch before or with this
   adoption's merge.
-- `Regex` and `Split`'s `pattern` annotation omits `regex.Pattern`, which
-  they accept; typing it fully is a public-typing change for its own PR.
+- Fixing the `Regex`, `Split` and `Strip` annotations, then swapping the
+  `regex` override for `types-regex`, is a public-typing change for its own
+  PR.
 
 [ADR 011]: 011-enable-autosectionlabel-with-document-prefixed-labels.md
 [ADR 012]: 012-check-the-docs-build-in-the-pre-commit-hook.md

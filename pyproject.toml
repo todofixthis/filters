@@ -64,7 +64,7 @@ dev = [
     "autohooks-plugin-pytest>=23,<24",
     "autohooks-plugin-ruff>=25,<26",
     "mypy>=2,<3",
-    # pyright ships every release as 1.1.x, so uv.lock is what holds it
+    # pyright ships every release as 1.1.x, so the weekly lock refresh moves it
     # (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
@@ -80,7 +80,7 @@ dev = [
 ci = [
     "black>=26,<27",
     "mypy>=2,<3",
-    # pyright ships every release as 1.1.x, so uv.lock is what holds it
+    # pyright ships every release as 1.1.x, so the weekly lock refresh moves it
     # (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
@@ -148,9 +148,10 @@ strict = true
 disable_error_code = ["no-any-return", "return-value"]
 
 [[tool.mypy.overrides]]
-# regex ships no type information. typeshed's types-regex would also type
-# `Regex` and `Split`'s `pattern` against `re.Pattern` alone, rejecting the
-# `regex.Pattern` they accept at runtime.
+# regex ships no type information. typeshed's types-regex would replace this
+# override, once `Regex` and `Split` type `pattern` to accept the
+# `regex.Pattern` they take at runtime, and `Strip` types its patterns as
+# optional (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
 module = ["regex", "regex.*"]
 ignore_missing_imports = true
 
