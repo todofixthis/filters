@@ -75,8 +75,9 @@ dev = [
     "types-python-dateutil>=2,<3",
     "types-pytz>=2025",
     # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
-    # `FloatInt`, which pyright 1.1.414's bundled typeshed lacks, so strict
-    # pyright reports each regex call taking `timeout` as partially unknown.
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
     # Lift the cap, here and in the other group, once the locked pyright
     # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
     "types-regex>=2026,<2026.11.19.20261122",
@@ -97,8 +98,9 @@ ci = [
     "types-python-dateutil>=2,<3",
     "types-pytz>=2025",
     # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
-    # `FloatInt`, which pyright 1.1.414's bundled typeshed lacks, so strict
-    # pyright reports each regex call taking `timeout` as partially unknown.
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
     # Lift the cap, here and in the other group, once the locked pyright
     # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
     "types-regex>=2026,<2026.11.19.20261122",
