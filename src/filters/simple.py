@@ -1,5 +1,6 @@
 from collections.abc import (
     Callable,
+    Hashable,
     Iterable,
     Mapping,
     MutableMapping,
@@ -8,9 +9,7 @@ from collections.abc import (
     Sized,
 )
 from datetime import date, datetime, time, tzinfo
-
-# AGENTS.md keeps `Hashable` from `typing`.
-from typing import Any, Hashable, cast  # noqa: UP035
+from typing import Any, cast
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset

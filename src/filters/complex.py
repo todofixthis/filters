@@ -1,7 +1,5 @@
-from collections.abc import Callable, Generator, Iterable, Mapping
-
-# AGENTS.md keeps `Hashable` from `typing`.
-from typing import Any, Hashable, Optional, Self, TypeVar  # noqa: UP035
+from collections.abc import Callable, Generator, Hashable, Iterable, Mapping
+from typing import Any, Optional, Self, TypeVar
 
 from filters.base import BaseFilter, FilterCompatible, FilterError, Type
 from filters.simple import Length
