@@ -25,8 +25,17 @@ Type Variables and Aliases
 --------------------------
 The generic parameters and type aliases that the signatures above refer to.
 
-.. autodata:: filters.base.FilterCompatible
-   :no-value:
+..
+   A type alias, written by hand: autodata would record it as py:data, which a
+   dependent project's intersphinx can't match to the py:class references its
+   own signatures make.
+
+.. py:type:: FilterCompatible
+   :module: filters.base
+
+   Used in PEP 484 type hints to indicate a value that can be normalised into
+   an instance of a :py:class:`~filters.BaseFilter` subclass: a filter
+   instance, a filter class, or a callable returning a filter.
 
 .. autodata:: filters.base.T_allowed1
    :no-value:
