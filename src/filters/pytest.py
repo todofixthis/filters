@@ -38,8 +38,6 @@ class unmodified:
     ``expected_value`` parameter.
     """
 
-    pass
-
 
 class skip_value_check:
     """
@@ -50,8 +48,6 @@ class skip_value_check:
     Note: If you use ``skip_value_check``, you should add extra assertions
     to your test to make sure the filtered value conforms to expectations.
     """
-
-    pass
 
 
 def _run_filter_assertion(
@@ -77,25 +73,23 @@ def _run_filter_assertion(
 
     # Fail immediately if unhandled exceptions occurred.
     if runner.has_exceptions:
+        tracebacks = pformat(list(starmap(format_exception, runner.exc_info)))
+        messages = pformat(dict(runner.filter_messages))
         pytest.fail(
             "Unhandled exceptions occurred while filtering the "
-            "request payload:\\n\\n{tracebacks}\\n\\n"
-            "Filter Messages:\\n\\n{messages}".format(
-                messages=pformat(dict(runner.filter_messages)),
-                tracebacks=pformat(list(starmap(format_exception, runner.exc_info))),
-            )
+            f"request payload:\\n\\n{tracebacks}\\n\\n"
+            f"Filter Messages:\\n\\n{messages}"
         )
 
     if isinstance(expected_codes, list):
         expected_codes = {"": expected_codes}
 
     if runner.error_codes != expected_codes:
+        expected = json.dumps(expected_codes)
+        messages = pformat(dict(runner.filter_messages))
         pytest.fail(
             "Filter generated unexpected error codes (expected "
-            "{expected}):\\n\\n{messages}".format(
-                expected=json.dumps(expected_codes),
-                messages=pformat(dict(runner.filter_messages)),
-            ),
+            f"{expected}):\\n\\n{messages}",
         )
 
     if expected_value is not skip_value_check:

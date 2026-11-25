@@ -158,7 +158,7 @@ class MemoryLogHandler(logging.Handler):
         return len(self._records)
 
     @property
-    def records(self) -> typing.List[logging.LogRecord]:
+    def records(self) -> list[logging.LogRecord]:
         """
         Returns all log messages that the handler has collected.
         """

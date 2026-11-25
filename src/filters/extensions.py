@@ -2,8 +2,14 @@ from collections.abc import Generator
 from importlib.metadata import entry_points
 from inspect import (
     getmembers as get_members,
+)
+from inspect import (
     isabstract as is_abstract,
+)
+from inspect import (
     isclass as is_class,
+)
+from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
@@ -14,8 +20,8 @@ from class_registry.entry_points import EntryPointClassRegistry
 from filters.base import BaseFilter
 
 __all__ = [
-    "FilterExtensionRegistry",
     "GROUP_NAME",
+    "FilterExtensionRegistry",
 ]
 
 GROUP_NAME = "filters.extensions"

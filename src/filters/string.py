@@ -260,7 +260,7 @@ class IpAddress(BaseFilter[str]):
         if self.ipv4:
             try:
                 socket.inet_pton(socket.AF_INET, text)
-            except socket.error:
+            except OSError:
                 pass
             else:
                 return text
@@ -268,7 +268,7 @@ class IpAddress(BaseFilter[str]):
         if self.ipv6:
             try:
                 n = socket.inet_pton(socket.AF_INET6, text)
-            except socket.error:
+            except OSError:
                 pass
             else:
                 # Convert the binary value back into a string representation,

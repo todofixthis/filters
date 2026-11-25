@@ -315,7 +315,7 @@ class _BaseDatetime(BaseFilter[T_out]):
 
     def __init__(
         self,
-        timezone: tzinfo | int | float | None = None,
+        timezone: tzinfo | float | None = None,
         naive: bool = False,
     ) -> None:
         """Initialises the filter.
@@ -846,7 +846,7 @@ class Omit(BaseFilter[Any]):
         """Filters items from an incoming mapping."""
         return selective_copy_mapping(
             value,
-            [key for key in value.keys() if key not in self.keys],
+            [key for key in value if key not in self.keys],
         )
 
     def _apply_sequence(self, value: Sequence[Any]) -> Sequence[Any]:

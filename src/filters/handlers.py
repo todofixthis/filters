@@ -44,7 +44,7 @@ class LogHandler(BaseInvalidValueHandler):
         )
 
 
-class FilterMessage(object):
+class FilterMessage:
     """Provides a consistent API for messages sent to MemoryHandler."""
 
     def __init__(

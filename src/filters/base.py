@@ -1,4 +1,5 @@
-from abc import ABCMeta, abstractmethod as abstract_method
+from abc import ABCMeta
+from abc import abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from copy import copy
 from typing import Any, Generic, Optional, Self, Union, cast, overload
@@ -325,8 +326,10 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         """Returns the parent Filter."""
         # Make sure `self._parent` hasn't gone away.
         try:
+            # Touching any attribute raises ReferenceError once the weakly
+            # referenced parent is gone.
             # noinspection PyStatementEffect
-            self._parent.__class__
+            self._parent.__class__  # noqa: B018
         except ReferenceError:
             return None
 

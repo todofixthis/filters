@@ -17,7 +17,7 @@ def test_call_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) 
     """
 
     def always_fail(value: Any) -> Any:
-        raise ValueError("{value} is not valid!".format(value=value))
+        raise ValueError(f"{value} is not valid!")
 
     assert_filter_passes(f.Call(always_fail), None)
 

@@ -63,16 +63,14 @@ class BaseFilterTestCase(TestCase):
 
     filter_type: Callable[..., BaseFilter[Any]] | None = None
 
-    class unmodified(object):
+    class unmodified:
         """Used by assertFilterPasses to omit expected_value parameter.
 
         Used by ``assertFilterPasses`` so that you can omit the
         ``expected_value`` parameter.
         """
 
-        pass
-
-    class skip_value_check(object):
+    class skip_value_check:
         """Sentinel value to skip checking the filtered value.
 
         Sentinel value; used by ``assertFilterPasses`` to skip
@@ -84,8 +82,6 @@ class BaseFilterTestCase(TestCase):
             assertions to your test to make sure the filtered value
             conforms to expectations.
         """
-
-        pass
 
     def assertFilterPasses(
         self,
