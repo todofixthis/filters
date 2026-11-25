@@ -278,6 +278,9 @@ Steps to build releases are based on
 
 1. Build the Project
 ~~~~~~~~~~~~~~~~~~~~
+#. Set ``__version__`` in ``src/filters/__init__.py`` to the new version. Hatch reads
+   the version from there, since ``pyproject.toml`` declares it dynamic.
+
 #. Delete artefacts from previous builds, if applicable::
 
     rm dist/*
@@ -297,10 +300,6 @@ Steps to build releases are based on
     uv tool update-shell
     keyring set https://upload.pypi.org/legacy/ __token__
 
-#. Bump the version (updates ``pyproject.toml`` and re-locks ``uv.lock``)::
-
-    uv version <version>
-
 #. Upload build artefacts to PyPI::
 
     uv publish --username __token__
@@ -312,7 +311,7 @@ Steps to build releases are based on
       git tag -a <version> -m "Release <version>"
       git push origin <version>
 
-   ``<version>`` must match the version set in step 2 above.
+   ``<version>`` must match ``__version__``, set in step 1 above.
 
 #. Go to the `Releases page for the repo`_.
 #. Click ``Draft a new release``.

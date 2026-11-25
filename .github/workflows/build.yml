@@ -1,9 +1,17 @@
 # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 name: CI
+
 on:
   push: ~
+
 permissions:
   contents: read
+
+# Every uv command here leaves out the default `dev` group, whose tooling
+# (autohooks → pontos → lxml) can lack wheels for a new Python. A flag on
+# `uv sync` alone isn't enough: each `uv run` would install `dev` again.
+env:
+  UV_NO_DEFAULT_GROUPS: "1"
 
 jobs:
   test:
@@ -31,7 +39,7 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-  typecheck:
+  type-check:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,25 +50,50 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          # Newest version in the test matrix. Reading `requires-python` from
-          # pyproject.toml resolves to the latest CPython, which can outrun
-          # dependency wheels.
           python-version: "3.14"
       - name: Install dependencies
         run: uv sync --group ci
-      # Strict mode, set in pyproject.toml — see
-      # docs/adr/016-run-the-type-checkers-in-strict-mode.md.
-      # `src` and `test/typing` are checked separately: `test/typing` is the
-      # assert_type harness and holds the rest of `test/` to a different
-      # (currently unenforced) bar.
-      - name: Run mypy on src
-        run: uv run mypy src
-      - name: Run mypy on test/typing
-        run: uv run mypy test/typing
-      - name: Run pyright on src
-        run: uv run pyright src/filters
-      - name: Run pyright on test/typing
-        run: uv run pyright test/typing
+      - name: Type checking
+        run: uv run mypy src test
+
+  # The pre-commit hook lints and formats too, but a commit made without it (a
+  # bare `git commit`, GitHub's web editor, a Renovate PR) skips that.
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # A conflicted template update commits its markers, and nothing else in
+      # `gate` reads a file such as README.rst (ADR 022 in
+      # todofixthis/cookiecutter-py). The `=======` separator is left out, as a
+      # reStructuredText heading underline can be the same line, and -I skips
+      # binary files. Exit code 1 from `git grep` means no match; anything
+      # above it is an error, which must fail rather than pass.
+      - name: Check for conflict markers
+        run: |
+          status=0
+          git grep -nIE '^(<{7}|>{7})( |$)' || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "❌ Conflict markers committed on the lines above"
+            exit 1
+          elif [ "$status" -ne 1 ]; then
+            echo "❌ git grep failed with exit code $status"
+            exit "$status"
+          fi
+          echo "✅ No conflict markers"
+      - name: Install uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: uv sync --group ci
+      - name: Lint
+        run: uv run ruff check
+      - name: Check formatting
+        run: uv run black --check .
 
   docs:
     runs-on: ubuntu-latest
@@ -73,21 +106,25 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          # Newest version in the test matrix. Reading `requires-python` from
-          # pyproject.toml resolves to the latest CPython, which can outrun
-          # dependency wheels.
           python-version: "3.14"
       - name: Install dependencies
         run: uv sync --group ci
+      # -W fails the job on a Sphinx warning, as ReadTheDocs'
+      # fail_on_warning does after merge. A bot PR, such as Renovate's
+      # automerged lock refresh, never runs the pre-commit docs build, so
+      # this is its only check (ADR 020 in todofixthis/cookiecutter-py).
       - name: Check docs build
         run: |
           cd docs
-          uv run make html
+          mkdir -p _static
+          uv run make html SPHINXOPTS=-W
 
-  # The phx plugin's hooks check ADRs in Claude Code sessions but never block, so
-  # this is the only check a commit made elsewhere meets (ADR 014 forbids a
-  # repo-local copy of the tool). The ref is the 8.1.0 release's commit; bump it,
-  # and every copy in AGENTS.md, with the plugin release sessions use.
+  # The phx plugin's hooks check ADRs in Claude Code sessions but never block,
+  # so this is the only check a commit made elsewhere meets (ADR 019 in
+  # todofixthis/cookiecutter-py forbids a repo-local copy of the tool, or a
+  # pre-commit hook running ADR tooling). Renovate bumps the pinned release
+  # here and in AGENTS.md together (ADR 018 in todofixthis/cookiecutter-py);
+  # keep the trailing version comment it matches on.
   adrs:
     runs-on: ubuntu-latest
 
@@ -97,4 +134,23 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
       - name: Check ADRs
-        run: uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr check
+        run: uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@c47fe62f483efa75e953d6a221306f552f362349#subdirectory=skills/writing-adrs' phx-adr check # 9.1.0
+
+  # This project's own jobs, in project.yml, which copier writes once and the
+  # project then owns (ADR 021 in todofixthis/cookiecutter-py).
+  project:
+    uses: ./.github/workflows/project.yml
+    secrets: inherit
+
+  # The single required status check. Depending on every job here collapses
+  # their results into one, so branch protection requires only `gate`. A
+  # skipped job fails it, so a job silently skipped cannot pass unnoticed.
+  gate:
+    needs: [adrs, docs, lint, project, test, type-check]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fail if any check did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

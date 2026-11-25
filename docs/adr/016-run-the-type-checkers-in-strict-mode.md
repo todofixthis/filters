@@ -1,9 +1,10 @@
 ---
-status: Accepted
+status: Superseded
 date: 2026-11-22
 scope: [pyproject.toml, .github/workflows/build.yml, src/filters/, test/typing/, test/__init__.py]
 summary: Run mypy --strict and pyright strict mode in CI on src and test/typing, disabling only return-value, no-any-return and reportReturnType until filters stop returning None to reject, rather than each checker's default rules, a hand-picked subset of strict rules, retyping _invalid_value, or an inline suppression at each rejection path; fix a new error, or suppress it inline with a comment saying why, never by disabling a code or by annotating Any where a narrower type is true.
 revisit-when: Filters stop returning None to reject a value (#121), so return-value, no-any-return and reportReturnType can be re-enabled; a consumer reports Any or Unknown from this package's annotations although both checkers pass in strict mode; src holds more than 30 pyright suppressions, against 16 when this ADR was written.
+superseded-by: 17
 ---
 
 # 016: Run the Type Checkers in Strict Mode
