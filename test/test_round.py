@@ -2,12 +2,17 @@
 Tests for the Round filter.
 """
 
-from decimal import Decimal, ROUND_CEILING
+from collections.abc import Callable
+from decimal import ROUND_CEILING, Decimal
+from typing import Any
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_round_pass_none(assert_filter_passes):
+def test_round_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     `None` always passes this filter.
 
@@ -16,7 +21,9 @@ def test_round_pass_none(assert_filter_passes):
     assert_filter_passes(f.Round(), None)
 
 
-def test_round_pass_round_integer_to_nearest_integer(assert_filter_passes):
+def test_round_pass_round_integer_to_nearest_integer(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds an integer to the nearest integer value.
     """
@@ -30,7 +37,9 @@ def test_round_pass_round_integer_to_nearest_integer(assert_filter_passes):
     )
 
 
-def test_round_pass_round_integer_to_nearest_float(assert_filter_passes):
+def test_round_pass_round_integer_to_nearest_float(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds an integer to the nearest float value.
     """
@@ -41,7 +50,9 @@ def test_round_pass_round_integer_to_nearest_float(assert_filter_passes):
     )
 
 
-def test_round_pass_round_float_to_nearest_integer(assert_filter_passes):
+def test_round_pass_round_float_to_nearest_integer(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds a float to the nearest integer value.
     """
@@ -52,7 +63,9 @@ def test_round_pass_round_float_to_nearest_integer(assert_filter_passes):
     )
 
 
-def test_round_pass_round_float_to_nearest_float(assert_filter_passes):
+def test_round_pass_round_float_to_nearest_float(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds a float to the nearest float value.
     """
@@ -66,7 +79,9 @@ def test_round_pass_round_float_to_nearest_float(assert_filter_passes):
     )
 
 
-def test_round_pass_round_string_float(assert_filter_passes):
+def test_round_pass_round_string_float(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds a float represented as a string to avoid floating point
     issues.
@@ -79,7 +94,9 @@ def test_round_pass_round_string_float(assert_filter_passes):
     )
 
 
-def test_round_pass_round_to_big_value(assert_filter_passes):
+def test_round_pass_round_to_big_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds something to a value greater than 1.
     """
@@ -90,7 +107,9 @@ def test_round_pass_round_to_big_value(assert_filter_passes):
     )
 
 
-def test_round_pass_round_negative_value(assert_filter_passes):
+def test_round_pass_round_negative_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Rounds a negative value.
     """
@@ -101,7 +120,9 @@ def test_round_pass_round_negative_value(assert_filter_passes):
     )
 
 
-def test_round_pass_modify_rounding(assert_filter_passes):
+def test_round_pass_modify_rounding(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, the filter will round up any value that is halfway
     to the nearest `to_nearest` value, but this behaviour can be
@@ -114,7 +135,9 @@ def test_round_pass_modify_rounding(assert_filter_passes):
     )
 
 
-def test_round_pass_custom_result_type(assert_filter_passes):
+def test_round_pass_custom_result_type(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can customize the return type of the filter.
     """
@@ -125,7 +148,9 @@ def test_round_pass_custom_result_type(assert_filter_passes):
     )
 
 
-def test_round_fail_wrong_type(assert_filter_errors):
+def test_round_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not numeric.
     """

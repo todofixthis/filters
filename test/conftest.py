@@ -11,6 +11,7 @@ the third argument (``expected``) can be omitted — the fixture uses the input
 """
 
 import typing
+from typing import Any
 
 
 class Bytesy:
@@ -19,11 +20,11 @@ class Bytesy:
     values into byte strings.
     """
 
-    def __init__(self, value):
+    def __init__(self, value: Any) -> None:
         super().__init__()
         self.value = value
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return bytes(self.value)
 
 
@@ -33,11 +34,11 @@ class Lengthy(typing.Sized):
     object length.
     """
 
-    def __init__(self, length):
+    def __init__(self, length: int) -> None:
         super().__init__()
         self.length = length
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.length
 
 
@@ -47,9 +48,9 @@ class Unicody:
     into unicodes.
     """
 
-    def __init__(self, value):
+    def __init__(self, value: Any) -> None:
         super().__init__()
         self.value = value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.value)

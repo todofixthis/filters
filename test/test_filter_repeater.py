@@ -3,11 +3,16 @@ Tests for the FilterRepeater filter.
 """
 
 import copy
+from collections.abc import Callable
+from typing import Any
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_filter_repeater_pass_none(assert_filter_passes):
+def test_filter_repeater_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For consistency with all the other Filter classes, `None` is
     considered a valid value to pass to a FilterRepeater, even
@@ -18,7 +23,9 @@ def test_filter_repeater_pass_none(assert_filter_passes):
     assert_filter_passes(filter_instance, None)
 
 
-def test_filter_repeater_pass_iterable(assert_filter_passes):
+def test_filter_repeater_pass_iterable(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a list of valid values.
     """
@@ -31,7 +38,9 @@ def test_filter_repeater_pass_iterable(assert_filter_passes):
     )
 
 
-def test_filter_repeater_fail_iterable(assert_filter_errors):
+def test_filter_repeater_fail_iterable(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a list that contains invalid
     values.
@@ -53,7 +62,9 @@ def test_filter_repeater_fail_iterable(assert_filter_errors):
     )
 
 
-def test_filter_repeater_pass_mapping(assert_filter_passes):
+def test_filter_repeater_pass_mapping(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a dict of valid values.
     """
@@ -78,7 +89,9 @@ def test_filter_repeater_pass_mapping(assert_filter_passes):
     )
 
 
-def test_filter_repeater_fail_mapping(assert_filter_errors):
+def test_filter_repeater_fail_mapping(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a dict that contains invalid
     values.
@@ -111,7 +124,10 @@ def test_filter_repeater_fail_mapping(assert_filter_errors):
     )
 
 
-def test_filter_repeater_restrict_keys(assert_filter_passes, assert_filter_errors):
+def test_filter_repeater_restrict_keys(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeated is configured to restrict allowed keys in a
     mapping.
@@ -146,7 +162,10 @@ def test_filter_repeater_restrict_keys(assert_filter_passes, assert_filter_error
     )
 
 
-def test_filter_repeater_restrict_indexes(assert_filter_passes, assert_filter_errors):
+def test_filter_repeater_restrict_indexes(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater CAN be configured to restrict keys for
     incoming Iterables, although it is probably the wrong tool
@@ -190,7 +209,9 @@ def test_filter_repeater_restrict_indexes(assert_filter_passes, assert_filter_er
     # collections.
 
 
-def test_filter_repeater_fail_non_iterable_value(assert_filter_errors):
+def test_filter_repeater_fail_non_iterable_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater will reject any non-iterable value it comes
     across (except for `None`).
@@ -201,8 +222,9 @@ def test_filter_repeater_fail_non_iterable_value(assert_filter_errors):
 
 
 def test_filter_repeater_chained_with_repeater(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Chaining two FilterRepeaters together has basically the same effect as
     combining their Filters, except for one very important difference:  The
@@ -258,8 +280,9 @@ def test_filter_repeater_chained_with_repeater(
 
 
 def test_filter_repeater_chained_with_filter(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Chaining a Filter with a FilterRepeater causes the chained Filter to
     operate on the entire collection.
@@ -280,7 +303,10 @@ def test_filter_repeater_chained_with_filter(
 
 
 # noinspection SpellCheckingInspection
-def test_filter_repeater_repeaterception(assert_filter_passes, assert_filter_errors):
+def test_filter_repeater_repeaterception(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterRepeaters can contain other FilterRepeaters.
     """
@@ -366,7 +392,9 @@ def test_filter_repeater_repeaterception(assert_filter_passes, assert_filter_err
     )
 
 
-def test_filter_repeater_copy(assert_filter_passes):
+def test_filter_repeater_copy(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """FilterRepeater can be shallow-copied via `copy.copy()`.
 
     The copied filter behaves identically to the original and does not
@@ -385,8 +413,9 @@ def test_filter_repeater_copy(assert_filter_passes):
 
 
 def test_filter_repeater_copy_with_restrict_keys(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """A copied FilterRepeater copies `restrict_keys` independently."""
     original = f.FilterRepeater(
         f.NotEmpty | f.Int,
@@ -396,6 +425,9 @@ def test_filter_repeater_copy_with_restrict_keys(
 
     assert copied is not original
     assert copied.restrict_keys == {"foo", "bar"}
+
+    assert copied.restrict_keys is not None
+    assert original.restrict_keys is not None
 
     # Mutating restrict_keys on the copy must not mutate the original.
     copied.restrict_keys.add("baz")
@@ -432,7 +464,7 @@ def test_filter_repeater_copy_with_restrict_keys(
     )
 
 
-def test_filter_repeater_copy_preserves_base_attributes():
+def test_filter_repeater_copy_preserves_base_attributes() -> None:
     """Copying a FilterRepeater preserves BaseFilter attributes."""
     handler = f.MemoryHandler()
     repeater = f.FilterRepeater(f.Int())

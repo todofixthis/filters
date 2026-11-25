@@ -3,13 +3,18 @@ Tests for the MaxBytes filter.
 """
 
 from codecs import BOM_UTF16
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_max_bytes_pass_none(assert_filter_passes):
+def test_max_bytes_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -18,7 +23,9 @@ def test_max_bytes_pass_none(assert_filter_passes):
     assert_filter_passes(f.MaxBytes(max_bytes=1), None)
 
 
-def test_max_bytes_pass_string_short(assert_filter_passes):
+def test_max_bytes_pass_string_short(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string that is short enough.
     """
@@ -31,7 +38,9 @@ def test_max_bytes_pass_string_short(assert_filter_passes):
     )
 
 
-def test_max_bytes_pass_string_short_with_prefix(assert_filter_passes):
+def test_max_bytes_pass_string_short_with_prefix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to apply a prefix to values that are too long,
     but the incoming value is a unicode string that is short enough.
@@ -52,7 +61,9 @@ def test_max_bytes_pass_string_short_with_prefix(assert_filter_passes):
     )
 
 
-def test_max_bytes_pass_string_short_with_suffix(assert_filter_passes):
+def test_max_bytes_pass_string_short_with_suffix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to apply a suffix to values that are too long,
     but the incoming value is a unicode string that is short enough.
@@ -70,7 +81,9 @@ def test_max_bytes_pass_string_short_with_suffix(assert_filter_passes):
     )
 
 
-def test_max_bytes_fail_string_too_long(assert_filter_errors):
+def test_max_bytes_fail_string_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string that is too long.
     """
@@ -82,7 +95,9 @@ def test_max_bytes_fail_string_too_long(assert_filter_errors):
     )
 
 
-def test_max_bytes_pass_string_truncated(assert_filter_passes):
+def test_max_bytes_pass_string_truncated(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string that is too long, and the filter is
     configured to truncate it.
@@ -99,7 +114,9 @@ def test_max_bytes_pass_string_truncated(assert_filter_passes):
     )
 
 
-def test_max_bytes_pass_string_truncated_with_prefix(assert_filter_passes):
+def test_max_bytes_pass_string_truncated_with_prefix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string that is too long, and the filter is
     configured to apply a prefix before truncating.
@@ -115,7 +132,9 @@ def test_max_bytes_pass_string_truncated_with_prefix(assert_filter_passes):
     )
 
 
-def test_max_bytes_pass_string_truncated_with_suffix(assert_filter_passes):
+def test_max_bytes_pass_string_truncated_with_suffix(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a string that is too long, and the filter is
     configured to apply a suffix after truncating.
@@ -135,8 +154,8 @@ def test_max_bytes_pass_string_truncated_with_suffix(assert_filter_passes):
 
 
 def test_max_bytes_pass_string_truncated_max_bytes_param_too_small(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured with a ``max_bytes`` so tiny that it is
     impossible to fit any multibyte sequences into a truncated string.
@@ -159,8 +178,8 @@ def test_max_bytes_pass_string_truncated_max_bytes_param_too_small(
 
 
 def test_max_bytes_pass_string_truncated_max_bytes_param_almost_too_small(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured with ``max_bytes`` so tiny that it is
     impossible to fit any multibyte sequences into a truncated string...
@@ -182,7 +201,9 @@ def test_max_bytes_pass_string_truncated_max_bytes_param_almost_too_small(
     )
 
 
-def test_max_bytes_pass_string_short_alt_encoding(assert_filter_passes):
+def test_max_bytes_pass_string_short_alt_encoding(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use an encoding other than UTF-8, and the
     incoming value is a string that is short enough.
@@ -200,7 +221,9 @@ def test_max_bytes_pass_string_short_alt_encoding(assert_filter_passes):
     )
 
 
-def test_max_bytes_fail_string_too_long_alt_encoding_has_bom(assert_filter_errors):
+def test_max_bytes_fail_string_too_long_alt_encoding_has_bom(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use an encoding that uses a BOM, and the
     incoming value is a string that is too long.
@@ -216,7 +239,9 @@ def test_max_bytes_fail_string_too_long_alt_encoding_has_bom(assert_filter_error
     )
 
 
-def test_max_bytes_pass_string_truncated_alt_encoding_has_bom(assert_filter_passes):
+def test_max_bytes_pass_string_truncated_alt_encoding_has_bom(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use an encoding that uses a BOM, and the
     incoming value is a string that will be truncated.
@@ -237,8 +262,8 @@ def test_max_bytes_pass_string_truncated_alt_encoding_has_bom(assert_filter_pass
 
 
 def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_prefix(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use an encoding that uses a BOM, and to
     apply a prefix to truncated values.
@@ -262,8 +287,8 @@ def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_prefix(
 
 
 def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_suffix(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to use an encoding that uses a BOM, and to
     apply a suffix to the truncated values.
@@ -283,8 +308,8 @@ def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_suffix(
 
 
 def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_prefix_and_suffix(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Because my life wasn't hard enough already...
     """
@@ -305,8 +330,8 @@ def test_max_bytes_pass_string_truncated_alt_encoding_has_bom_with_prefix_and_su
 
 
 def test_max_bytes_pass_string_truncated_max_bytes_param_almost_too_small_alt_encoding_has_bom(
-    assert_filter_passes,
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Unrealistically tiny ``max_bytes``, part 2: the revenge!
     """
@@ -325,7 +350,9 @@ def test_max_bytes_pass_string_truncated_max_bytes_param_almost_too_small_alt_en
     )
 
 
-def test_max_bytes_pass_bytes_short(assert_filter_passes):
+def test_max_bytes_pass_bytes_short(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string that is short enough.
     """
@@ -337,7 +364,9 @@ def test_max_bytes_pass_bytes_short(assert_filter_passes):
     )
 
 
-def test_max_bytes_fail_bytes_long(assert_filter_errors):
+def test_max_bytes_fail_bytes_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string that is too long.
     """
@@ -350,7 +379,9 @@ def test_max_bytes_fail_bytes_long(assert_filter_errors):
     )
 
 
-def test_max_bytes_pass_bytes_truncated(assert_filter_passes):
+def test_max_bytes_pass_bytes_truncated(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string that is too long, and the filter is
     configured to truncate.
@@ -368,7 +399,9 @@ def test_max_bytes_pass_bytes_truncated(assert_filter_passes):
     )
 
 
-def test_max_bytes_fail_wrong_type(assert_filter_errors):
+def test_max_bytes_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """
@@ -379,7 +412,7 @@ def test_max_bytes_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_max_bytes_error_max_bytes_too_small():
+def test_max_bytes_error_max_bytes_too_small() -> None:
     """
     ``max_bytes`` must be at least 1.
     """
@@ -387,7 +420,7 @@ def test_max_bytes_error_max_bytes_too_small():
         f.MaxBytes(max_bytes=0)
 
 
-def test_max_bytes_fail_reports_decoded_value():
+def test_max_bytes_fail_reports_decoded_value() -> None:
     """
     When a value is too long, the error context holds the decoded text
     rather than the bytes that came in.

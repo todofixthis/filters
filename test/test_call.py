@@ -2,28 +2,34 @@
 Tests for the Call filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_call_pass_none(assert_filter_passes):
+def test_call_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
     Use ``Required | Call`` if you want to reject null values.
     """
 
-    def always_fail(value):
+    def always_fail(value: Any) -> Any:
         raise ValueError("{value} is not valid!".format(value=value))
 
     assert_filter_passes(f.Call(always_fail), None)
 
 
-def test_call_pass_successful_execution(assert_filter_passes):
+def test_call_pass_successful_execution(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The callable runs successfully.
     """
 
-    def is_odd(value):
+    def is_odd(value: int) -> int:
         return value % 2
 
     assert_filter_passes(
@@ -36,12 +42,14 @@ def test_call_pass_successful_execution(assert_filter_passes):
     )
 
 
-def test_call_fail_filter_error(assert_filter_errors):
+def test_call_fail_filter_error(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The callable raises a :py:class:`FilterError`.
     """
 
-    def even_only(value):
+    def even_only(value: int) -> int:
         if value % 2:
             raise f.FilterError("value is not even!")
         return value
@@ -49,12 +57,14 @@ def test_call_fail_filter_error(assert_filter_errors):
     assert_filter_errors(f.Call(even_only), 5, ["value is not even!"])
 
 
-def test_call_fail_filter_error_custom_code(assert_filter_errors):
+def test_call_fail_filter_error_custom_code(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The callable raises a :py:class:`FilterError` with a custom error code.
     """
 
-    def even_only(value):
+    def even_only(value: int) -> int:
         if value % 2:
             # If you find yourself doing this, you would probably be better
             # served by creating a custom filter instead.
@@ -70,12 +80,12 @@ def test_call_fail_filter_error_custom_code(assert_filter_errors):
     )
 
 
-def test_call_error_exception():
+def test_call_error_exception() -> None:
     """
     The callable raises an exception other than a :py:class:`FilterError`.
     """
 
-    def even_only(value):
+    def even_only(value: int) -> int:
         if value % 2:
             raise ValueError("{value} is not even!")
         return value

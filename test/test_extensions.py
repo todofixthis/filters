@@ -8,17 +8,17 @@ from test import FilterAlpha, FilterBravo
 from test.helper import DummyDistributionFinder
 
 
-def setup_module():
+def setup_module() -> None:
     """Inject a distribution that defines some entry points."""
     DummyDistributionFinder.install()
 
 
-def teardown_module():
+def teardown_module() -> None:
     """Remove the injected distribution."""
     DummyDistributionFinder.uninstall()
 
 
-def test_filter_extension_registry_happy_path():
+def test_filter_extension_registry_happy_path() -> None:
     """
     Loading filters automatically via entry points.
 
@@ -37,7 +37,9 @@ def test_filter_extension_registry_happy_path():
     assert alpha is FilterAlpha
 
     # You can also instantiate filters using parameters.
-    bravo = registry.Bruce(name="Batman")
+    # The registry types its entries as plain ``BaseFilter``, which has no
+    # ``name`` parameter; ``FilterBravo`` does.
+    bravo = registry.Bruce(name="Batman")  # type: ignore[call-arg]
     assert isinstance(bravo, FilterBravo)
     assert bravo.name == "Batman"
 

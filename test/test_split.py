@@ -3,14 +3,19 @@ Tests for the Split filter.
 """
 
 import re
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 import regex
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_split_pass_none(assert_filter_passes):
+def test_split_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -22,7 +27,9 @@ def test_split_pass_none(assert_filter_passes):
     )
 
 
-def test_split_pass_char_split(assert_filter_passes):
+def test_split_pass_char_split(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Simplest use case is to split a string by a single character.
     """
@@ -33,7 +40,9 @@ def test_split_pass_char_split(assert_filter_passes):
     )
 
 
-def test_split_pass_pattern_split(assert_filter_passes):
+def test_split_pass_pattern_split(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can also use a regex to split the string.
     """
@@ -44,7 +53,9 @@ def test_split_pass_pattern_split(assert_filter_passes):
     )
 
 
-def test_split_pass_pattern_split_with_groups(assert_filter_passes):
+def test_split_pass_pattern_split_with_groups(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If you include capturing parentheses in the pattern, the matched groups
     are included in the resulting list.
@@ -57,7 +68,9 @@ def test_split_pass_pattern_split_with_groups(assert_filter_passes):
     )
 
 
-def test_split_pass_no_split(assert_filter_passes):
+def test_split_pass_no_split(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A string that does not match the regex at all is also considered valid.
 
@@ -71,7 +84,9 @@ def test_split_pass_no_split(assert_filter_passes):
     )
 
 
-def test_split_pass_keys(assert_filter_passes):
+def test_split_pass_keys(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If desired, you can map a collection of keys onto the resulting list,
     which creates a dict.
@@ -98,7 +113,9 @@ def test_split_pass_keys(assert_filter_passes):
 
 
 # noinspection SpellCheckingInspection
-def test_split_pass_precompiled_regex(assert_filter_passes):
+def test_split_pass_precompiled_regex(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can alternatively provide a precompiled regex to the filter instead
     of a string pattern.
@@ -117,7 +134,9 @@ def test_split_pass_precompiled_regex(assert_filter_passes):
     )
 
 
-def test_split_pass_regex_library_support(assert_filter_passes):
+def test_split_pass_regex_library_support(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The Regex filter also supports precompiled patterns using the ``regex``
     library.
@@ -136,7 +155,7 @@ def test_split_pass_regex_library_support(assert_filter_passes):
     )
 
 
-def test_split_invalid_empty_keys():
+def test_split_invalid_empty_keys() -> None:
     """
     An empty ``keys`` can never produce a result — any non-empty split
     is too long, and even the empty string splits to a non-empty list.
@@ -146,7 +165,9 @@ def test_split_invalid_empty_keys():
         f.Split(pattern=":", keys=())
 
 
-def test_split_fail_too_long(assert_filter_errors):
+def test_split_fail_too_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has too many parts to assign a key to each one, so
     it fails validation.
@@ -164,7 +185,9 @@ def test_split_fail_too_long(assert_filter_errors):
     )
 
 
-def test_split_pass_too_short(assert_filter_passes):
+def test_split_pass_too_short(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not have enough parts to use all the keys, so
     extra ``None`` values are inserted.
@@ -193,7 +216,9 @@ def test_split_pass_too_short(assert_filter_passes):
     )
 
 
-def test_split_fail_bytes(assert_filter_errors):
+def test_split_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -205,7 +230,9 @@ def test_split_fail_bytes(assert_filter_errors):
     )
 
 
-def test_split_fail_wrong_type(assert_filter_errors):
+def test_split_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

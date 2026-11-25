@@ -2,10 +2,16 @@
 Tests for the FilterSwitch filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_filter_switch_pass_none(assert_filter_passes):
+def test_filter_switch_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -19,7 +25,9 @@ def test_filter_switch_pass_none(assert_filter_passes):
     assert_filter_passes(filter_instance, None)
 
 
-def test_filter_switch_pass_match_case(assert_filter_passes):
+def test_filter_switch_pass_match_case(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value matches one of the switch cases.
     """
@@ -36,7 +44,9 @@ def test_filter_switch_pass_match_case(assert_filter_passes):
     )
 
 
-def test_filter_switch_fail_match_case(assert_filter_errors):
+def test_filter_switch_fail_match_case(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value matches one of the switch cases, but it is not
     valid, according to the corresponding filter.
@@ -58,7 +68,9 @@ def test_filter_switch_fail_match_case(assert_filter_errors):
     )
 
 
-def test_filter_switch_pass_default(assert_filter_passes):
+def test_filter_switch_pass_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not match any of the switch cases, but we
     defined a default filter.
@@ -77,7 +89,9 @@ def test_filter_switch_pass_default(assert_filter_passes):
     )
 
 
-def test_filter_switch_fail_no_default(assert_filter_errors):
+def test_filter_switch_fail_no_default(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not match any of the switch cases, and we did
     not define a default filter.

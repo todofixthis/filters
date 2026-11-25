@@ -2,12 +2,18 @@
 Tests for the Choice filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_choice_pass_none(assert_filter_passes):
+def test_choice_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -19,7 +25,9 @@ def test_choice_pass_none(assert_filter_passes):
     )
 
 
-def test_choice_pass_valid(assert_filter_passes):
+def test_choice_pass_valid(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value matches one of the choices.
     """
@@ -29,7 +37,9 @@ def test_choice_pass_valid(assert_filter_passes):
     )
 
 
-def test_choice_fail_invalid(assert_filter_errors):
+def test_choice_fail_invalid(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not match any of the choices.
     """
@@ -40,7 +50,9 @@ def test_choice_fail_invalid(assert_filter_errors):
     )
 
 
-def test_choice_pass_case_insensitive_valid(assert_filter_passes):
+def test_choice_pass_case_insensitive_valid(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value matches a choice using case-insensitive comparison.
     """
@@ -56,7 +68,9 @@ def test_choice_pass_case_insensitive_valid(assert_filter_passes):
     )
 
 
-def test_choice_fail_case_insensitive_type_mismatch(assert_filter_errors):
+def test_choice_fail_case_insensitive_type_mismatch(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has a different type, so it does not match.
     """
@@ -67,7 +81,7 @@ def test_choice_fail_case_insensitive_type_mismatch(assert_filter_errors):
     )
 
 
-def test_choice_error_choices_empty():
+def test_choice_error_choices_empty() -> None:
     """
     The filter must be configured with at least one valid choice.
     """

@@ -225,8 +225,10 @@ class FilterMapper(BaseFilter):
         # invariant, so a union would reject a ``dict[str, ...]`` variable
         # that callers pass today.
         filter_map: Mapping[Any, FilterCompatible],
-        allow_missing_keys: bool | Iterable[str] = True,
-        allow_extra_keys: bool | Iterable[str] = True,
+        # ``Hashable`` rather than ``str``: in sequence mode (an all-``int``
+        # map, ADR 003) the keys are indexes.
+        allow_missing_keys: bool | Iterable[Hashable] = True,
+        allow_extra_keys: bool | Iterable[Hashable] = True,
     ) -> None:
         """Initialises the FilterMapper filter.
 

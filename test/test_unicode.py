@@ -2,14 +2,20 @@
 Tests for the Unicode filter.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
 from xml.etree.ElementTree import Element
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Bytesy, Unicody
 
 
-def test_unicode_pass_none(assert_filter_passes):
+def test_unicode_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -18,14 +24,18 @@ def test_unicode_pass_none(assert_filter_passes):
     assert_filter_passes(f.Unicode(), None)
 
 
-def test_unicode_pass_unicode(assert_filter_passes):
+def test_unicode_pass_unicode(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a unicode.
     """
     assert_filter_passes(f.Unicode(), r"┻━┻︵ \(°□°)/ ︵ ┻━┻ ")  # RAWR!
 
 
-def test_unicode_pass_bytes_utf8(assert_filter_passes):
+def test_unicode_pass_bytes_utf8(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string that is encoded as UTF-8.
     """
@@ -43,7 +53,10 @@ def test_unicode_pass_bytes_utf8(assert_filter_passes):
     )
 
 
-def test_unicode_fail_bytes_non_utf8(assert_filter_passes, assert_filter_errors):
+def test_unicode_fail_bytes_non_utf8(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a byte string that is encoded using a codec other
     than UTF-8.
@@ -73,7 +86,9 @@ def test_unicode_fail_bytes_non_utf8(assert_filter_passes, assert_filter_errors)
     )
 
 
-def test_unicode_pass_string_like_object(assert_filter_passes):
+def test_unicode_pass_string_like_object(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an object that can be cast as a string.
     """
@@ -86,7 +101,9 @@ def test_unicode_pass_string_like_object(assert_filter_passes):
     )
 
 
-def test_unicode_pass_bytes_like_object(assert_filter_passes):
+def test_unicode_pass_bytes_like_object(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an object that can be cast as a byte string.
     """
@@ -98,14 +115,18 @@ def test_unicode_pass_bytes_like_object(assert_filter_passes):
     )
 
 
-def test_unicode_pass_boolean(assert_filter_passes):
+def test_unicode_pass_boolean(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a boolean (treated as an int).
     """
     assert_filter_passes(f.Unicode(), True, "1")
 
 
-def test_unicode_pass_decimal_with_scientific_notation(assert_filter_passes):
+def test_unicode_pass_decimal_with_scientific_notation(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a Decimal that was parsed from scientific
     notation.
@@ -119,7 +140,9 @@ def test_unicode_pass_decimal_with_scientific_notation(assert_filter_passes):
     )
 
 
-def test_unicode_pass_xml_element(assert_filter_passes):
+def test_unicode_pass_xml_element(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an ElementTree XML Element.
     """
@@ -130,7 +153,9 @@ def test_unicode_pass_xml_element(assert_filter_passes):
     )
 
 
-def test_unicode_unicode_normalisation(assert_filter_passes):
+def test_unicode_unicode_normalisation(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter always returns the NFC form of the unicode string.
 
@@ -151,7 +176,9 @@ def test_unicode_unicode_normalisation(assert_filter_passes):
     assert_filter_passes(f.Unicode(), decomposed, composed)
 
 
-def test_unicode_unicode_normalisation_disabled(assert_filter_passes):
+def test_unicode_unicode_normalisation_disabled(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter not to perform normalisation.
     """
@@ -164,7 +191,9 @@ def test_unicode_unicode_normalisation_disabled(assert_filter_passes):
     )
 
 
-def test_unicode_remove_non_printables(assert_filter_passes):
+def test_unicode_remove_non_printables(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, this filter also removes non-printable characters (both
     ASCII and Unicode varieties).
@@ -180,7 +209,9 @@ def test_unicode_remove_non_printables(assert_filter_passes):
     )
 
 
-def test_unicode_remove_non_printables_disabled(assert_filter_passes):
+def test_unicode_remove_non_printables_disabled(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter not to remove non-printable characters.
     """
@@ -194,7 +225,9 @@ def test_unicode_remove_non_printables_disabled(assert_filter_passes):
     )
 
 
-def test_unicode_newline_normalisation(assert_filter_passes):
+def test_unicode_newline_normalisation(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, any newlines in the string are automatically converted to
     unix-style ('\n').
@@ -206,7 +239,9 @@ def test_unicode_newline_normalisation(assert_filter_passes):
     )
 
 
-def test_unicode_newline_normalisation_disabled(assert_filter_passes):
+def test_unicode_newline_normalisation_disabled(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can force the filter not to normalise line endings.
     """

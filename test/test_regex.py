@@ -3,13 +3,18 @@ Tests for the Regex filter.
 """
 
 import re
+from collections.abc import Callable
+from typing import Any
 
 import regex
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_regex_pass_none(assert_filter_passes):
+def test_regex_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -18,7 +23,9 @@ def test_regex_pass_none(assert_filter_passes):
     assert_filter_passes(f.Regex(pattern=r"."), None)
 
 
-def test_regex_pass_happy_path(assert_filter_passes):
+def test_regex_pass_happy_path(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value matches the regex pattern.
     """
@@ -32,7 +39,9 @@ def test_regex_pass_happy_path(assert_filter_passes):
     )
 
 
-def test_regex_fail_no_match(assert_filter_errors):
+def test_regex_fail_no_match(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value does not match the regex pattern.
     """
@@ -45,7 +54,9 @@ def test_regex_fail_no_match(assert_filter_errors):
     )
 
 
-def test_regex_pass_unicode_character_class(assert_filter_passes):
+def test_regex_pass_unicode_character_class(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, character classes like ``\\w`` will take unicode into
     account.
@@ -61,7 +72,9 @@ def test_regex_pass_unicode_character_class(assert_filter_passes):
 
 
 # noinspection SpellCheckingInspection
-def test_regex_pass_precompiled_regex(assert_filter_passes):
+def test_regex_pass_precompiled_regex(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can alternatively provide a precompiled regex to the filter instead
     of a string pattern.
@@ -79,7 +92,9 @@ def test_regex_pass_precompiled_regex(assert_filter_passes):
     )
 
 
-def test_regex_pass_regex_library_support(assert_filter_passes):
+def test_regex_pass_regex_library_support(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The Regex filter also supports precompiled patterns using the ``regex``
     library.
@@ -98,7 +113,9 @@ def test_regex_pass_regex_library_support(assert_filter_passes):
     )
 
 
-def test_regex_fail_bytes(assert_filter_errors):
+def test_regex_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -110,7 +127,9 @@ def test_regex_fail_bytes(assert_filter_errors):
     )
 
 
-def test_regex_fail_wrong_type(assert_filter_errors):
+def test_regex_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

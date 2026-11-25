@@ -787,14 +787,16 @@ class Strip(BaseFilter[str]):
 
     def __init__(
         self,
-        leading: str = r"[\p{C}\s]+",
-        trailing: str = r"[\p{C}\s]+",
+        leading: str | None = r"[\p{C}\s]+",
+        trailing: str | None = r"[\p{C}\s]+",
     ) -> None:
         """Initialises the Strip filter.
 
         Args:
-            leading: Regex to match at the start of the string.
-            trailing: Regex to match at the end of the string.
+            leading: Regex to match at the start of the string, or ``None``
+                to leave the start alone.
+            trailing: Regex to match at the end of the string, or ``None``
+                to leave the end alone.
         """
         super().__init__()
 
