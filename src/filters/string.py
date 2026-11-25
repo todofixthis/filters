@@ -637,7 +637,7 @@ class Regex(BaseFilter[list[str]]):
 
     def __init__(
         self,
-        pattern: str | re.Pattern[str],
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
     ) -> None:
         """Initialises the Regex filter.
 
@@ -694,21 +694,21 @@ class Split(BaseFilter[T_split]):
     @overload
     def __init__(
         self: "Split[list[str]]",
-        pattern: str | re.Pattern[str],
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: None = None,
     ) -> None: ...
 
     @overload
     def __init__(
         self: "Split[dict[str, str]]",
-        pattern: str | re.Pattern[str],
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: Sequence[str],
     ) -> None: ...
 
     # noinspection PyProtectedMember
     def __init__(
         self,
-        pattern: str | re.Pattern[str],
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialises the Split filter.
@@ -799,6 +799,9 @@ class Strip(BaseFilter[str]):
                 to leave the end alone.
         """
         super().__init__()
+
+        self.leading: regex.Pattern[str] | None
+        self.trailing: regex.Pattern[str] | None
 
         if leading:
             self.leading = regex.compile(

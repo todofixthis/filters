@@ -7,8 +7,11 @@ rather than parent and child, so each reports the type it actually produces
 docs/adr/008-split-bytestring-and-date-into-siblings.md.
 """
 
+import re
 from typing import Any, Optional, assert_type
 from uuid import UUID
+
+import regex
 
 import filters as f
 
@@ -63,6 +66,20 @@ def test_split_binds_container_shape_from_keys() -> None:
     assert_type(f.Split("-").apply("a-b"), Optional[list[str]])
     assert_type(f.Split("-", keys=["a", "b"]), f.Split[dict[str, str]])
     assert_type(f.Split("-", keys=["a", "b"]).apply("a-b"), Optional[dict[str, str]])
+
+
+def test_regex_and_split_accept_compiled_patterns() -> None:
+    """``Regex`` and ``Split`` accept a pattern compiled by ``re`` or ``regex``."""
+    assert_type(f.Regex(re.compile("a")), f.Regex)
+    assert_type(f.Regex(regex.compile("a")), f.Regex)
+    assert_type(f.Split(re.compile("-")), f.Split[list[str]])
+    assert_type(f.Split(regex.compile("-")), f.Split[list[str]])
+
+
+def test_strip_stores_optional_patterns() -> None:
+    """``Strip`` stores ``None`` for an end it leaves unstripped."""
+    assert_type(f.Strip().leading, regex.Pattern[str] | None)
+    assert_type(f.Strip().trailing, regex.Pattern[str] | None)
 
 
 def test_json_decode_stays_untyped() -> None:

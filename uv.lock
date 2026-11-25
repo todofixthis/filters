@@ -899,6 +899,7 @@ ci = [
     { name = "tox-uv" },
     { name = "types-python-dateutil" },
     { name = "types-pytz" },
+    { name = "types-regex" },
 ]
 dev = [
     { name = "autohooks" },
@@ -915,6 +916,7 @@ dev = [
     { name = "tox-uv" },
     { name = "types-python-dateutil" },
     { name = "types-pytz" },
+    { name = "types-regex" },
 ]
 
 [package.metadata]
@@ -941,6 +943,7 @@ ci = [
     { name = "tox-uv", specifier = ">=1,<2" },
     { name = "types-python-dateutil", specifier = ">=2,<3" },
     { name = "types-pytz", specifier = ">=2025" },
+    { name = "types-regex", specifier = ">=2026,<2026.11.19.20261122" },
 ]
 dev = [
     { name = "autohooks", specifier = ">=26,<27" },
@@ -957,6 +960,7 @@ dev = [
     { name = "tox-uv", specifier = ">=1,<2" },
     { name = "types-python-dateutil", specifier = ">=2,<3" },
     { name = "types-pytz", specifier = ">=2025" },
+    { name = "types-regex", specifier = ">=2026,<2026.11.19.20261122" },
 ]
 
 [[package]]
@@ -1493,6 +1497,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/40/ff/c047ddc68c803b46470a357454ef76f4acd8c1088f5cc4891cdd909bfcf6/types_pytz-2025.2.0.20251108.tar.gz", hash = "sha256:fca87917836ae843f07129567b74c1929f1870610681b4c92cb86a3df5817bdb", size = 10961, upload-time = "2025-11-08T02:55:57.001Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/c1/56ef16bf5dcd255155cc736d276efa6ae0a5c26fd685e28f0412a4013c01/types_pytz-2025.2.0.20251108-py3-none-any.whl", hash = "sha256:0f1c9792cab4eb0e46c52f8845c8f77cf1e313cb3d68bf826aa867fe4717d91c", size = 10116, upload-time = "2025-11-08T02:55:56.194Z" },
+]
+
+[[package]]
+name = "types-regex"
+version = "2026.11.19.20261119"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/d4/e3586873a6b36be46d231593021edb769ec3341c6a0e234b8ddb02120e56/types_regex-2026.11.19.20261119.tar.gz", hash = "sha256:e26dacbf9f9ca46281ecccc85ab42947cd6c7900d9092435972e80b37c8511d3", size = 14466, upload-time = "2026-11-19T09:36:09.846Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/3d/4319315751ce54a6ef58e95b3135e6d94b89799e9d5bc0851f70e315d670/types_regex-2026.11.19.20261119-py3-none-any.whl", hash = "sha256:bf0ed475d94ed594bfc228378c9ca6b17437f90a03438dc6ddb96652dbb19fe1", size = 11221, upload-time = "2026-11-19T09:36:08.913Z" },
 ]
 
 [[package]]
