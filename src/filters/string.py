@@ -7,7 +7,9 @@ from base64 import standard_b64decode, urlsafe_b64decode
 from collections.abc import Callable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
-from typing import Any, Hashable, Optional, cast, overload
+
+# AGENTS.md keeps `Hashable` from `typing`.
+from typing import Any, Hashable, Optional, cast, overload  # noqa: UP035
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 

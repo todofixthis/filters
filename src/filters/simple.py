@@ -8,7 +8,9 @@ from collections.abc import (
     Sized,
 )
 from datetime import date, datetime, time, tzinfo
-from typing import Any, Hashable, cast
+
+# AGENTS.md keeps `Hashable` from `typing`.
+from typing import Any, Hashable, cast  # noqa: UP035
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
@@ -289,7 +291,8 @@ class Call(BaseFilter[T_callable]):
     def _apply(self, value: Any) -> T_callable:
         try:
             return self.callable(value, *self.extra_args, **self.extra_kwargs)
-        except Exception as e:
+        # Any exception the callable raises becomes an invalid value.
+        except Exception as e:  # noqa: BLE001
             return self._invalid_value(
                 value,
                 reason=e,

@@ -153,24 +153,14 @@ testpaths = ["test"]
 
 [tool.ruff.lint]
 ignore = [
-    # A constant getattr/setattr reaches an attribute the strict type checkers
-    # can't see (`context` on any exception, namedtuple's `_fields`).
-    "B009",
-    "B010",
-    # Catching any exception is how a filter turns an error into an invalid
-    # value (ExceptionHandler, Call, FilterChain).
-    "BLE001",
     # BaseFilter declares `templates` as an instance attribute, so a subclass
     # annotating it `ClassVar`, as RUF012 asks, fails mypy's override check.
     "RUF012",
-    # Keep `Hashable` from `typing`, and `TypeAliasType` and `TypeVar` from
-    # typing_extensions, whose PEP 696 defaults Python 3.12 lacks; for the
-    # same reason, keep `Generic` rather than PEP 695 type parameters.
-    "UP035",
-    "UP046",
     # Keep `Optional` and `Union`: a forward reference needs them, since
     # `"ClassName" | None` fails at runtime under Sphinx, and pyupgrade's
-    # rewrite of the quoted annotations in `__or__`'s overloads breaks pyright.
+    # rewrite of the quoted annotations in `__or__`'s overloads breaks
+    # pyright. Re-enable both once a ruff release leaves quoted forward
+    # references alone.
     "UP007",
     "UP045",
 ]
