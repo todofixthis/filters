@@ -10,7 +10,7 @@ In the template-owned `pyproject.toml`, this project's own content is `[project]
 
 ## Type checking
 
-mypy runs in strict mode on `src` and `test`, as the template's `type-check` job runs it. pyright runs in strict mode on `src/filters` and `test/typing`, in `.github/workflows/project.yml`'s `pyright` job (ADR 017). The pre-commit hook runs mypy but not pyright, so run `uv run pyright src/filters test/typing` before committing a change to either. Its notice that a newer pyright exists is expected: `uv.lock` holds the version, and the weekly lock refresh moves it.
+mypy runs in strict mode on `src` and `test`, as the template's `type-check` job runs it. pyright runs in strict mode on `src/filters` and `test/typing`, in `.github/workflows/project.yml`'s `pyright` job (ADR 017). The pre-commit hook runs mypy but not pyright, so run `uv run pyright src/filters test/typing` before committing a change to either. Its notice that a newer pyright exists is expected: `uv.lock` holds the version, and the weekly lock refresh moves it. The `pyright` job's Python version is this project's own, so a Python rotation moves it by hand to the newest supported version.
 
 Fix a reported error where the fix is honest; otherwise suppress it on the line the checker reports, with a comment on the line above saying why. mypy's `return-value` and `no-any-return` and pyright's `reportReturnType` are disabled until #121, so nothing reports an `Any` returned where a type is declared. In a new `_apply`, or one whose logic you change, assign `_filter()`'s result to a new name and guard it with `if self._has_errors or result is None:`, as `CaseFold._apply` does: reassigning `value` leaves it `Any`, which leaves the rest of the body unchecked.
 

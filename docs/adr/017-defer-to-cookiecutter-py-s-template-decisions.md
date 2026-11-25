@@ -31,7 +31,8 @@ now writes:
   decide the same; 020 adds `-W` to the CI docs job and drops
   `--keep-going`.
 - [ADR 016][] runs mypy and pyright strict on `src` and `test/typing`,
-  pinned below each checker's next minor release, with mypy's
+  with mypy pinned below its next minor release and pyright held only by
+  `uv.lock`, and with mypy's
   `ignore_missing_imports` because `regex` ships no type information. The
   template runs strict mypy on `src` and all of `test`, in its pre-commit
   hook and `type-check` job, pins mypy to a major range, and has no
@@ -76,10 +77,10 @@ and isn't merged until fixed.
 ## Decision
 
 Option 2. The template owns these files, so it owns the decisions about
-them, and a second copy here can only fall behind. A failing lock refresh shows a
-new diagnostic as surely as a pin would, at the cost of holding back the
-refresh until it is fixed; a pin would conflict more often, on every
-template change to the mypy lines.
+them, and a second copy here can only fall behind. A failing lock refresh surfaces a
+new diagnostic before it reaches `develop`, as a pin would, though it holds
+back the refresh until fixed; a pin would conflict on every template change
+to the mypy lines.
 
 Pyright stays filters' own, in a `pyright` job in
 `.github/workflows/project.yml` that `gate` requires, rather than in the
