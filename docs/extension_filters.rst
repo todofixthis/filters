@@ -73,7 +73,7 @@ Country
 Interprets the incoming value as an
 `ISO 3166-1 alpha-2 or alpha-3 country code`_.
 
-The resulting value is a :py:class:`iso3166.Country` object (provided by the
+The resulting value is an ``iso3166.Country`` object (provided by the
 `iso3166 library`_).
 
 .. code-block:: python
@@ -105,7 +105,7 @@ Currency
 ^^^^^^^^
 Interprets the incoming value as an `ISO 4217 currency code`_.
 
-The resulting value is a :py:class:`moneyed.Currency` object (provided by
+The resulting value is a ``moneyed.Currency`` object (provided by
 the `py-moneyed library`_).
 
 .. code-block:: python
@@ -130,7 +130,7 @@ Locale
 Interprets the incoming value as an `IETF Language Tag`_ (also known as BCP
 47).
 
-The resulting value is a :py:class:`language_tags.Tag.Tag` object (provided
+The resulting value is a ``language_tags.Tag.Tag`` object (provided
 by the `language_tags library`_).
 
 .. code-block:: python
