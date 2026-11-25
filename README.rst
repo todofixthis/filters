@@ -287,6 +287,20 @@ Steps to build releases are based on
 
       git checkout main && git pull
 
+<<<<<<< before updating
+=======
+1. Build the Project
+~~~~~~~~~~~~~~~~~~~~~
+#. Set ``__version__`` in ``src/filters/__init__.py`` to the new version,
+   and merge that change into ``main`` through ``develop``. Hatch reads the version
+   from there, since ``pyproject.toml`` declares it dynamic.
+
+#. Check out ``main`` and pull, so the build and the tag below both carry the new
+   version::
+
+      git checkout main && git pull
+
+>>>>>>> after updating
 #. Delete artefacts from previous builds, if applicable::
 
     rm dist/*
@@ -300,12 +314,15 @@ Steps to build releases are based on
 
 2. Upload to PyPI
 ~~~~~~~~~~~~~~~~~
+<<<<<<< before updating
 #. One-time setup — install keyring and store your PyPI token::
 
     uv tool install keyring
     uv tool update-shell
     keyring set https://upload.pypi.org/legacy/ __token__
 
+=======
+>>>>>>> after updating
 #. Upload build artefacts to PyPI::
 
     uv publish --username __token__
