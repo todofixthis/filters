@@ -627,3 +627,34 @@ def test_per_run_state_child_thread_with_copied_context() -> None:
     runner = f.FilterRunner(f.FilterMapper({"a": Threaded()}), {"a": ""})
 
     assert runner.error_codes == {"a.t": [f.NotEmpty.CODE_EMPTY]}
+
+
+@pytest.mark.parametrize("through_filter", [False, True])
+def test_per_run_state_runner_overrides_handler_of_self_applying_filter(
+    through_filter: bool,
+) -> None:
+    """A runner receives the errors of a filter with its own handler at every depth the filter applies itself."""
+
+    class Nested(f.BaseFilter[Any]):
+        """Rejects an empty string, at any depth of nested lists."""
+
+        CODE_BAD = "bad"
+
+        templates = {
+            CODE_BAD: "Bad.",
+        }
+
+        def _apply(self, value: Any) -> Any:
+            if isinstance(value, list):
+                if through_filter:
+                    return [self._filter(item, self) for item in value]
+
+                return [self.apply(item) for item in value]
+
+            return value if value else self._invalid_value(value, self.CODE_BAD)
+
+    configured = f.MemoryHandler()
+    runner = f.FilterRunner(Nested().set_handler(configured), ["x", [""]])
+
+    assert runner.error_codes == {"": [Nested.CODE_BAD]}
+    assert configured.messages == {}

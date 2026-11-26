@@ -484,19 +484,29 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @staticmethod
     def _resolve_handler(frame: _Frame) -> "BaseInvalidValueHandler":
         """Finds the handler for the filter that ``frame`` belongs to."""
+        configured: Optional[BaseInvalidValueHandler] = None
+        configured_filter: Optional[BaseFilter[Any]] = None
+
         ancestor: Optional[_Frame] = frame
         while ancestor is not None:
             if ancestor.handler is not None:
-                return ancestor.handler
+                # The injected handler replaces the one set on the filter
+                # the run starts with, at whatever depth that filter is
+                # found: it may apply itself. Any other filter's own
+                # handler is nearer, and wins.
+                if configured is None or configured_filter is ancestor.filter:
+                    return ancestor.handler
 
-            # noinspection PyProtectedMember
-            configured = ancestor.filter._handler
-            if configured is not None:
                 return configured
+
+            if configured is None:
+                # noinspection PyProtectedMember
+                configured = ancestor.filter._handler
+                configured_filter = ancestor.filter
 
             ancestor = ancestor.parent
 
-        return ExceptionHandler()
+        return ExceptionHandler() if configured is None else configured
 
     def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter[T_out]":
         """Cascading method for setting the filter's invalid value

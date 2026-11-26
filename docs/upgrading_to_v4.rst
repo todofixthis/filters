@@ -312,8 +312,10 @@ change:
   raises under a :py:class:`filters.FilterRunner`, and the value is still
   rejected, but ``_apply()`` stops at the child's first error and the error
   loses its whole key: ``{'m.name': [...]}`` becomes ``{'': [...]}``. A filter
-  that calls its own ``self.apply()`` on the items of a nested value is
-  unaffected.
+  that calls its own ``self.apply()`` on the items of a nested value keeps its
+  key and handler. Its ``self._has_errors`` now covers the whole call, where
+  each ``self.apply()`` reset it, so it no longer says whether the last item
+  failed.
 * Call another filter's ``apply()``, never its ``_apply()``. A filter whose
   ``_apply()`` is called directly has no part in the run, so its
   ``self._has_errors`` checks never trip.
