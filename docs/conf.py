@@ -40,7 +40,10 @@ language = "en-nz"
 # own: keep them through a template-update conflict (see
 # https://github.com/todofixthis/cookiecutter-py/blob/main/docs/adr/024-fail-generated-docs-builds-on-unresolved-cross-references.md).
 nitpicky = True
-nitpick_ignore: list[tuple[str, str]] = []
+nitpick_ignore: list[tuple[str, str]] = [
+    # regex.Pattern's runtime class: regex publishes no Sphinx docs.
+    ("py:class", "_regex.Pattern"),
+]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
