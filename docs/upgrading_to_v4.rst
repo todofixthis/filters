@@ -81,10 +81,12 @@ before it is loud for some custom filters and silent for others:
        a custom filter applies a stored child with ``child.apply()``, or
        where code reads ``parent``, ``key``, ``handler`` or ``_has_errors``
        outside ``apply()``.
-     - ``rg -U 'resolve_filter\([^)]*\b(parent|key)\s*='`` and
-       ``rg '\._?(parent|key)\s*=[^=]'`` find the loud cases. Nothing
-       searches for the silent ones, so read each custom filter that holds
-       another filter against :ref:`upgrade-v4-run-state`.
+     - ``rg 'resolve_filter\('`` — a candidate list; check each hit for a
+       second or third argument. ``rg '\._?(parent|key)\s*=[^=]'`` finds
+       the assignments. For each filter these find, check how it applies the
+       child. ``rg '\._has_errors'`` — any hit outside an ``_apply`` method
+       is a silent case. Nothing narrower finds a read of ``parent``,
+       ``key`` or ``handler`` outside ``apply()``.
    * - :ref:`upgrade-v4-siblings`
      - **Nothing.** No exception, no warning — a check silently returns
        ``False`` and your code takes the other branch.
@@ -306,9 +308,12 @@ change:
   ``child.apply(value)``. In Filters v3, a child stored with
   ``resolve_filter(child, parent=self)`` reported under its parent's key and
   handler however it was applied. In Filters v4, ``child.apply()`` starts a run
-  of its own: the child raises :py:class:`filters.FilterError` unless it has a
-  handler set, and reports under no key. A filter that calls its own
-  ``self.apply()`` on the items of a nested value is unaffected.
+  of its own, which knows nothing of the filter that started it. Nothing
+  raises under a :py:class:`filters.FilterRunner`, and the value is still
+  rejected, but ``_apply()`` stops at the child's first error and the error
+  loses its whole key: ``{'m.name': [...]}`` becomes ``{'': [...]}``. A filter
+  that calls its own ``self.apply()`` on the items of a nested value is
+  unaffected.
 * Call another filter's ``apply()``, never its ``_apply()``. A filter whose
   ``_apply()`` is called directly has no part in the run, so its
   ``self._has_errors`` checks never trip.
@@ -327,11 +332,24 @@ change:
   ``is_valid()`` instead.
 * Don't store anything about the current value on ``self`` in ``_apply()``.
   Another run can be part-way through the same instance.
-* A filter that starts its own thread and calls ``self._filter()`` from it
-  must run that call in a copy of the context:
-  ``contextvars.copy_context().run(self._filter, value, child)``. Without the
-  copy, the thread can't see the run. The child's error then raises in the
-  thread, and the run can accept an invalid value.
+* A filter that calls ``self._filter()`` from a thread or a thread pool it
+  starts must hand the run to that thread. Without that, the thread can't see
+  the run: the child's error raises in the thread, and unless ``_apply()``
+  collects that exception, the run accepts an invalid value. Take a copy of
+  the context in ``_apply()``, one copy for each call, and run the call in it.
+  A copy taken inside the thread is empty, and one copy can't run two calls
+  at the same time.
+
+  .. code-block:: python
+
+     # Filters v3, in _apply
+     futures = [pool.submit(self._filter, item, child) for item in value]
+
+     # Filters v4, in _apply
+     futures = [
+         pool.submit(contextvars.copy_context().run, self._filter, item, child)
+         for item in value
+     ]
 
 What you set on a filter is still shared by every run that uses the filter. A
 handler set with ``set_handler()`` receives the errors of all of them, so a
