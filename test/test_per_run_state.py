@@ -658,3 +658,25 @@ def test_per_run_state_runner_overrides_handler_of_self_applying_filter(
 
     assert runner.error_codes == {"": [Nested.CODE_BAD]}
     assert configured.messages == {}
+
+
+def test_per_run_state_context_outliving_its_run() -> None:
+    """A filter called in a context copied during a finished run reports nothing to that run."""
+
+    class Captures(f.BaseFilter[Any]):
+        """Keeps a copy of the context it ran in, as a pool thread would."""
+
+        def _apply(self, value: Any) -> Any:
+            contexts.append(contextvars.copy_context())
+            return value
+
+    contexts: list[contextvars.Context] = []
+    captures = Captures()
+    finished = f.FilterRunner(f.FilterMapper({"a": captures}), {"a": "x"})
+    assert finished.is_valid()
+
+    with pytest.raises(f.FilterError) as exc_info:
+        contexts[0].run(captures._filter, "", f.NotEmpty)
+
+    assert exc_info.value.context["key"] == ""
+    assert finished.error_codes == {}

@@ -105,7 +105,15 @@ class _Frame:
     docs/adr/019-keep-per-run-state-off-filter-instances.md.
     """
 
-    __slots__ = ("filter", "handler", "has_errors", "key", "parent", "pending")
+    __slots__ = (
+        "closed",
+        "filter",
+        "handler",
+        "has_errors",
+        "key",
+        "parent",
+        "pending",
+    )
 
     def __init__(
         self,
@@ -127,6 +135,11 @@ class _Frame:
         self.has_errors = False
         # Whether ``the_filter.apply()`` has yet to claim this frame.
         self.pending = pending
+        # Whether that ``apply()`` call has returned. A context can outlive
+        # the run it was copied in (a pool thread that inherited it, say),
+        # and a closed frame found there must not pass for the run in
+        # progress.
+        self.closed = False
 
 
 # A ``ContextVar`` rather than an argument to ``apply``, whose signature
@@ -137,6 +150,15 @@ _current_frame: ContextVar[Optional[_Frame]] = ContextVar(
     default=None,
 )
 """The frame of the filter being applied in the current context."""
+
+
+def _live_frame() -> Optional[_Frame]:
+    """Returns the current frame, or ``None`` where the context holds none
+    or holds one left over from a run that has finished.
+    """
+    frame = _current_frame.get()
+
+    return None if frame is None or frame.closed else frame
 
 
 class FilterMeta(ABCMeta):
@@ -373,7 +395,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         ``apply()``, and the child may call back into it or read its
         ``key``. Nearest, because a filter that applies itself has several.
         """
-        frame = _current_frame.get()
+        frame = _live_frame()
         while frame is not None and frame.filter is not self:
             frame = frame.parent
 
@@ -524,10 +546,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             ``replacement`` (``None`` unless the caller overrode it)
             whenever the invalid value handler does not raise.
         """
-        current = _current_frame.get()
+        current = _live_frame()
         if current is not None and current.pending and current.filter is self:
             # ``_filter`` or ``apply_with_handler`` made this frame for
-            # this call, and resets the context when the call returns.
+            # this call, and resets the context and closes the frame when
+            # the call returns. It stays open until then, for an override
+            # that calls this method more than once.
             current.pending = False
             return self._apply_in_frame(value)
 
@@ -545,6 +569,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             return self._apply_in_frame(value)
         finally:
             _current_frame.reset(token)
+            frame.closed = True
 
             if outer is not None and frame.has_errors:
                 outer.has_errors = True
@@ -567,11 +592,14 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
                 handler set on this filter, if any. A filter this one
                 applies that has a handler of its own still uses it.
         """
-        token = _current_frame.set(_Frame(self, handler=handler, pending=True))
+        frame = _Frame(self, handler=handler, pending=True)
+
+        token = _current_frame.set(frame)
         try:
             return self.apply(value)
         finally:
             _current_frame.reset(token)
+            frame.closed = True
 
     def _apply_in_frame(self, value: Any) -> Optional[T_out]:
         """Runs the filter's logic once :py:meth:`apply` has put this
@@ -631,7 +659,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         if resolved is None:
             return value
 
-        current = _current_frame.get()
+        current = _live_frame()
         own_frame = (
             current if current is not None and current.filter is self else self._frame
         )
@@ -653,6 +681,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
                 # Before ``_invalid_value`` runs, which looks up this
                 # filter's own frame.
                 _current_frame.reset(token)
+                frame.closed = True
         # Any exception becomes an invalid value, which the handler reports.
         except Exception as e:  # noqa: BLE001
             return self._invalid_value(value, e, exc_info=True)

@@ -302,7 +302,8 @@ change:
      result = self._filter(value, self._child, sub_key='name')
 
 * ``parent`` and ``key`` are read-only, and assigning either raises
-  :py:class:`AttributeError`. To file a child filter's errors under a key,
+  :py:class:`AttributeError`. Assigning the private ``_parent`` or ``_key``
+  raises nothing and does nothing. To file a child filter's errors under a key,
   pass it when you apply the child: ``self._filter(value, child, sub_key='name')``.
 * Apply a child filter with ``self._filter(value, child)``, not
   ``child.apply(value)``. In Filters v3, a child stored with
@@ -337,7 +338,10 @@ change:
 * A filter that calls ``self._filter()`` from a thread or a thread pool it
   starts must hand the run to that thread. Without that, the thread can't see
   the run: the child's error raises in the thread, and unless ``_apply()``
-  collects that exception, the run accepts an invalid value. Take a copy of
+  collects that exception, the run accepts an invalid value. That holds on
+  every interpreter, including a free-threaded build whose threads inherit a
+  context: a pool thread inherits it once, from the run that started the
+  thread. Take a copy of
   the context in ``_apply()``, one copy for each call, and run the call in it.
   A copy taken inside the thread is empty, and one copy can't run two calls
   at the same time.
