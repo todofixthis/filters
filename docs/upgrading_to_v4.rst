@@ -4,8 +4,8 @@ Upgrading to Filters v4
 `Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0a2>`_ makes
 every filter generic over its output type, so a type checker can follow a value
 all the way through a chain. That part is free — your own filters need no
-changes. But three changes can break code that worked in Filters v3, and one of
-them fails silently. A few bug fixes also change results; see
+changes. But four changes can break code that worked in Filters v3, and two of
+them can do it silently. A few bug fixes also change results; see
 :ref:`upgrade-v4-bug-fixes`. And if you run mypy, it checks your calls into
 Filters for the first time, which can report errors in code you haven't
 touched; see :ref:`upgrade-v4-type-parameters`.
@@ -48,7 +48,8 @@ At a Glance
 -----------
 Ordered by how likely each is to affect your code, not by how loud the
 failure is — the last one gives no warning at all, but tripping it takes a
-subclass check on these specific filters, which most code never does:
+subclass check on these specific filters, which most code never does. The one
+before it is loud for some custom filters and silent for others:
 
 .. list-table::
    :header-rows: 1
@@ -71,6 +72,19 @@ subclass check on these specific filters, which most code never does:
        built at module scope, that's on import.
      - ``rg -U 'Split\([^)]*,'`` — a candidate list to eyeball; check each
        hit for a ``keys`` argument
+   * - :ref:`upgrade-v4-run-state`
+     - :py:class:`TypeError` or :py:class:`AttributeError` when a custom
+       filter is *constructed*, if its ``__init__`` passes ``parent`` or
+       ``key`` to ``resolve_filter()`` or assigns either attribute. If its
+       ``_apply`` does, every value fails with the code ``exception``. Only
+       custom filters that hold other filters do either. **Nothing** where
+       a custom filter applies a stored child with ``child.apply()``, or
+       where code reads ``parent``, ``key``, ``handler`` or ``_has_errors``
+       outside ``apply()``.
+     - ``rg -U 'resolve_filter\([^)]*\b(parent|key)\s*='`` and
+       ``rg '\._?(parent|key)\s*=[^=]'`` find the loud cases. Nothing
+       searches for the silent ones, so read each custom filter that holds
+       another filter against :ref:`upgrade-v4-run-state`.
    * - :ref:`upgrade-v4-siblings`
      - **Nothing.** No exception, no warning — a check silently returns
        ``False`` and your code takes the other branch.
@@ -214,7 +228,7 @@ ByteString and Date are no longer subclasses
       >>> isinstance(f.ByteString(), f.Unicode)
       False
 
-**This is the one change nothing will tell you about.** There is no exception
+**Nothing will tell you about this change.** There is no exception
 and no warning: a check that used to be ``True`` is now ``False``, and whatever
 branch depended on it quietly stops running. Search for ``ByteString`` and
 ``Date`` wherever you use ``isinstance()`` or ``issubclass()`` — both are
@@ -247,6 +261,85 @@ public replacement — the shared base classes are private. Test against the pai
    produce the same output as they did in Filters v3, so code that simply *uses*
    them needs no changes.
 
+.. _upgrade-v4-run-state:
+
+Filters keep nothing from a run
+-------------------------------
+In Filters v3, a filter instance remembered which filter last applied it, the
+key it was applied under, and whether it had found an error. Filters that share
+an instance could therefore swap errors; :ref:`upgrade-v4-bug-fixes` lists what
+that caused. Sharing is common: after ``Text = f.Unicode | f.Strip``,
+``Text | f.MaxLength(50)`` and ``Text | f.MaxLength(2000)`` hold the same
+``Unicode`` and ``Strip`` instances.
+
+In Filters v4, a filter instance holds its configuration and nothing else.
+Everything that belongs to a run lives with the run, so any number of threads
+can apply the same filter at the same time.
+
+Most custom filters need no changes. ``_apply()``, ``self._filter()``,
+``self._invalid_value()`` and ``self._has_errors`` work as before. These do
+change:
+
+* ``resolve_filter()`` no longer takes ``parent`` or ``key``, and passing
+  either raises :py:class:`TypeError`. Delete the argument: ``self._filter()``
+  supplies both each time it applies the filter. In ``__init__``, the
+  exception stops the filter from being constructed. In ``_apply()``, Filters
+  catches it like any other exception, so the filter rejects every value with
+  the code ``exception``. If you passed ``key``, pass it to ``self._filter()``
+  as ``sub_key`` instead, or the child's errors lose that part of their key.
+
+  .. code-block:: python
+
+     # Filters v3, in __init__
+     self._child = self.resolve_filter(child, parent=self, key='name')
+
+     # Filters v4, in __init__
+     self._child = self.resolve_filter(child)
+
+     # Filters v4, in _apply
+     result = self._filter(value, self._child, sub_key='name')
+
+* ``parent`` and ``key`` are read-only, and assigning either raises
+  :py:class:`AttributeError`. To file a child filter's errors under a key,
+  pass it when you apply the child: ``self._filter(value, child, sub_key='name')``.
+* Apply a child filter with ``self._filter(value, child)``, not
+  ``child.apply(value)``. In Filters v3, a child stored with
+  ``resolve_filter(child, parent=self)`` reported under its parent's key and
+  handler however it was applied. In Filters v4, ``child.apply()`` starts a run
+  of its own: the child raises :py:class:`filters.FilterError` unless it has a
+  handler set, and reports under no key. A filter that calls its own
+  ``self.apply()`` on the items of a nested value is unaffected.
+* Call another filter's ``apply()``, never its ``_apply()``. A filter whose
+  ``_apply()`` is called directly has no part in the run, so its
+  ``self._has_errors`` checks never trip.
+* ``parent``, ``key`` and ``handler`` describe the run in progress. Inside
+  ``_apply()``, for a filter applied through ``self._filter()``, they hold what
+  they held in Filters v3. Outside ``apply()``,
+  ``parent`` is ``None``, ``key`` is an empty string, and ``handler`` is the
+  handler set on that filter, or an :py:class:`filters.ExceptionHandler` if
+  none is set. They no longer reflect the chain or mapper that holds the
+  filter, so a filter applied on its own no longer reports to the handler of a
+  chain that also holds it.
+* ``self._has_errors`` is ``False`` outside ``apply()``, where Filters v3
+  kept the result of the last call. Read it inside ``_apply()``. Code that
+  reads ``some_filter._has_errors`` after ``some_filter.apply()`` now treats
+  every value as valid: use a :py:class:`filters.FilterRunner` and its
+  ``is_valid()`` instead.
+* Don't store anything about the current value on ``self`` in ``_apply()``.
+  Another run can be part-way through the same instance.
+* A filter that starts its own thread and calls ``self._filter()`` from it
+  must run that call in a copy of the context:
+  ``contextvars.copy_context().run(self._filter, value, child)``. Without the
+  copy, the thread can't see the run. The child's error then raises in the
+  thread, and the run can accept an invalid value.
+
+What you set on a filter is still shared by every run that uses the filter. A
+handler set with ``set_handler()`` receives the errors of all of them, so a
+:py:class:`filters.MemoryHandler` set on a shared filter mixes their messages.
+To collect one run's errors, use a :py:class:`filters.FilterRunner`, or
+``apply_with_handler()``; see :ref:`upgrade-v4-while-youre-here`. A
+``FilterRunner`` object itself holds one result, so give each thread its own.
+
 .. _upgrade-v4-bug-fixes:
 
 Bug Fixes That Change Results
@@ -275,6 +368,20 @@ check your code if any of these apply:
   exception the filter reported. Where a custom filter catches one exception
   and reports another, it holds the reported one, whose traceback is ``None``
   unless it was raised.
+* Two threads that ran filters sharing an instance could swap errors: one run
+  accepted an invalid value, and the other rejected a valid one. Filters share
+  an instance whenever one chain is extended twice with ``|``, nested in two
+  filters, or run by two :py:class:`filters.FilterRunner` objects. Each run now
+  gets its own errors, under its own keys. See :ref:`upgrade-v4-run-state`.
+* A filter that a :py:class:`filters.FilterMapper` held filed its errors under
+  the mapper's key wherever else it ran, even on one thread:
+  after ``f.FilterMapper({'a': chain})``, ``f.FilterRunner(chain, '')`` gave
+  ``{'a': [...]}``. It now gives ``{'': [...]}``.
+* A :py:class:`filters.FilterRunner` left an
+  :py:class:`filters.ExceptionHandler` set on its filter after the first run.
+  Two runners that overlapped could leave the filter reporting to a finished
+  run, so a later ``apply()`` returned ``None`` for an invalid value instead of
+  raising. A runner now leaves its filter as it found it.
 
 .. _upgrade-v4-type-parameters:
 
@@ -455,8 +562,21 @@ type instead:
    pyright infers ``FilterChain[str]`` in every one of these forms, and runtime
    behaviour is identical throughout.
 
+.. _upgrade-v4-while-youre-here:
+
 While You're Here
 -----------------
+``apply_with_handler()`` applies a filter with an invalid value handler for
+that one call. Unlike ``set_handler()``, it leaves the filter unchanged, so it
+is the one to use on a filter that other threads apply too:
+
+.. code-block:: python
+
+   >>> handler = f.MemoryHandler()
+   >>> (f.Unicode | f.NotEmpty).apply_with_handler("", handler)
+   >>> [message.code for message in handler.messages[""]]
+   ['empty']
+
 :py:class:`filters.FilterMapper` now accepts sequence input. Where every key in
 ``filter_map`` is a non-``bool`` :py:class:`int`, a :py:class:`list` or
 :py:class:`tuple` is filtered by position and returned as a :py:class:`list`:

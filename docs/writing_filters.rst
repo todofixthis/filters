@@ -130,6 +130,12 @@ To create a new filter, write a class that extends
         extra_bytes = self.block_size - (len(value) % self.block_size)
         return value + bytes([extra_bytes] * extra_bytes)
 
+A filter instance holds its configuration and nothing about the value it is
+filtering. Set configuration as a class attribute, as ``block_size`` is above,
+or in ``__init__``, which must call ``super().__init__()`` first. Never assign
+to ``self`` in ``_apply``: one filter instance can be part of many chains, and
+several threads can apply it at the same time, so whatever ``_apply`` writes to
+``self`` is shared between those runs.
 
 Validation
 ^^^^^^^^^^
