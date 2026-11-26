@@ -84,9 +84,12 @@ before it is loud for some custom filters and silent for others:
      - ``rg 'resolve_filter\('`` — a candidate list; check each hit for a
        second or third argument. ``rg '\._?(parent|key)\s*=[^=]'`` finds
        the assignments. For each filter these find, check how it applies the
-       child. ``rg '\._has_errors'`` — any hit outside an ``_apply`` method
-       is a silent case. Nothing narrower finds a read of ``parent``,
-       ``key`` or ``handler`` outside ``apply()``.
+       child. ``rg '_apply_item'`` finds a ``FilterMapper`` or
+       ``FilterRepeater`` subclass that applies its children itself.
+       ``rg '\._has_errors'`` — a hit outside an ``_apply`` method, or one
+       that reads another filter's flag, is a silent case. Nothing narrower
+       finds a read of ``parent``, ``key`` or ``handler`` outside
+       ``apply()``.
    * - :ref:`upgrade-v4-siblings`
      - **Nothing.** No exception, no warning — a check silently returns
        ``False`` and your code takes the other branch.
@@ -316,7 +319,16 @@ change:
   that calls its own ``self.apply()`` on the items of a nested value keeps its
   key and handler. Its ``self._has_errors`` now covers the whole call, where
   each ``self.apply()`` reset it, so it no longer says whether the last item
-  failed.
+  failed. The same holds for an ``apply()`` override that calls
+  ``super().apply()`` more than once: an error from an earlier call stays on
+  the flag, so a chain stops after the filter.
+* A subclass of :py:class:`filters.FilterMapper`,
+  :py:class:`filters.FilterRepeater` or :py:class:`filters.FilterChain` that
+  applies a stored child itself follows the same rule. In Filters v3 the
+  constructor gave each child its key, so an ``_apply_item()`` override that
+  called ``self._filter(value, filter_chain)`` still reported under the right
+  key. Pass ``sub_key`` in the override, as the base method does, or every
+  child reports under the mapper's own key.
 * Call another filter's ``apply()``, never its ``_apply()``. A filter whose
   ``_apply()`` is called directly has no part in the run, so its
   ``self._has_errors`` checks never trip.
@@ -332,7 +344,15 @@ change:
   kept the result of the last call. Read it inside ``_apply()``. Code that
   reads ``some_filter._has_errors`` after ``some_filter.apply()`` now treats
   every value as valid: use a :py:class:`filters.FilterRunner` and its
-  ``is_valid()`` instead.
+  ``is_valid()`` instead. A filter that reads a child's flag after
+  ``self._filter(value, child)`` gets ``False`` too. Read its own
+  ``self._has_errors``, which ``_filter()`` sets when the child fails.
+* A handler assigned to ``self.handler`` inside ``_apply()`` no longer takes a
+  child's errors where the filter is the one a
+  :py:class:`filters.FilterRunner` runs: the runner's handler replaces the
+  filter's own for the whole run. To try a child without reporting its
+  errors, use ``child.apply_with_handler(value, f.MemoryHandler())`` and read
+  that handler's ``messages``.
 * Don't store anything about the current value on ``self`` in ``_apply()``.
   Another run can be part-way through the same instance.
 * A filter that calls ``self._filter()`` from a thread or a thread pool it
@@ -350,6 +370,10 @@ change:
      # Filters v4, in _apply
      bound = self._bind_to_run(self._filter)
      futures = [pool.submit(bound, item, child) for item in value]
+
+  The wrapped call is part of the run until it returns, so it must do its
+  work before then. A generator method such as ``self.iter`` returns before
+  its body runs: wrap ``lambda: list(self.iter(value))`` instead.
 
   Wait for the threads before ``_apply()`` returns. A wrapped call that starts
   after ``_apply()`` has returned has no run to report to, so its error raises

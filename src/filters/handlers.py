@@ -364,7 +364,6 @@ class FilterRunner(Generic[T_out]):  # noqa: UP046
         """
         if self._handler is None:
             handler = MemoryHandler(self.capture_exc_info)
-            self._handler = handler
 
             # The handler goes to this run rather than onto the filter,
             # which other runners may be applying at the same time.
@@ -372,6 +371,10 @@ class FilterRunner(Generic[T_out]):  # noqa: UP046
                 self.data,
                 handler,
             )
+
+            # Stored once the run has returned: an exception that escapes
+            # it would otherwise leave a runner that reports itself valid.
+            self._handler = handler
 
             return handler
 

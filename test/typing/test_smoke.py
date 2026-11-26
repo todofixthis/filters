@@ -55,7 +55,7 @@ def test_smoke_resolve_filter_return_type_is_optional_base_filter() -> None:
 
 
 def test_smoke_apply_with_handler_return_type_matches_apply() -> None:
-    """``apply_with_handler`` returns what ``apply`` does for the same filter."""
+    """``apply_with_handler`` returns what ``apply`` does for the filter."""
     assert_type(
         f.Unicode().apply_with_handler("", f.MemoryHandler()),
         Optional[str],

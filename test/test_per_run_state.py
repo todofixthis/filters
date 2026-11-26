@@ -207,7 +207,7 @@ def run_together(
 
 @pytest.mark.parametrize("route", ROUTES)
 def test_per_run_state_threads_one_invalid(route: Callable[[], Route]) -> None:
-    """An invalid run and a valid run sharing filters each get their own result."""
+    """An invalid and a valid run sharing filters each get their own result."""
     filter_a, filter_b, wrap, key_a, _ = route()
     runner_a = f.FilterRunner(filter_a, wrap(""))
     runner_b = f.FilterRunner(filter_b, wrap("ok"))
@@ -220,7 +220,7 @@ def test_per_run_state_threads_one_invalid(route: Callable[[], Route]) -> None:
 
 @pytest.mark.parametrize("route", ROUTES)
 def test_per_run_state_threads_both_invalid(route: Callable[[], Route]) -> None:
-    """Two invalid runs sharing filters each file one error, under their own key."""
+    """Two invalid runs sharing filters each file one error, under its key."""
     filter_a, filter_b, wrap, key_a, key_b = route()
     runner_a = f.FilterRunner(filter_a, wrap(""))
     runner_b = f.FilterRunner(filter_b, wrap(""))
@@ -232,10 +232,10 @@ def test_per_run_state_threads_both_invalid(route: Callable[[], Route]) -> None:
 
 
 def test_per_run_state_nested_run_keeps_its_errors() -> None:
-    """A run started and finished inside another, over the same filters, takes none of its errors."""
+    """A run nested in another over the same filters takes no errors from it."""
 
     class RunAgain(f.BaseFilter[str]):
-        """Runs the chain holding it a second time, part-way through the first."""
+        """Runs the chain that holds it again, part-way through a run."""
 
         def _apply(self, value: str) -> str:
             if not inner_runners:
@@ -268,7 +268,7 @@ def test_per_run_state_runner_leaves_handler(
 
 
 def test_per_run_state_runner_leaves_shared_sub_filter_handler() -> None:
-    """A FilterRunner on a filter another chain holds leaves its handler unset."""
+    """A runner on a filter another chain holds leaves its handler unset."""
     not_empty = f.NotEmpty()
     (f.Unicode | not_empty).set_handler(f.MemoryHandler())
 
@@ -278,7 +278,7 @@ def test_per_run_state_runner_leaves_shared_sub_filter_handler() -> None:
 
 
 def test_per_run_state_runner_overrides_configured_handler() -> None:
-    """A FilterRunner receives the errors of a chain that has its own handler."""
+    """A runner receives the errors of a chain that has its own handler."""
     configured = f.MemoryHandler()
     chain = (f.Unicode | f.NotEmpty).set_handler(configured)
 
@@ -317,7 +317,7 @@ STALE_KEY_SETUPS = [
 
 @pytest.mark.parametrize("setup", STALE_KEY_SETUPS)
 def test_per_run_state_key_in_chain(setup: Callable[[], f.BaseFilter[Any]]) -> None:
-    """A filter a mapper also holds files its errors under the chain's key, not the mapper's."""
+    """A filter a mapper also holds reports under the chain's key."""
     runner = f.FilterRunner(f.Unicode | setup(), "")
 
     assert runner.error_codes == {"": [f.NotEmpty.CODE_EMPTY]}
@@ -327,7 +327,7 @@ def test_per_run_state_key_in_chain(setup: Callable[[], f.BaseFilter[Any]]) -> N
 def test_per_run_state_key_run_directly(
     setup: Callable[[], f.BaseFilter[Any]],
 ) -> None:
-    """A filter a mapper also holds files its errors under no key when a runner runs it."""
+    """A filter a mapper also holds reports under no key under a runner."""
     runner = f.FilterRunner(setup(), "")
 
     assert runner.error_codes == {"": [f.NotEmpty.CODE_EMPTY]}
@@ -337,7 +337,7 @@ def test_per_run_state_key_run_directly(
 def test_per_run_state_key_plain_apply(
     setup: Callable[[], f.BaseFilter[Any]],
 ) -> None:
-    """A filter a mapper also holds files its errors under no key when applied directly."""
+    """A filter a mapper also holds reports under no key on a plain apply()."""
     with pytest.raises(f.FilterError) as exc_info:
         setup().apply("")
 
@@ -361,7 +361,7 @@ def test_per_run_state_parent_and_key_follow_the_run() -> None:
 
 
 def test_per_run_state_parent_and_key_outside_a_run() -> None:
-    """Outside apply(), a filter has no parent, key or error flag, whatever holds it."""
+    """Outside apply(), a filter has no parent, key or error flag."""
     not_empty = f.NotEmpty()
     mapper = f.FilterMapper({"a": not_empty})
     assert not f.FilterRunner(mapper, {"a": ""}).is_valid()
@@ -373,18 +373,20 @@ def test_per_run_state_parent_and_key_outside_a_run() -> None:
 
 
 def test_per_run_state_parent_and_key_are_read_only() -> None:
-    """Assigning a parent or key raises, because neither is the filter's to keep."""
+    """Assigning a parent or key raises: neither is the filter's to keep."""
     not_empty = f.NotEmpty()
 
     with pytest.raises(AttributeError):
+        # mypy rejects the assignment this test makes on purpose.
         not_empty.parent = f.NoOp()  # type: ignore[misc]
 
     with pytest.raises(AttributeError):
+        # mypy rejects the assignment this test makes on purpose.
         not_empty.key = "a"  # type: ignore[misc]
 
 
 def test_per_run_state_recursive_filter() -> None:
-    """A filter that applies itself keeps a separate key and error flag at each depth."""
+    """A filter that applies itself keeps its own key at each depth."""
 
     class Tree(f.BaseFilter[Any]):
         """A node: a non-empty ``name`` and a list of child nodes."""
@@ -415,7 +417,7 @@ def test_per_run_state_recursive_filter() -> None:
 
 
 def test_per_run_state_direct_apply_starts_its_own_run() -> None:
-    """A filter applied with apply() inside another's _apply takes no key or handler from it."""
+    """apply() inside another filter's _apply takes no key or handler."""
 
     class Direct(f.BaseFilter[Any]):
         """Applies ``NotEmpty`` without going through ``_filter``."""
@@ -435,7 +437,7 @@ def test_per_run_state_direct_apply_starts_its_own_run() -> None:
 
 
 def test_per_run_state_overridden_apply_joins_the_run() -> None:
-    """A filter that overrides apply() still reports under its parent's key and handler."""
+    """A filter that overrides apply() still reports under its parent's key."""
 
     class Loud(f.Unicode):
         """Overrides ``apply``, as a filter that wraps every call might."""
@@ -449,7 +451,7 @@ def test_per_run_state_overridden_apply_joins_the_run() -> None:
 
 
 def test_per_run_state_iter_outside_apply_uses_configured_handler() -> None:
-    """FilterRepeater.iter() called directly sends item errors to the repeater's own handler."""
+    """iter() called directly reports to the repeater's own handler."""
     handler = f.MemoryHandler()
     repeater = f.FilterRepeater(f.NotEmpty).set_handler(handler)
     assert isinstance(repeater, f.FilterRepeater)
@@ -461,7 +463,7 @@ def test_per_run_state_iter_outside_apply_uses_configured_handler() -> None:
 
 
 def test_per_run_state_apply_with_handler() -> None:
-    """apply_with_handler() sends one call's errors to its handler and leaves the filter alone."""
+    """apply_with_handler() takes one call's errors and leaves the filter be."""
     configured = f.MemoryHandler()
     handler = f.MemoryHandler()
     chain = (f.Unicode | f.NotEmpty).set_handler(configured)
@@ -474,7 +476,7 @@ def test_per_run_state_apply_with_handler() -> None:
 
 
 def test_per_run_state_apply_with_handler_nested_handler_wins() -> None:
-    """A nested filter with its own handler keeps it under apply_with_handler()."""
+    """A nested filter's own handler wins under apply_with_handler()."""
     nested = f.MemoryHandler()
     handler = f.MemoryHandler()
     chain = f.Unicode | f.NotEmpty().set_handler(nested)
@@ -486,7 +488,7 @@ def test_per_run_state_apply_with_handler_nested_handler_wins() -> None:
 
 
 def test_per_run_state_handler_outside_a_run() -> None:
-    """Outside apply(), a filter's handler is its own or the default, never a holder's."""
+    """Outside apply(), a filter's handler is its own, never a holder's."""
     not_empty = f.NotEmpty()
     chain = (f.Unicode | not_empty).set_handler(f.MemoryHandler())
 
@@ -495,7 +497,7 @@ def test_per_run_state_handler_outside_a_run() -> None:
 
 
 def test_per_run_state_copy_keeps_handler() -> None:
-    """Copying a filter keeps its configured handler, the only state BaseFilter stores."""
+    """Copying a filter keeps its handler, all the state BaseFilter stores."""
     handler = f.MemoryHandler()
     not_empty = f.NotEmpty().set_handler(handler)
 
@@ -506,7 +508,7 @@ def test_per_run_state_copy_keeps_handler() -> None:
 
 
 def test_per_run_state_ancestor_state_while_child_runs() -> None:
-    """A filter keeps its key and handler in the run while a child it applies is running."""
+    """A filter keeps its key and handler while a child it applies runs."""
 
     class ReadsParent(f.BaseFilter[Any]):
         """Records what its parent reports while this filter runs."""
@@ -529,10 +531,10 @@ def test_per_run_state_ancestor_state_while_child_runs() -> None:
 
 
 def test_per_run_state_callback_into_ancestor() -> None:
-    """An error a filter reports from a callback its child runs is filed under that filter's key."""
+    """A callback a child runs reports under the key of the filter it is on."""
 
     class Checks(f.BaseFilter[Any]):
-        """Hands a bound method to a child, which calls back into this filter."""
+        """Hands a child a bound method that calls back into this filter."""
 
         CODE_ODD = "odd"
 
@@ -556,10 +558,10 @@ def test_per_run_state_callback_into_ancestor() -> None:
 
 
 def test_per_run_state_iter_inside_another_filter() -> None:
-    """A mapper's iter() called from another filter's _apply reports under that filter's key."""
+    """iter() inside another filter's _apply reports under that filter's key."""
 
     class Iterates(f.BaseFilter[Any]):
-        """Consumes a mapper it built through ``iter()`` instead of ``_filter``."""
+        """Consumes a mapper through ``iter()`` instead of ``_filter``."""
 
         def _apply(self, value: Any) -> Any:
             return dict(f.FilterMapper({"x": f.NotEmpty}).iter(value))
@@ -571,7 +573,7 @@ def test_per_run_state_iter_inside_another_filter() -> None:
 
 
 def test_per_run_state_filter_applies_itself() -> None:
-    """A filter that calls its own apply() on nested items keeps the run's key and handler."""
+    """A filter that calls its own apply() keeps the run's key and handler."""
 
     class Nested(f.BaseFilter[Any]):
         """Rejects an empty string, at any depth of nested lists."""
@@ -595,7 +597,7 @@ def test_per_run_state_filter_applies_itself() -> None:
 
 
 def test_per_run_state_overridden_apply_called_twice() -> None:
-    """A filter whose apply() calls the base apply() twice reports both calls under its key."""
+    """An apply() that calls the base twice reports both calls under its key."""
 
     class Twice(f.NotEmpty):
         """Applies the base filter to each half of a pair."""
@@ -626,7 +628,7 @@ def run_on_thread(func: Callable[[], Any]) -> list[Any]:
 
 
 def test_per_run_state_child_thread_bound_to_run() -> None:
-    """A child applied on another thread through _bind_to_run() reports to the run under the filter's key."""
+    """A child applied on a thread through _bind_to_run() reports to the run."""
 
     class Threaded(f.BaseFilter[Any]):
         """Applies ``NotEmpty`` to its value on another thread."""
@@ -645,7 +647,7 @@ def test_per_run_state_child_thread_bound_to_run() -> None:
 
 
 def test_per_run_state_thread_with_run_context_is_not_in_the_run() -> None:
-    """A thread that holds a live run's context, as an inheriting interpreter gives it, takes no part in that run."""
+    """A thread holding a live run's context takes no part in that run."""
 
     class Threaded(f.BaseFilter[Any]):
         """Calls itself on another thread, in a copy of the run's context."""
@@ -675,7 +677,7 @@ def test_per_run_state_thread_with_run_context_is_not_in_the_run() -> None:
 
 
 def test_per_run_state_bound_callable_after_the_run() -> None:
-    """A callable bound to a run that has finished runs with no run, and reports nothing to it."""
+    """A callable bound to a finished run reports nothing to it."""
 
     class Binds(f.BaseFilter[Any]):
         """Hands out a callable bound to its run."""
@@ -698,7 +700,7 @@ def test_per_run_state_bound_callable_after_the_run() -> None:
 def test_per_run_state_runner_overrides_handler_of_self_applying_filter(
     through_filter: bool,
 ) -> None:
-    """A runner receives the errors of a filter with its own handler at every depth the filter applies itself."""
+    """A runner gets a self-applying filter's errors at every depth."""
 
     class Nested(f.BaseFilter[Any]):
         """Rejects an empty string, at any depth of nested lists."""
@@ -726,7 +728,7 @@ def test_per_run_state_runner_overrides_handler_of_self_applying_filter(
 
 
 def test_per_run_state_context_outliving_its_run() -> None:
-    """A filter called in a context copied during a finished run reports nothing to that run."""
+    """A context copied during a finished run reports nothing to that run."""
 
     class Captures(f.BaseFilter[Any]):
         """Keeps a copy of the context it ran in, as a pool thread would."""
@@ -745,3 +747,199 @@ def test_per_run_state_context_outliving_its_run() -> None:
 
     assert exc_info.value.context["key"] == ""
     assert finished.error_codes == {}
+
+
+def test_per_run_state_ancestor_filter_on_bound_thread() -> None:
+    """A callback into an ancestor from a bound thread keeps its key."""
+
+    class Outer(f.BaseFilter[Any]):
+        """Applies ``Inner``, which calls back into this one from a thread."""
+
+        def _apply(self, value: Any) -> Any:
+            result = self._filter(value, Inner(self))
+            flags.append(self._has_errors)
+            return result
+
+        def check(self, value: Any) -> Any:
+            return self._filter(value, f.NotEmpty, sub_key="cb")
+
+    class Inner(f.BaseFilter[Any]):
+        """Runs the outer filter's check on another thread."""
+
+        def __init__(self, outer: Outer) -> None:
+            super().__init__()
+
+            self.outer = outer
+
+        def _apply(self, value: Any) -> Any:
+            bound = self._bind_to_run(self.outer.check)
+            run_on_thread(lambda: bound(value))
+            return value
+
+    flags: list[bool] = []
+    runner = f.FilterRunner(f.FilterMapper({"a": Outer()}), {"a": ""})
+
+    assert runner.error_codes == {"a.cb": [f.NotEmpty.CODE_EMPTY]}
+    assert flags == [True]
+
+
+@pytest.mark.parametrize("own_handler", [False, True])
+def test_per_run_state_handler_beneath_reapplied_first_filter(
+    own_handler: bool,
+) -> None:
+    """A nested handler gets the first filter's deeper errors either way."""
+
+    class Rec(f.BaseFilter[Any]):
+        """Rejects ``0``, and recurses into lists through ``Mid``."""
+
+        CODE_BAD = "bad"
+
+        templates = {
+            CODE_BAD: "Bad.",
+        }
+
+        def _apply(self, value: Any) -> Any:
+            if isinstance(value, list):
+                return [self._filter(item, middle) for item in value]
+
+            return value if value else self._invalid_value(value, self.CODE_BAD)
+
+    class Mid(f.BaseFilter[Any]):
+        """Applies ``Rec`` again, with a handler of its own set."""
+
+        def _apply(self, value: Any) -> Any:
+            return self._filter(value, rec)
+
+    nested = f.MemoryHandler()
+    unused = f.MemoryHandler()
+    rec = Rec()
+    middle = Mid().set_handler(nested)
+    if own_handler:
+        rec.set_handler(unused)
+
+    runner = f.FilterRunner(rec, [1, 0])
+
+    assert runner.error_codes == {}
+    assert [m.code for m in nested.messages[""]] == [Rec.CODE_BAD]
+    assert unused.messages == {}
+
+
+def test_per_run_state_iter_inside_another_filter_own_errors() -> None:
+    """A mapper consumed through iter() reports its own errors in the run."""
+
+    class Iterates(f.BaseFilter[Any]):
+        """Consumes a strict mapper through ``iter()``."""
+
+        def _apply(self, value: Any) -> Any:
+            mapper = f.FilterMapper({"x": f.NotEmpty}, allow_extra_keys=False)
+            return dict(mapper.iter(value))
+
+    runner = f.FilterRunner(
+        f.FilterMapper({"a": Iterates()}),
+        {"a": {"x": "", "y": 1}},
+    )
+
+    assert runner.error_codes == {
+        "a.x": [f.NotEmpty.CODE_EMPTY],
+        "a.y": [f.FilterMapper.CODE_EXTRA_KEY],
+    }
+
+
+def test_per_run_state_bound_to_frameless_filter_after_the_run() -> None:
+    """A callable bound to a filter run through iter() ends with that call."""
+
+    class Child(f.BaseFilter[Any]):
+        """Hands out a callable bound to the repeater applying it."""
+
+        def _apply(self, value: Any) -> Any:
+            parent = self.parent
+            assert parent is not None
+            bound.append(parent._bind_to_run(parent._filter))
+            return value
+
+    class UsesIter(f.BaseFilter[Any]):
+        """Consumes a repeater through ``iter()``."""
+
+        def _apply(self, value: Any) -> Any:
+            return list(f.FilterRepeater(Child()).iter(value))
+
+    bound: list[Callable[..., Any]] = []
+    finished = f.FilterRunner(f.FilterMapper({"a": UsesIter()}), {"a": ["v"]})
+    assert finished.is_valid()
+
+    with pytest.raises(f.FilterError):
+        bound[0]("", f.NotEmpty, "late")
+
+    assert finished.error_codes == {}
+
+
+def test_per_run_state_parent_skips_the_filters_own_frames() -> None:
+    """A filter that applies itself still has the filter above it as parent."""
+
+    class Nested(f.BaseFilter[Any]):
+        """Records its parent at each depth of nested lists."""
+
+        def _apply(self, value: Any) -> Any:
+            parents.append(self.parent)
+
+            if isinstance(value, list):
+                return [self.apply(item) for item in value]
+
+            return value
+
+    parents: list[Optional[f.BaseFilter[Any]]] = []
+    mapper = f.FilterMapper({"a": Nested()})
+
+    mapper.apply({"a": [1]})
+
+    assert parents == [mapper, mapper]
+
+
+def test_per_run_state_filter_uses_resolve_filter_override() -> None:
+    """_filter() resolves a filter instance through a resolve_filter()."""
+
+    class Wraps(f.BaseFilter[Any]):
+        """Wraps every child it applies in ``Optional``."""
+
+        @classmethod
+        def resolve_filter(cls, the_filter: Any) -> Any:
+            resolved = super().resolve_filter(the_filter)
+            return None if resolved is None else resolved | f.Optional("default")
+
+        def _apply(self, value: Any) -> Any:
+            return self._filter(value, f.NoOp())
+
+    assert Wraps().apply("") == "default"
+
+
+def test_per_run_state_chain_keeps_falsy_filter() -> None:
+    """A chain applies a filter that is falsy, as a mapper does."""
+
+    class Sized(f.BaseFilter[Any]):
+        """Rejects everything, and has a length of zero."""
+
+        def __len__(self) -> int:
+            return 0
+
+        def _apply(self, value: Any) -> Any:
+            return self._invalid_value(value, self.CODE_EXCEPTION)
+
+    runner = f.FilterRunner(f.Unicode | Sized(), "x")
+
+    assert runner.error_codes == {"": [Sized.CODE_EXCEPTION]}
+
+
+def test_per_run_state_runner_reruns_after_escaped_exception() -> None:
+    """A runner whose run an exception escaped runs again; it is not valid."""
+
+    class Interrupted(f.BaseFilter[Any]):
+        """Raises an exception that ``apply()`` does not catch."""
+
+        def _apply(self, value: Any) -> Any:
+            raise KeyboardInterrupt
+
+    runner = f.FilterRunner(Interrupted(), "x")
+
+    for _ in range(2):
+        with pytest.raises(KeyboardInterrupt):
+            runner.is_valid()
