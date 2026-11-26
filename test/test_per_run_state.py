@@ -4,8 +4,10 @@ filters shared between chains, mappers, repeaters and runners can't swap
 errors or keys (issue #175, ADR 019).
 """
 
+import contextvars
 import copy
 import threading
+import typing
 from collections.abc import Callable
 from typing import Any, Optional
 
@@ -66,6 +68,24 @@ class Spy(f.BaseFilter[Any]):
         return value
 
 
+class Holder(f.BaseFilter[Any]):
+    """Stores a child filter and applies it under the key ``held``."""
+
+    def __init__(self, child: f.FilterCompatible[Any]) -> None:
+        super().__init__()
+
+        self.child = self.resolve_filter(child)
+
+    def _apply(self, value: Any) -> Any:
+        return self._filter(value, self.child, sub_key="held")
+
+
+class OneField(typing.NamedTuple):
+    """The namedtuple type the ``NamedTuple`` route builds."""
+
+    a: str
+
+
 def shared_text() -> f.FilterChain[str]:
     """Builds the chain every route below shares between two runs."""
     return f.Unicode | Rendezvous()
@@ -107,6 +127,36 @@ def route_filter_repeater() -> Route:
     return f.FilterRepeater(shared), f.FilterRepeater(shared), _one_item, "0", "0"
 
 
+def route_filter_switch() -> Route:
+    """Two ``FilterSwitch`` instances with the shared chain as a case."""
+    shared = shared_text()
+    return (
+        f.FilterSwitch(len, {0: shared, 2: shared}),
+        f.FilterSwitch(len, {}, default=shared),
+        str,
+        "",
+        "",
+    )
+
+
+def route_named_tuple() -> Route:
+    """Two ``NamedTuple`` instances whose mappers hold the shared chain."""
+    shared = shared_text()
+    return (
+        f.NamedTuple(OneField, {"a": shared}),
+        f.NamedTuple(OneField, {"a": shared}),
+        _one_item,
+        "a",
+        "a",
+    )
+
+
+def route_stored_child() -> Route:
+    """Two custom filters that each store the shared chain as a child."""
+    shared = shared_text()
+    return Holder(shared), Holder(shared), str, "held", "held"
+
+
 def route_same_chain() -> Route:
     """One chain run by two ``FilterRunner`` instances."""
     chain = f.NoOp | shared_text()
@@ -132,6 +182,9 @@ ROUTES = [
     route_pipe_right,
     route_filter_mapper,
     route_filter_repeater,
+    route_filter_switch,
+    route_named_tuple,
+    route_stored_child,
     route_same_chain,
     route_same_mapper,
 ]
@@ -450,3 +503,127 @@ def test_per_run_state_copy_keeps_handler() -> None:
 
     assert vars(copied) == vars(not_empty)
     assert copied.handler is handler
+
+
+def test_per_run_state_ancestor_state_while_child_runs() -> None:
+    """A filter keeps its key and handler in the run while a child it applies is running."""
+
+    class ReadsParent(f.BaseFilter[Any]):
+        """Records what its parent reports while this filter runs."""
+
+        def _apply(self, value: Any) -> Any:
+            parent = self.parent
+            assert parent is not None
+            seen.append((parent.key, parent.handler))
+            return value
+
+    seen: list[tuple[str, f.BaseInvalidValueHandler]] = []
+    handler = f.MemoryHandler()
+
+    f.FilterMapper({"a": f.FilterRepeater(ReadsParent())}).apply_with_handler(
+        {"a": ["x"]},
+        handler,
+    )
+
+    assert seen == [("a", handler)]
+
+
+def test_per_run_state_callback_into_ancestor() -> None:
+    """An error a filter reports from a callback its child runs is filed under that filter's key."""
+
+    class Checks(f.BaseFilter[Any]):
+        """Hands a bound method to a child, which calls back into this filter."""
+
+        CODE_ODD = "odd"
+
+        templates = {
+            CODE_ODD: "Odd.",
+        }
+
+        def _apply(self, value: Any) -> Any:
+            result = self._filter(value, f.Call(self._check))
+            flags.append(self._has_errors)
+            return result
+
+        def _check(self, value: Any) -> Any:
+            return self._invalid_value(value, self.CODE_ODD)
+
+    flags: list[bool] = []
+    runner = f.FilterRunner(f.FilterMapper({"a": Checks()}), {"a": 1})
+
+    assert runner.error_codes == {"a": [Checks.CODE_ODD]}
+    assert flags == [True]
+
+
+def test_per_run_state_iter_inside_another_filter() -> None:
+    """A mapper's iter() called from another filter's _apply reports under that filter's key."""
+
+    class Iterates(f.BaseFilter[Any]):
+        """Consumes a mapper it built through ``iter()`` instead of ``_filter``."""
+
+        def _apply(self, value: Any) -> Any:
+            return dict(f.FilterMapper({"x": f.NotEmpty}).iter(value))
+
+    runner = f.FilterRunner(f.FilterMapper({"a": Iterates()}), {"a": {"x": ""}})
+
+    assert runner.error_codes == {"a.x": [f.NotEmpty.CODE_EMPTY]}
+    assert runner.cleaned_data == {"a": {"x": None}}
+
+
+def test_per_run_state_filter_applies_itself() -> None:
+    """A filter that calls its own apply() on nested items keeps the run's key and handler."""
+
+    class Nested(f.BaseFilter[Any]):
+        """Rejects an empty string, at any depth of nested lists."""
+
+        CODE_BAD = "bad"
+
+        templates = {
+            CODE_BAD: "Bad.",
+        }
+
+        def _apply(self, value: Any) -> Any:
+            if isinstance(value, list):
+                return [self.apply(item) for item in value]
+
+            return value if value else self._invalid_value(value, self.CODE_BAD)
+
+    runner = f.FilterRunner(f.FilterMapper({"a": Nested()}), {"a": ["x", "", ["y"]]})
+
+    assert runner.error_codes == {"a": [Nested.CODE_BAD]}
+    assert runner.cleaned_data == {"a": ["x", None, ["y"]]}
+
+
+def test_per_run_state_overridden_apply_called_twice() -> None:
+    """A filter whose apply() calls the base apply() twice reports both calls under its key."""
+
+    class Twice(f.NotEmpty):
+        """Applies the base filter to each half of a pair."""
+
+        def apply(self, value: Any) -> Any:
+            return [super().apply(value[0]), super().apply(value[1])]
+
+    runner = f.FilterRunner(f.FilterMapper({"a": Twice()}), {"a": ["", ""]})
+
+    assert runner.error_codes == {"a": [f.NotEmpty.CODE_EMPTY] * 2}
+
+
+def test_per_run_state_child_thread_with_copied_context() -> None:
+    """A child applied from a thread the filter starts joins the run when the thread runs in a copy of the context."""
+
+    class Threaded(f.BaseFilter[Any]):
+        """Applies ``NotEmpty`` to its value on another thread."""
+
+        def _apply(self, value: Any) -> Any:
+            context = contextvars.copy_context()
+            thread = threading.Thread(
+                target=context.run,
+                args=(self._filter, value, f.NotEmpty, "t"),
+            )
+            thread.start()
+            thread.join(RUN_TIMEOUT)
+            return value
+
+    runner = f.FilterRunner(f.FilterMapper({"a": Threaded()}), {"a": ""})
+
+    assert runner.error_codes == {"a.t": [f.NotEmpty.CODE_EMPTY]}

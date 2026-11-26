@@ -366,11 +366,18 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     @property
     def _frame(self) -> Optional[_Frame]:
         """Returns this filter's frame in the run in progress, or ``None``
-        outside :py:meth:`apply`.
+        where this filter has no part in it.
+
+        That is the nearest frame, not only the current one: a filter
+        whose child is being applied is still part-way through its own
+        ``apply()``, and the child may call back into it or read its
+        ``key``. Nearest, because a filter that applies itself has several.
         """
         frame = _current_frame.get()
+        while frame is not None and frame.filter is not self:
+            frame = frame.parent
 
-        return frame if frame is not None and frame.filter is self else None
+        return frame
 
     @property
     def _has_errors(self) -> bool:
@@ -507,20 +514,30 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             ``replacement`` (``None`` unless the caller overrode it)
             whenever the invalid value handler does not raise.
         """
-        frame = _current_frame.get()
-        if frame is not None and frame.pending and frame.filter is self:
+        current = _current_frame.get()
+        if current is not None and current.pending and current.filter is self:
             # ``_filter`` or ``apply_with_handler`` made this frame for
             # this call, and resets the context when the call returns.
-            frame.pending = False
+            current.pending = False
             return self._apply_in_frame(value)
 
         # A filter applied any other way starts a run of its own, even
-        # from inside another filter's ``_apply``.
-        token = _current_frame.set(_Frame(self))
+        # from inside another filter's ``_apply``: ``unicodify_key`` relies
+        # on ``Unicode().apply()`` raising there. The exception is a filter
+        # that applies itself (``self.apply(item)`` on each item of a nested
+        # value, say), which carries on under the key and handler it
+        # already has.
+        outer = None if current is None else self._frame
+        frame = _Frame(self, parent=outer)
+
+        token = _current_frame.set(frame)
         try:
             return self._apply_in_frame(value)
         finally:
             _current_frame.reset(token)
+
+            if outer is not None and frame.has_errors:
+                outer.has_errors = True
 
     def apply_with_handler(
         self,
@@ -604,13 +621,17 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         if resolved is None:
             return value
 
-        # Outside ``apply()`` (``FilterRepeater.iter()`` called directly,
-        # say) this filter has no frame, so it gets one that lasts for
-        # this call: ``resolved`` then still finds a handler set on this
-        # filter.
-        own_frame = _current_frame.get()
-        if own_frame is None or own_frame.filter is not self:
-            own_frame = _Frame(self)
+        current = _current_frame.get()
+        own_frame = (
+            current if current is not None and current.filter is self else self._frame
+        )
+        if own_frame is None:
+            # This filter has no part in the run (``FilterRepeater.iter()``
+            # called directly, say), so it gets a frame that lasts for
+            # this call. ``resolved`` then still finds a handler set on
+            # this filter, and the key and handler of whichever filter is
+            # being applied, if one is.
+            own_frame = _Frame(self, parent=current)
 
         frame = _Frame(resolved, parent=own_frame, key=sub_key, pending=True)
 
