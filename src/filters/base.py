@@ -3,10 +3,12 @@ from abc import abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from contextvars import ContextVar
 from copy import copy
+from threading import get_ident
 from typing import (
     Any,
     Generic,
     Optional,
+    ParamSpec,
     Self,
     TypeAliasType,
     Union,
@@ -47,6 +49,12 @@ T_widened = TypeVar("T_widened", default=Any)
 # applies.
 T_next = TypeVar("T_next", default=Any)
 """The output type of the filter being chained onto another."""
+
+P_bound = ParamSpec("P_bound")
+"""The parameters of the callable :py:meth:`BaseFilter._bind_to_run` wraps."""
+
+T_bound = TypeVar("T_bound")
+"""The return type of the callable :py:meth:`BaseFilter._bind_to_run` wraps."""
 
 T_filtered = TypeVar("T_filtered")
 """The output type of the filter :py:meth:`BaseFilter._filter` applies."""
@@ -113,6 +121,7 @@ class _Frame:
         "key",
         "parent",
         "pending",
+        "thread",
     )
 
     def __init__(
@@ -135,11 +144,13 @@ class _Frame:
         self.has_errors = False
         # Whether ``the_filter.apply()`` has yet to claim this frame.
         self.pending = pending
-        # Whether that ``apply()`` call has returned. A context can outlive
-        # the run it was copied in (a pool thread that inherited it, say),
-        # and a closed frame found there must not pass for the run in
-        # progress.
+        # Whether that ``apply()`` call has returned, and the thread it
+        # runs on. A context can reach a thread its run is not on, or
+        # outlive the run: a new thread inherits its parent's context on
+        # some interpreters, and a pool keeps that thread for other runs.
+        # A frame found there must not pass for the run in progress.
         self.closed = False
+        self.thread = get_ident()
 
 
 # A ``ContextVar`` rather than an argument to ``apply``, whose signature
@@ -153,12 +164,15 @@ _current_frame: ContextVar[Optional[_Frame]] = ContextVar(
 
 
 def _live_frame() -> Optional[_Frame]:
-    """Returns the current frame, or ``None`` where the context holds none
-    or holds one left over from a run that has finished.
+    """Returns the current frame, or ``None`` where the context holds none,
+    or holds one from a run that has finished or that is on another thread.
     """
     frame = _current_frame.get()
 
-    return None if frame is None or frame.closed else frame
+    if frame is None or frame.closed or frame.thread != get_ident():
+        return None
+
+    return frame
 
 
 class FilterMeta(ABCMeta):
@@ -600,6 +614,49 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         finally:
             _current_frame.reset(token)
             frame.closed = True
+
+    def _bind_to_run(
+        self,
+        func: Callable[P_bound, T_bound],
+    ) -> Callable[P_bound, T_bound]:
+        """Wraps ``func`` so that a call to it on any thread is part of the
+        run this filter is in.
+
+        A run belongs to the thread it started on, so ``self._filter()``
+        called from a thread or pool that ``_apply`` starts finds no run
+        there: the child's error raises in that thread instead of reaching
+        the run's handler. Hand over the wrapped callable instead::
+
+            futures = [
+                pool.submit(self._bind_to_run(self._filter), item, child)
+                for item in value
+            ]
+
+        Call this method in ``_apply``, on the run's own thread. A wrapped
+        callable that is called after ``_apply`` has returned runs
+        ``func`` with no run, as though it had not been wrapped.
+        """
+        frame = self._frame
+
+        def bound(*args: P_bound.args, **kwargs: P_bound.kwargs) -> T_bound:
+            if frame is None or frame.closed:
+                return func(*args, **kwargs)
+
+            # A frame of the calling thread's own, under this filter's
+            # frame in the run.
+            adopted = _Frame(self, parent=frame)
+
+            token = _current_frame.set(adopted)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                _current_frame.reset(token)
+                adopted.closed = True
+
+                if adopted.has_errors:
+                    frame.has_errors = True
+
+        return bound
 
     def _apply_in_frame(self, value: Any) -> Optional[T_out]:
         """Runs the filter's logic once :py:meth:`apply` has put this

@@ -336,15 +336,11 @@ change:
 * Don't store anything about the current value on ``self`` in ``_apply()``.
   Another run can be part-way through the same instance.
 * A filter that calls ``self._filter()`` from a thread or a thread pool it
-  starts must hand the run to that thread. Without that, the thread can't see
-  the run: the child's error raises in the thread, and unless ``_apply()``
-  collects that exception, the run accepts an invalid value. That holds on
-  every interpreter, including a free-threaded build whose threads inherit a
-  context: a pool thread inherits it once, from the run that started the
-  thread. Take a copy of
-  the context in ``_apply()``, one copy for each call, and run the call in it.
-  A copy taken inside the thread is empty, and one copy can't run two calls
-  at the same time.
+  starts must hand the run to that thread. A run belongs to the thread it
+  started on, so the other thread can't see it: the child's error raises in
+  that thread, and unless ``_apply()`` collects that exception, the run accepts
+  an invalid value. Wrap the call with ``self._bind_to_run()`` in
+  ``_apply()``, and hand over the wrapped call.
 
   .. code-block:: python
 
@@ -353,9 +349,13 @@ change:
 
      # Filters v4, in _apply
      futures = [
-         pool.submit(contextvars.copy_context().run, self._filter, item, child)
+         pool.submit(self._bind_to_run(self._filter), item, child)
          for item in value
      ]
+
+  Wait for the threads before ``_apply()`` returns. A wrapped call that starts
+  after ``_apply()`` has returned has no run to report to, so its error raises
+  in the thread.
 
 What you set on a filter is still shared by every run that uses the filter. A
 handler set with ``set_handler()`` receives the errors of all of them, so a

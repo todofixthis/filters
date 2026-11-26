@@ -608,25 +608,90 @@ def test_per_run_state_overridden_apply_called_twice() -> None:
     assert runner.error_codes == {"a": [f.NotEmpty.CODE_EMPTY] * 2}
 
 
-def test_per_run_state_child_thread_with_copied_context() -> None:
-    """A child applied from a thread the filter starts joins the run when the thread runs in a copy of the context."""
+def run_on_thread(func: Callable[[], Any]) -> list[Any]:
+    """Calls ``func`` on another thread, returning its result or exception."""
+
+    def target() -> None:
+        try:
+            outcome.append(func())
+        # Handed back for the test to assert on.
+        except Exception as e:  # noqa: BLE001
+            outcome.append(e)
+
+    outcome: list[Any] = []
+    thread = threading.Thread(target=target)
+    thread.start()
+    thread.join(RUN_TIMEOUT)
+    return outcome
+
+
+def test_per_run_state_child_thread_bound_to_run() -> None:
+    """A child applied on another thread through _bind_to_run() reports to the run under the filter's key."""
 
     class Threaded(f.BaseFilter[Any]):
         """Applies ``NotEmpty`` to its value on another thread."""
 
         def _apply(self, value: Any) -> Any:
-            context = contextvars.copy_context()
-            thread = threading.Thread(
-                target=context.run,
-                args=(self._filter, value, f.NotEmpty, "t"),
-            )
-            thread.start()
-            thread.join(RUN_TIMEOUT)
+            bound = self._bind_to_run(self._filter)
+            run_on_thread(lambda: bound(value, f.NotEmpty, "t"))
+            flags.append(self._has_errors)
             return value
 
+    flags: list[bool] = []
     runner = f.FilterRunner(f.FilterMapper({"a": Threaded()}), {"a": ""})
 
     assert runner.error_codes == {"a.t": [f.NotEmpty.CODE_EMPTY]}
+    assert flags == [True]
+
+
+def test_per_run_state_thread_with_run_context_is_not_in_the_run() -> None:
+    """A thread that holds a live run's context, as an inheriting interpreter gives it, takes no part in that run."""
+
+    class Threaded(f.BaseFilter[Any]):
+        """Calls itself on another thread, in a copy of the run's context."""
+
+        def _apply(self, value: Any) -> Any:
+            context = contextvars.copy_context()
+            outcomes.extend(
+                run_on_thread(
+                    lambda: context.run(self._filter, "", f.NotEmpty, "t"),
+                )
+            )
+            outcomes.extend(
+                run_on_thread(lambda: context.run(f.NotEmpty().apply, "")),
+            )
+            outcomes.extend(run_on_thread(lambda: context.run(self.apply, None)))
+            return value
+
+        def _apply_none(self) -> Any:
+            return self._invalid_value(None, self.CODE_EXCEPTION)
+
+    outcomes: list[Any] = []
+    runner = f.FilterRunner(f.FilterMapper({"a": Threaded()}), {"a": "x"})
+
+    assert runner.error_codes == {}
+    assert [type(outcome) for outcome in outcomes] == [f.FilterError] * 3
+    assert [outcome.context["key"] for outcome in outcomes] == ["t", "", ""]
+
+
+def test_per_run_state_bound_callable_after_the_run() -> None:
+    """A callable bound to a run that has finished runs with no run, and reports nothing to it."""
+
+    class Binds(f.BaseFilter[Any]):
+        """Hands out a callable bound to its run."""
+
+        def _apply(self, value: Any) -> Any:
+            bound.append(self._bind_to_run(self._filter))
+            return value
+
+    bound: list[Callable[..., Any]] = []
+    finished = f.FilterRunner(f.FilterMapper({"a": Binds()}), {"a": "x"})
+    assert finished.is_valid()
+
+    with pytest.raises(f.FilterError):
+        bound[0]("", f.NotEmpty)
+
+    assert finished.error_codes == {}
 
 
 @pytest.mark.parametrize("through_filter", [False, True])

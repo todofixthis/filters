@@ -2,8 +2,8 @@
 status: Accepted
 date: 2026-11-26
 scope: [src/filters/]
-summary: A filter instance holds configuration only; BaseFilter keeps each run's parent, key, error flag and injected handler in a per-apply frame held in a ContextVar, rather than on the instance or by copying child filters when chains combine, so parent and key are read-only, resolve_filter takes no parent or key, a filter applies a child with self._filter() rather than child.apply() to keep it in the run, and FilterRunner injects its handler with apply_with_handler.
-revisit-when: A filter needs its run state in a thread or task that cannot run in a copy of the run's context; or a consumer's profile shows the per-apply frame as a bottleneck that optimising the frame cannot remove.
+summary: A filter instance holds configuration only; BaseFilter keeps each run's parent, key, error flag and injected handler in a per-apply frame held in a ContextVar and owned by the thread that created it, rather than on the instance or by copying child filters when chains combine, so parent and key are read-only, resolve_filter takes no parent or key, a filter applies a child with self._filter() rather than child.apply() to keep it in the run, hands a run to a thread it starts with self._bind_to_run(), and FilterRunner injects its handler with apply_with_handler.
+revisit-when: A filter needs its run state somewhere `_bind_to_run` cannot carry it, such as work that outlives `_apply`; or a consumer's profile shows the per-apply frame as a bottleneck that optimising the frame cannot remove.
 ---
 
 # 019: Keep Per-Run State off Filter Instances
@@ -40,7 +40,7 @@ Each `apply()` call gets a frame holding the filter, the frame of the filter tha
 
 **Pros:** `_apply`, `_filter`, `_invalid_value` and `self._has_errors` keep their signatures and meaning, so the filters in this package, phx-filters-django, phx-filters-iso, phx-filters-pydantic and paddock run unchanged.
 **Cons:** Each `apply()` allocates a frame and sets and resets the context variable. `parent` and `key` lose their setters, and `resolve_filter` loses its `parent` and `key` arguments, which breaks a custom filter that uses them.
-**Risks:** A frame is found through the context, so a filter that applies a child from a thread it starts itself finds no frame there. The child then reports to the filter's own handler, or raises in that thread where the filter has none, and the run that started the thread can accept an invalid value. An interpreter that gives a new thread its parent's context does not make this safe: a pool thread keeps the context of the run that started it, and a frame is closed when its `apply()` returns, so a later run finds no frame in that thread either. Running the thread's work with `contextvars.copy_context().run` gives it the frame, where the copy is taken in `_apply` and each concurrent call has its own.
+**Risks:** A filter that applies a child from a thread it starts itself, and does not hand the run over, finds no frame there. The child then reports to the filter's own handler, or raises in that thread where the filter has none, and the run that started the thread can accept an invalid value.
 
 The frame could instead be an argument to `apply` and `_apply`. That needs no context variable, and it changes the signature of every `_apply` ever written, so it is not a separate option worth the break.
 
@@ -74,6 +74,8 @@ The rules that follow from it:
 - `handler` is the nearest of: the handler set on the filter, the handler set on each filter applying it in turn, and the handler injected for the run. The injected handler replaces the one set on the run's first filter, as `FilterRunner` always did and at every depth that filter applies itself, and any other nested filter's own handler still wins over it. For a filter with no frame it is the filter's own handler or a new `ExceptionHandler`, never a holder's.
 - A filter applies a child with `_filter`. A filter with no frame in the run that is applied with `apply()` from inside `_apply` starts a run of its own, with no key and no handler but its own, because `unicodify_key` and code like it rely on `Unicode().apply()` raising there. A filter that has a frame in the run already continues under its nearest frame, with that frame's key and handler and with its error flag carried up: that is a filter that calls its own `apply()` to recurse into a nested value, or one applied by a filter beneath it. `apply_with_handler` starts a run of its own in every case.
 - `_filter` called by a filter with no frame, as `FilterRepeater.iter()` allows, gives that filter a frame for the call, under the frame of whichever filter is being applied. Its children find a handler set on it and the key of the run around it. The error flag of the filter being applied is not raised.
+- A frame belongs to the thread that created it and lasts until the call that created it returns. A context that holds a frame from another thread, or from a call that has returned, counts as holding none. A new thread inherits its parent's context on some interpreters and a pool keeps its threads, so without this rule a worker started inside one run would report a later or concurrent run's errors to the first.
+- A filter that applies a child from a thread it starts wraps the call with `_bind_to_run`, which gives the calling thread a frame of its own under the filter's frame. Copying the context is not a hand-off, because the copy holds the first thread's frame.
 - `apply_with_handler(value, handler)` injects a handler for one call and is public, so a caller with its own runner has a route that does not write to the filter. `FilterRunner` uses it.
 - `resolve_filter` takes no `parent` or `key`. Passing either raises `TypeError`, which is a louder failure than accepting and ignoring them.
 
@@ -91,7 +93,7 @@ The rules that follow from it:
   - A filter that calls its own `apply()` on each item keeps one error flag for the whole call, where each nested call reset it. The flag no longer says whether the last item failed.
 
   `docs/upgrading_to_v4.rst` covers each.
-- A four-filter chain took about 9 microseconds to apply against about 6 before, and a mapper over a nested schema took about a quarter longer, measured with `timeit` on CPython 3.14 when this ADR was written.
+- Applying a filter costs more. Across `timeit` runs on CPython 3.14 when this ADR was written, a four-filter chain took between a quarter and a half longer than the 6 microseconds it took before, and a mapper over a nested schema took between a tenth and a quarter longer.
 - ADR 013's note that two copies applied at once are not isolated no longer holds for the state `BaseFilter` keeps. Its rule on copying containers is unchanged.
 - `__copy__` copies `_handler` and the subclass's own attributes. There is no run state left for a copy to inherit.
 
