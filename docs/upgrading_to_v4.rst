@@ -348,14 +348,13 @@ change:
      futures = [pool.submit(self._filter, item, child) for item in value]
 
      # Filters v4, in _apply
-     futures = [
-         pool.submit(self._bind_to_run(self._filter), item, child)
-         for item in value
-     ]
+     bound = self._bind_to_run(self._filter)
+     futures = [pool.submit(bound, item, child) for item in value]
 
   Wait for the threads before ``_apply()`` returns. A wrapped call that starts
   after ``_apply()`` has returned has no run to report to, so its error raises
-  in the thread.
+  in the thread, and one still running then reports to a run that has already
+  given its result.
 
 What you set on a filter is still shared by every run that uses the filter. A
 handler set with ``set_handler()`` receives the errors of all of them, so a

@@ -93,7 +93,7 @@ The rules that follow from it:
   - A filter that calls its own `apply()` on each item keeps one error flag for the whole call, where each nested call reset it. The flag no longer says whether the last item failed.
 
   `docs/upgrading_to_v4.rst` covers each.
-- Applying a filter costs more. Across `timeit` runs on CPython 3.14 when this ADR was written, a four-filter chain took between a quarter and a half longer than the 6 microseconds it took before, and a mapper over a nested schema took between a tenth and a quarter longer.
+- Applying a filter costs more. Across `timeit` runs on CPython 3.14 when this ADR was written, a four-filter chain took about half as long again as the 6 microseconds it took before, and a mapper over a nested schema took about a quarter longer.
 - ADR 013's note that two copies applied at once are not isolated no longer holds for the state `BaseFilter` keeps. Its rule on copying containers is unchanged.
 - `__copy__` copies `_handler` and the subclass's own attributes. There is no run state left for a copy to inherit.
 

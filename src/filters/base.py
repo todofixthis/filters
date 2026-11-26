@@ -133,6 +133,7 @@ class _Frame:
         # Use `Optional` instead of `|` for Sphinx compat
         handler: Optional["BaseInvalidValueHandler"] = None,
         pending: bool = False,
+        thread: Optional[int] = None,
     ) -> None:
         self.filter = the_filter
         self.parent = parent
@@ -150,7 +151,9 @@ class _Frame:
         # some interpreters, and a pool keeps that thread for other runs.
         # A frame found there must not pass for the run in progress.
         self.closed = False
-        self.thread = get_ident()
+        # ``_filter`` passes its own frame's thread, to spare the lookup on
+        # the path every filter in a chain takes.
+        self.thread = get_ident() if thread is None else thread
 
 
 # A ``ContextVar`` rather than an argument to ``apply``, whose signature
@@ -560,8 +563,16 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             ``replacement`` (``None`` unless the caller overrode it)
             whenever the invalid value handler does not raise.
         """
-        current = _live_frame()
-        if current is not None and current.pending and current.filter is self:
+        current = _current_frame.get()
+        # The checks ``_live_frame`` makes come last and inline: this is
+        # the path every filter in a chain takes.
+        if (
+            current is not None
+            and current.pending
+            and current.filter is self
+            and not current.closed
+            and current.thread == get_ident()
+        ):
             # ``_filter`` or ``apply_with_handler`` made this frame for
             # this call, and resets the context and closes the frame when
             # the call returns. It stays open until then, for an override
@@ -576,7 +587,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         # value, say), which carries on under the key and handler it
         # already has.
         outer = None if current is None else self._frame
-        frame = _Frame(self, parent=outer)
+        frame = _Frame(self, outer)
 
         token = _current_frame.set(frame)
         try:
@@ -627,10 +638,8 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         there: the child's error raises in that thread instead of reaching
         the run's handler. Hand over the wrapped callable instead::
 
-            futures = [
-                pool.submit(self._bind_to_run(self._filter), item, child)
-                for item in value
-            ]
+            bound = self._bind_to_run(self._filter)
+            futures = [pool.submit(bound, item, child) for item in value]
 
         Call this method in ``_apply``, on the run's own thread. A wrapped
         callable that is called after ``_apply`` has returned runs
@@ -728,7 +737,7 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             # being applied, if one is.
             own_frame = _Frame(self, parent=current)
 
-        frame = _Frame(resolved, parent=own_frame, key=sub_key, pending=True)
+        frame = _Frame(resolved, own_frame, sub_key, None, True, own_frame.thread)
 
         token = _current_frame.set(frame)
         try:
