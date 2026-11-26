@@ -80,7 +80,7 @@ dev = [
     # `timeout` as partially unknown.
     # Lift the cap, here and in the other group, once the locked pyright
     # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
-    "types-regex>=2026,<2026.11.19.20261122",
+    "types-regex>=2026,<2026.11.19.20261123",
 ]
 
 # Used by GitHub Actions and ReadTheDocs.
@@ -103,7 +103,7 @@ ci = [
     # `timeout` as partially unknown.
     # Lift the cap, here and in the other group, once the locked pyright
     # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
-    "types-regex>=2026,<2026.11.19.20261122",
+    "types-regex>=2026,<2026.11.19.20261123",
 ]
 
 [tool.autohooks]
