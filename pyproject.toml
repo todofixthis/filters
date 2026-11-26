@@ -78,8 +78,8 @@ dev = [
     # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
     # 1.1.414 share one), so strict pyright reports each regex call taking
     # `timeout` as partially unknown.
-    # Lift the cap, here and in the other group, once the locked pyright
-    # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
+    # Lift the cap, here, in the other group and with its renovate.json rule,
+    # once the locked pyright bundles `_typeshed.FloatInt`; ADR 018 says how.
     "types-regex>=2026,<2026.11.19.20261122",
 ]
 
@@ -101,8 +101,8 @@ ci = [
     # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
     # 1.1.414 share one), so strict pyright reports each regex call taking
     # `timeout` as partially unknown.
-    # Lift the cap, here and in the other group, once the locked pyright
-    # bundles `_typeshed.FloatInt`; ADR 018 says how to check.
+    # Lift the cap, here, in the other group and with its renovate.json rule,
+    # once the locked pyright bundles `_typeshed.FloatInt`; ADR 018 says how.
     "types-regex>=2026,<2026.11.19.20261122",
 ]
 

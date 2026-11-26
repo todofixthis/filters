@@ -1,7 +1,7 @@
 ---
 status: Accepted
 date: 2026-11-25
-scope: [pyproject.toml, src/filters/string.py, test/typing/test_string.py]
+scope: [.agents/rules/project.md, pyproject.toml, renovate.json, src/filters/string.py, test/typing/test_string.py]
 summary: Type-check regex through typeshed's types-regex in the dev and ci groups, capped below 2026.11.19.20261122, rather than a mypy override that ignores its missing imports; Regex and Split accept a regex.Pattern and Strip stores optional patterns.
 revisit-when: The pyright in uv.lock bundles _typeshed.FloatInt; filters needs a types-regex release above the cap.
 ---
@@ -73,12 +73,16 @@ check is manual: Consequences says how to run it.
 - The stubs track `regex`'s newest release while `uv.lock` holds an older
   runtime, so mypy can accept a call the locked `regex` lacks. The cap
   widens that gap as the runtime moves on.
-- To check whether the cap can lift, remove it from both groups, run
-  `uv lock --upgrade-package types-regex && uv sync --group dev` (plain
-  `uv lock` keeps the capped release, so the check would pass regardless;
-  leave pyright where the lock has it), then `uv run pyright src/filters
-  test/typing`. Zero errors means the locked pyright bundles `FloatInt`, and
-  the change can be committed; otherwise restore `pyproject.toml` and
+- Renovate's `pep621` manager raises an upper bound to admit a new release,
+  so a package rule in `renovate.json` disables it for `types-regex`; the
+  weekly lock refresh still moves the stubs within the cap.
+- To check whether the cap can lift, remove it from both groups, run `uv lock
+  --upgrade-package types-regex && uv sync --group dev` (plain `uv lock` keeps
+  the capped release, so the check would pass regardless; leave pyright where
+  the lock has it), then `uv run pyright src/filters test/typing`. Zero errors
+  means the locked pyright bundles `FloatInt`: commit the change with the
+  `renovate.json` rule removed and the cap's mentions in
+  `.agents/rules/project.md` dropped; otherwise restore `pyproject.toml` and
   `uv.lock` and re-sync. `uv.lock` records only pyright's version, so nothing
   in it shows this.
 
