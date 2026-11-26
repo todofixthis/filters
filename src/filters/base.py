@@ -1,6 +1,7 @@
 from abc import ABCMeta
 from abc import abstractmethod as abstract_method
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
+from contextvars import ContextVar
 from copy import copy
 from typing import (
     Any,
@@ -12,7 +13,6 @@ from typing import (
     cast,
     overload,
 )
-from weakref import ProxyTypes, proxy
 
 from typing_extensions import TypeVar
 
@@ -91,6 +91,52 @@ FilterCompatible = TypeAliasType(
 """Used in PEP-484 type hints to indicate a value that can be
 normalised into an instance of a BaseFilter subclass.
 """
+
+
+class _Frame:
+    """One filter's part in one run: the state that holds only while
+    :py:meth:`BaseFilter.apply` is running.
+
+    A run is one top-level ``apply()`` call and every filter it applies
+    through :py:meth:`BaseFilter._filter`. Each of those filters gets its
+    own frame, linked to the frame of the filter that applied it, so the
+    frames of a run mirror its call stack rather than the way the filters
+    were composed. See
+    docs/adr/019-keep-per-run-state-off-filter-instances.md.
+    """
+
+    __slots__ = ("filter", "handler", "has_errors", "key", "parent", "pending")
+
+    def __init__(
+        self,
+        the_filter: "BaseFilter[Any]",
+        # Use `Optional` instead of `|` for Sphinx compat
+        parent: Optional["_Frame"] = None,
+        key: Optional[str] = None,
+        # Use `Optional` instead of `|` for Sphinx compat
+        handler: Optional["BaseInvalidValueHandler"] = None,
+        pending: bool = False,
+    ) -> None:
+        self.filter = the_filter
+        self.parent = parent
+        self.key = key
+        # The handler injected for this run, which only a run's first
+        # frame carries. A handler set on a filter with ``set_handler``
+        # stays on the filter.
+        self.handler = handler
+        self.has_errors = False
+        # Whether ``the_filter.apply()`` has yet to claim this frame.
+        self.pending = pending
+
+
+# A ``ContextVar`` rather than an argument to ``apply``, whose signature
+# every filter's ``_apply`` would have to follow, or a ``threading.local``,
+# which asyncio tasks on one thread would share.
+_current_frame: ContextVar[Optional[_Frame]] = ContextVar(
+    "filters_current_frame",
+    default=None,
+)
+"""The frame of the filter being applied in the current context."""
 
 
 class FilterMeta(ABCMeta):
@@ -231,22 +277,10 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
     def __init__(self) -> None:
         super().__init__()
 
-        self._parent: Optional[BaseFilter[Any]] = None
+        # The only state ``BaseFilter`` keeps on the instance, because it is
+        # configuration. Everything that changes during a run lives in a
+        # ``_Frame``, so that runs sharing this instance cannot interfere.
         self._handler: Optional[BaseInvalidValueHandler] = None
-        self._key: Optional[str] = None
-
-        #
-        # Indicates whether the Filter detected any invalid values.
-        # It gets reset every time `apply` gets called.
-        #
-        # Note that this attribute is intended to be used internally;
-        # external code should instead interact with invalid value
-        # handlers such as LogHandler and MemoryHandler.
-        #
-        # References:
-        #   - :py:mod:`importer.core.filters.handlers`
-        #
-        self._has_errors = False
 
     @classmethod
     def __copy__(cls, the_filter: Self) -> Self:
@@ -330,42 +364,64 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         return f"{type(self).__name__}()"
 
     @property
+    def _frame(self) -> Optional[_Frame]:
+        """Returns this filter's frame in the run in progress, or ``None``
+        outside :py:meth:`apply`.
+        """
+        frame = _current_frame.get()
+
+        return frame if frame is not None and frame.filter is self else None
+
+    @property
+    def _has_errors(self) -> bool:
+        """Whether this filter has detected an invalid value in the
+        :py:meth:`apply` call in progress, itself or through
+        :py:meth:`_filter`.
+
+        Each ``apply()`` call starts with it ``False``, and outside one it
+        is always ``False``.
+
+        Note:
+            This is for a filter's own use inside ``_apply``. External code
+            should use an invalid value handler such as
+            :py:class:`filters.handlers.MemoryHandler` instead.
+        """
+        frame = self._frame
+
+        return frame is not None and frame.has_errors
+
+    @_has_errors.setter
+    def _has_errors(self, has_errors: bool) -> None:
+        frame = self._frame
+        if frame is not None:
+            frame.has_errors = has_errors
+
+    @property
     def parent(
         self,
         # Use `Optional` instead of `|` for Sphinx compat
     ) -> Optional["BaseFilter[Any]"]:
-        """Returns the parent Filter."""
-        # Make sure `self._parent` hasn't gone away.
-        try:
-            # Touching any attribute raises ReferenceError once the weakly
-            # referenced parent is gone.
-            # noinspection PyStatementEffect
-            self._parent.__class__  # noqa: B018
-        except ReferenceError:
-            return None
+        """Returns the filter that is applying this one, or ``None``
+        outside :py:meth:`apply` and for the filter a run starts with.
 
-        return self._parent
+        Note:
+            This is where the filter sits in the run in progress, not how
+            it was composed: a filter two chains share has whichever one
+            is applying it as its parent.
+        """
+        frame = self._frame
 
-    @parent.setter
-    def parent(self, parent: "BaseFilter[Any]") -> None:
-        """Sets the parent Filter."""
-        # Create a weakref to the parent Filter to prevent annoying the
-        # garbage collector.
-        self._parent = (
-            (parent if isinstance(parent, ProxyTypes) else proxy(parent))
-            if parent
-            else None
-        )
+        return None if frame is None or frame.parent is None else frame.parent.filter
 
     @property
     def key(self) -> str:
-        """Returns the key associated with this filter."""
-        return self._make_key(self._key_parts)
+        """Returns this filter's key in the run in progress.
 
-    @key.setter
-    def key(self, key: str) -> None:
-        """Sets the key associated with this filter."""
-        self._key = key
+        The key is the dotted path of the sub-keys under which the filters
+        applying this one applied it. Outside :py:meth:`apply`, it is an
+        empty string.
+        """
+        return self._make_key(self._key_parts)
 
     def sub_key(self, sub_key: Optional[str]) -> str:
         """Returns a copy of this filter's key with an additional
@@ -377,51 +433,63 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
                 :py:attr:`key` — e.g. for an error on the filter's own
                 value rather than on one of its items.
         """
-        return self._make_key(self._key_parts + [sub_key])
+        return self._make_key([*self._key_parts, sub_key])
 
     @property
     def _key_parts(self) -> list[Optional[str]]:
-        """Assembles each key part in the filter hierarchy."""
+        """Assembles each key part in the run in progress, outermost
+        first.
+        """
         key_parts: list[Optional[str]] = []
 
-        # Iterate up the parent chain and collect key parts.
-        # Alternatively, we could just get ``self.parent._key_parts``,
-        # but that is way less efficient.
-        parent: Optional[BaseFilter[Any]] = self
-        while parent:
-            # As we move up the chain, push key parts onto the front of
-            # the path (otherwise the key parts would be in reverse
-            # order).
-            key_parts.insert(0, parent._key)
-            parent = parent.parent
+        frame = self._frame
+        while frame is not None:
+            key_parts.append(frame.key)
+            frame = frame.parent
 
+        key_parts.reverse()
         return key_parts
 
     @property
     def handler(self) -> "BaseInvalidValueHandler":
-        """Returns the invalid value handler for the filter."""
-        if self._handler is None:
-            # Attempt to return the parent filter's handler...
-            parent = self.parent
-            if parent is None:
-                #
-                # ... unless this filter has no parent, in which case
-                # it should use the default.
-                #
-                # Note that we do not set ``self._handler``, in case
-                # the filter later gets added to e.g., a FilterChain
-                # that has a different invalid value handler set.
-                #
-                return ExceptionHandler()
+        """Returns the invalid value handler for the filter.
 
-            return parent.handler
+        Inside :py:meth:`apply`, that is the nearest of: the handler set on
+        this filter, the one set on each filter applying it in turn, and
+        the one the run was given (by
+        :py:meth:`apply_with_handler` or a
+        :py:class:`filters.handlers.FilterRunner`), which replaces the
+        handler set on the filter the run starts with. Outside ``apply()``
+        it is the handler set on this filter. Where none of those is set,
+        it is a new :py:class:`ExceptionHandler`.
+        """
+        frame = self._frame
+        if frame is None:
+            return ExceptionHandler() if self._handler is None else self._handler
 
-        return self._handler
+        return self._resolve_handler(frame)
 
     @handler.setter
     def handler(self, handler: "BaseInvalidValueHandler") -> None:
         """Sets the invalid value handler for the filter."""
         self._handler = handler
+
+    @staticmethod
+    def _resolve_handler(frame: _Frame) -> "BaseInvalidValueHandler":
+        """Finds the handler for the filter that ``frame`` belongs to."""
+        ancestor: Optional[_Frame] = frame
+        while ancestor is not None:
+            if ancestor.handler is not None:
+                return ancestor.handler
+
+            # noinspection PyProtectedMember
+            configured = ancestor.filter._handler
+            if configured is not None:
+                return configured
+
+            ancestor = ancestor.parent
+
+        return ExceptionHandler()
 
     def set_handler(self, handler: "BaseInvalidValueHandler") -> "BaseFilter[T_out]":
         """Cascading method for setting the filter's invalid value
@@ -439,8 +507,49 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             ``replacement`` (``None`` unless the caller overrode it)
             whenever the invalid value handler does not raise.
         """
-        self._has_errors = False
+        frame = _current_frame.get()
+        if frame is not None and frame.pending and frame.filter is self:
+            # ``_filter`` or ``apply_with_handler`` made this frame for
+            # this call, and resets the context when the call returns.
+            frame.pending = False
+            return self._apply_in_frame(value)
 
+        # A filter applied any other way starts a run of its own, even
+        # from inside another filter's ``_apply``.
+        token = _current_frame.set(_Frame(self))
+        try:
+            return self._apply_in_frame(value)
+        finally:
+            _current_frame.reset(token)
+
+    def apply_with_handler(
+        self,
+        value: Any,
+        handler: "BaseInvalidValueHandler",
+    ) -> Optional[T_out]:
+        """Applies the filter to a value, sending invalid values to
+        ``handler`` for this call only.
+
+        Unlike :py:meth:`set_handler`, this leaves the filter unchanged, so
+        it is safe where other threads or tasks apply the same filter at
+        the same time.
+
+        Args:
+            value: The value to filter.
+            handler: Receives this call's invalid values in place of the
+                handler set on this filter, if any. A filter this one
+                applies that has a handler of its own still uses it.
+        """
+        token = _current_frame.set(_Frame(self, handler=handler, pending=True))
+        try:
+            return self.apply(value)
+        finally:
+            _current_frame.reset(token)
+
+    def _apply_in_frame(self, value: Any) -> Optional[T_out]:
+        """Runs the filter's logic once :py:meth:`apply` has put this
+        filter's frame in the context.
+        """
         try:
             return self._apply_none() if value is None else self._apply(value)
         # Any exception becomes an invalid value, which the handler reports.
@@ -480,26 +589,47 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             sub_key: Appended to the ``key`` value in the error message
                 context (used by complex filters).
         """
-        filter_chain = self.resolve_filter(
-            filter_chain,
-            parent=self,
-            key=sub_key,
-        )
+        # The ``isinstance`` check skips ``resolve_filter`` for the usual
+        # case, a filter that is already an instance. pyright narrows
+        # ``FilterCompatible``'s ``Callable`` arm here too, as
+        # ``BaseFilter[Unknown]``.
+        resolved: Optional[BaseFilter[T_filtered]]
+        if isinstance(filter_chain, BaseFilter):
+            resolved = filter_chain  # pyright: ignore[reportUnknownVariableType]
+        else:
+            resolved = self.resolve_filter(filter_chain)
 
         # In rare cases, ``filter_chain`` may be ``None``.
         # :py:meth:`filters.complex.FilterMapper.__init__`
-        if filter_chain:
-            try:
-                filtered = filter_chain.apply(value)
-            # Any exception becomes an invalid value, which the handler reports.
-            except Exception as e:  # noqa: BLE001
-                return self._invalid_value(value, e, exc_info=True)
-            else:
-                # noinspection PyProtectedMember
-                self._has_errors = self._has_errors or filter_chain._has_errors
-                return filtered
-        else:
+        if resolved is None:
             return value
+
+        # Outside ``apply()`` (``FilterRepeater.iter()`` called directly,
+        # say) this filter has no frame, so it gets one that lasts for
+        # this call: ``resolved`` then still finds a handler set on this
+        # filter.
+        own_frame = _current_frame.get()
+        if own_frame is None or own_frame.filter is not self:
+            own_frame = _Frame(self)
+
+        frame = _Frame(resolved, parent=own_frame, key=sub_key, pending=True)
+
+        token = _current_frame.set(frame)
+        try:
+            try:
+                filtered = resolved.apply(value)
+            finally:
+                # Before ``_invalid_value`` runs, which looks up this
+                # filter's own frame.
+                _current_frame.reset(token)
+        # Any exception becomes an invalid value, which the handler reports.
+        except Exception as e:  # noqa: BLE001
+            return self._invalid_value(value, e, exc_info=True)
+
+        if frame.has_errors:
+            own_frame.has_errors = True
+
+        return filtered
 
     def _invalid_value(
         self,
@@ -600,11 +730,13 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
         cls,
         the_filter: "FilterCompatible[T_resolved]",
         # Use `Optional` instead of `|` for Sphinx compat
-        parent: Optional["BaseFilter[Any]"] = None,
-        key: Optional[str] = None,
-        # Use `Optional` instead of `|` for Sphinx compat
     ) -> Optional["BaseFilter[T_resolved]"]:
-        """Converts a filter-compatible value into a consistent type."""
+        """Converts a filter-compatible value into a consistent type.
+
+        Note:
+            This takes no parent or key, because ``_filter()`` supplies
+            both each time it applies the result.
+        """
         if the_filter is not None:
             resolved: Optional[BaseFilter[T_resolved]]
 
@@ -617,24 +749,12 @@ class BaseFilter(Generic[T_out], metaclass=FilterMeta):
             elif callable(the_filter):
                 resolved = cls.resolve_filter(the_filter())
 
-                # A callable is free to hand back ``None``; without this
-                # guard the ``parent``/``key`` assignments below would
-                # raise ``AttributeError`` on it.
-                if resolved is None:
-                    return None
-
             # Uhh... hm.
             else:
                 raise TypeError(
                     f"{type(the_filter).__name__} {the_filter!r} is not "
                     f"compatible with {cls.__name__}.",
                 )
-
-            if parent:
-                resolved.parent = parent
-
-            if key:
-                resolved.key = key
 
             return resolved
 
@@ -769,13 +889,19 @@ class FilterChain(BaseFilter[T_out]):
 
     def _add(self, next_filter: "FilterCompatible[Any]") -> "FilterChain[T_out]":
         """Adds a Filter to the collection directly."""
-        resolved = self.resolve_filter(next_filter, parent=self)
+        resolved = self.resolve_filter(next_filter)
         if resolved:
             self._filters.append(resolved)
 
         return self
 
     def _apply(self, value: Any) -> T_out:
+        # Looked up once rather than through ``_has_errors`` after every
+        # filter: a chain is the hottest loop in the package. It is ``None``
+        # only where ``_apply`` is called directly, which has no error flag
+        # to read.
+        frame = self._frame
+
         for f in self._filters:
             value = self._filter(value, f)
 
@@ -783,7 +909,7 @@ class FilterChain(BaseFilter[T_out]):
             # This is important because FilterChains have to behave
             # consistently regardless of whether the invalid value
             # handler raises an exception.
-            if self._has_errors:
+            if frame is not None and frame.has_errors:
                 break
 
         return value

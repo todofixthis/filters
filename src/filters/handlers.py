@@ -366,14 +366,12 @@ class FilterRunner(Generic[T_out]):  # noqa: UP046
             handler = MemoryHandler(self.capture_exc_info)
             self._handler = handler
 
-            # Inject our own handler (temporarily) while the Filter runs, so we
-            # can capture error messages.
-            prev_handler = self.filter_chain.handler
-            self.filter_chain.handler = handler
-            try:
-                self._cleaned_data = self.filter_chain.apply(self.data)
-            finally:
-                self.filter_chain.handler = prev_handler
+            # The handler goes to this run rather than onto the filter,
+            # which other runners may be applying at the same time.
+            self._cleaned_data = self.filter_chain.apply_with_handler(
+                self.data,
+                handler,
+            )
 
             return handler
 
