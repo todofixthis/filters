@@ -494,6 +494,10 @@ Known Limitations
   under mypy and ``reportReturnType`` under pyright. Widening ``_apply`` to
   ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
   rules on those lines, or disable them as Filters does for its own code.
+  Leaving ``_apply`` without annotations doesn't avoid it under pyright, which
+  infers the return type and reports ``reportIncompatibleMethodOverride`` on
+  the ``def`` line at its default rules. Suppress that rule there. mypy
+  doesn't check an unannotated ``_apply`` unless you run it in strict mode.
   ``return self._invalid_value(...)`` reports neither, because
   ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
   it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
@@ -507,6 +511,19 @@ Known Limitations
   result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
+* A filter instance must not be applied from two threads at the same time.
+  A filter keeps the state of the run in progress on the instance, so two
+  threads that share one can swap errors: one run accepts an invalid value,
+  and the other rejects a valid one. Filters share an instance more often than
+  it looks. After ``Text = f.Unicode | f.Strip``, the chains
+  ``Text | f.MaxLength(50)`` and ``Text | f.MaxLength(2000)`` hold the same
+  ``Unicode`` and ``Strip`` instances, and so does every
+  :py:class:`filters.FilterMapper` or :py:class:`filters.FilterRepeater` that
+  ``Text`` is nested in. Where threads validate at the same time, as most web
+  frameworks do with synchronous code, build each thread's filters inside a
+  function it calls, with no filter object defined outside that function, or
+  hold a lock around every run. Filters v3 has the same limitation. Tracked in
+  `issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.
