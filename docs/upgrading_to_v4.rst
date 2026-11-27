@@ -1,7 +1,7 @@
 Upgrading to Filters v4
 =======================
 
-`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0a2>`_ makes
+`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0b1>`_ makes
 every filter generic over its output type, so a type checker can follow a value
 all the way through a chain. That part is free — your own filters need no
 changes. But three changes can break code that worked in Filters v3, and one of
@@ -12,37 +12,54 @@ touched; see :ref:`upgrade-v4-type-parameters`.
 
 .. note::
 
-   This guide covers the v4 alpha. The typing surface may still shift before
+   This guide covers the v4 beta. The typing surface may still shift before
    4.0.0 final.
 
-Installing the alpha
---------------------
+Installing the beta
+-------------------
 Pre-release versions aren't selected by default, so ask for this one
-explicitly::
+explicitly by pinning it::
 
-    pip install --pre 'phx-filters==4.0.0a2'
+    pip install 'phx-filters==4.0.0b1'
 
 Or, with `uv <https://docs.astral.sh/uv/>`_::
 
-    uv add 'phx-filters==4.0.0a2'
+    uv add 'phx-filters==4.0.0b1'
 
-If the alpha bites, going back is just as explicit::
+If the beta bites, going back is just as explicit::
 
     pip install 'phx-filters<4'
 
-.. note::
+Or, with uv, which records the change in ``pyproject.toml`` and ``uv.lock`` so
+the next ``uv sync`` doesn't reinstall the beta::
 
-   Filters v4 adds ``typing-extensions>=4.15.0`` as a runtime dependency. If you
-   vendor your dependencies or install from a private mirror, add it before you
-   upgrade.
+    uv add 'phx-filters<4'
 
-.. note::
+.. warning::
 
-   The ``phx-filters[django]`` and ``phx-filters[iso]`` extras declare no upper
-   bound on ``phx-filters``, so both install alongside v4 without a resolver
-   conflict, and neither looks likely to trip the breaking changes below.
-   Neither has been exercised against v4 in anger yet, though, so test in a
-   throwaway environment before you rely on it.
+   **Filters v4 changes its runtime dependencies**
+
+   It raises two of them by a major version:
+
+   * ``python-dateutil>=4,<5``, where Filters v3 requires ``>=2,<3``
+   * ``phx-class-registry>=6,<7``, where Filters v3 requires ``>=5,<6``
+
+   If anything else in your project caps either package below these versions,
+   your resolver reports a conflict on that package and won't install
+   Filters v4. Upgrade or loosen that package first, or stay on Filters v3
+   until a release of it lifts the cap. If your own code uses
+   ``python-dateutil``, check its
+   `changelog <https://github.com/dateutil/dateutil/releases>`_ for the 3.0
+   and 4.0 changes too.
+
+   It also adds ``typing-extensions>=4.15.0``. If you vendor your dependencies
+   or install from a private mirror, add it before you upgrade.
+
+The ``phx-filters[django]`` and ``phx-filters[iso]`` extras declare no upper
+bound on ``phx-filters``, so both install alongside v4 without a resolver
+conflict, and neither looks likely to trip the breaking changes below.
+Neither has been exercised against v4 in anger yet, though, so test in a
+throwaway environment before you rely on it.
 
 At a Glance
 -----------
@@ -361,10 +378,10 @@ separate stubs package.
    keeps them by default. And a model raises pydantic's ``ValidationError``,
    which carries each filter's message but not its error code.
 
-   Its v1 is in alpha alongside Filters v4, so ask for the pre-release
-   explicitly::
+   Its v1 is in alpha alongside the Filters v4 beta, so ask for the pre-release
+   explicitly by pinning it::
 
-       pip install --pre phx-filters-pydantic
+       pip install 'phx-filters-pydantic==1.0.0a1'
 
 .. note::
 
