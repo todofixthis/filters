@@ -468,13 +468,9 @@ def test_filter_repeater_copy_preserves_base_attributes() -> None:
     """Copying a FilterRepeater preserves BaseFilter attributes."""
     handler = f.MemoryHandler()
     repeater = f.FilterRepeater(f.Int())
-    repeater.parent = f.FilterRepeater(f.Int())
     repeater.handler = handler
-    repeater._key = "items"
 
     copied = copy.copy(repeater)
 
     assert copied is not repeater
-    assert copied._parent is repeater._parent
-    assert copied._key == "items"
     assert copied.handler is handler

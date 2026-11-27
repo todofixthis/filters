@@ -66,7 +66,7 @@ class FilterRepeater(BaseFilter):
         """
         super().__init__()
 
-        self._filter_chain = self.resolve_filter(filter_chain, parent=self)
+        self._filter_chain = self.resolve_filter(filter_chain)
 
         self.restrict_keys = None if restrict_keys is None else set(restrict_keys)
 
@@ -277,16 +277,7 @@ class FilterMapper(BaseFilter):
                 # (depending on `allow_missing_keys`) without
                 # applying any Filters to the value.
                 #
-                self._filters[key] = self.resolve_filter(
-                    filter_chain,
-                    parent=self,
-                    # ``resolve_filter`` skips a falsy ``key`` and
-                    # ``_make_key`` joins key parts with ``str.join``,
-                    # so an un-stringified int key (especially ``0``)
-                    # would go missing from error contexts, or blow up
-                    # ``str.join`` if a sibling key is a string.
-                    key=self.unicodify_key(key),
-                )
+                self._filters[key] = self.resolve_filter(filter_chain)
 
         # Every key must be a non-bool int for this FilterMapper to
         # also accept sequence input (see class docstring).
