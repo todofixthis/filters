@@ -484,39 +484,6 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
-.. caution::
-
-   **Two threads must not apply the same filter instance at the same time**
-
-   A filter keeps the state of the run in progress on the instance, so two
-   threads that share one can swap errors: one run accepts an invalid value,
-   and the other rejects a valid one. Filters v3 has the same limitation.
-
-   Filters share an instance more often than it looks. After
-   ``Text = f.Unicode | f.Strip``, the chains ``Text | f.MaxLength(50)`` and
-   ``Text | f.MaxLength(2000)`` hold the same ``Unicode`` and ``Strip``
-   instances, and so does every :py:class:`filters.FilterMapper` or
-   :py:class:`filters.FilterRepeater` that ``Text`` is nested in.
-
-   Where threads validate at the same time, as most web frameworks do with
-   synchronous code, do one of these:
-
-   * Build the filters inside the function that uses them, so each call has
-     its own. No filter instance may come from outside that function: not a
-     module-level chain, and not a child filter stored on a class.
-   * Hold one lock around every run in the process. A lock for each chain is
-     not enough, because two chains can share filters. A
-     :py:class:`filters.FilterRunner` runs when you first read ``is_valid()``,
-     ``cleaned_data`` or ``errors``, not when you create it, so hold the lock
-     across that read. Use a :py:class:`threading.RLock` if any of your
-     filters starts a run of its own.
-
-   ``phx-filters-pydantic`` locks each ``FilterField`` on its own, which is a
-   lock for each chain. Two fields built from the same filters, such as
-   ``Text`` above, still need one of the two measures.
-
-   Tracked in `issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
-
 * Filters checks its own code with mypy and pyright in strict mode, except for
   three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
   ``reportReturnType``. All three report the way a filter rejects a value,
@@ -547,6 +514,11 @@ Known Limitations
   result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
+* Two threads must not apply the same filter instance at the same time, or
+  one run can accept an invalid value. Filters v3 has the same limitation: it
+  is not new in v4, but it came to light during the v4 work, so it may be news
+  to you. :ref:`getting_started:Using Filters From Several Threads` says when
+  filters share an instance and what to do about it.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.

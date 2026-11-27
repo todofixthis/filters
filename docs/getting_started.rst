@@ -86,6 +86,54 @@ Here's an example:
    runner = f.FilterRunner(filter_, '\r\n')
    assert runner.is_valid() is False
 
+Using Filters From Several Threads
+==================================
+A filter keeps the state of the run in progress on the filter instance. That
+is fine for one thread, however many times it reuses the instance. It matters
+where several threads validate at the same time, as most web frameworks do
+with synchronous code.
+
+.. caution::
+
+   **Two threads must not apply the same filter instance at the same time**
+
+   Two threads that share an instance can swap errors: one run accepts an
+   invalid value, and the other rejects a valid one.
+
+Filters share an instance more often than it looks:
+
+.. code-block:: python
+
+   import filters as f
+
+   Text = f.Unicode | f.Strip
+
+   # These two chains hold the same ``Unicode`` and ``Strip`` instances.
+   title = Text | f.MaxLength(50)
+   body = Text | f.MaxLength(2000)
+
+Every :py:class:`filters.FilterMapper` or :py:class:`filters.FilterRepeater`
+that ``Text`` is nested in holds those two instances as well.
+
+Where threads validate at the same time, do one of these:
+
+* Build the filters inside the function that uses them, so each call has its
+  own. No filter instance may come from outside that function: not a
+  module-level chain, and not a child filter stored on a class.
+* Hold one lock around every run in the process. A lock for each chain is not
+  enough, because two chains can share filters. A
+  :py:class:`filters.FilterRunner` runs when you first read ``is_valid()``,
+  ``cleaned_data`` or ``errors``, not when you create it, so hold the lock
+  across that read. Use a :py:class:`threading.RLock` if any of your filters
+  starts a run of its own.
+
+``phx-filters-pydantic`` locks each ``FilterField`` on its own, which is a lock
+for each chain. Two fields built from the same filters, such as ``Text`` above,
+still need one of the two measures.
+
+This is tracked in
+`issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
+
 .. _none-is-special:
 
 Much Ado About None
