@@ -508,7 +508,12 @@ Known Limitations
      not enough, because two chains can share filters. A
      :py:class:`filters.FilterRunner` runs when you first read ``is_valid()``,
      ``cleaned_data`` or ``errors``, not when you create it, so hold the lock
-     across that read.
+     across that read. Use a :py:class:`threading.RLock` if any of your
+     filters starts a run of its own.
+
+   ``phx-filters-pydantic`` locks each ``FilterField`` on its own, which is a
+   lock for each chain. Two fields built from the same filters, such as
+   ``Text`` above, still need one of the two measures.
 
    Tracked in `issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
 
