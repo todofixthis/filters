@@ -86,6 +86,58 @@ Here's an example:
    runner = f.FilterRunner(filter_, '\r\n')
    assert runner.is_valid() is False
 
+Using Filters From Several Threads
+==================================
+A filter instance is not thread-safe: it keeps the state of the run in
+progress on the instance. That is fine for one thread, however many times it
+reuses the instance, so skip this section if your code validates on one thread.
+It matters where several threads validate at the same time, as most web
+frameworks do with synchronous code.
+
+.. caution::
+
+   **Two threads must not apply the same filter instance at the same time**
+
+   Two threads that share an instance can swap errors: one run accepts an
+   invalid value, and the other rejects a valid one.
+
+Filters share an instance more often than it looks:
+
+.. code-block:: python
+
+   import filters as f
+
+   Text = f.Unicode | f.Strip
+
+   # These two chains hold the same ``Unicode`` and ``Strip`` instances.
+   title = Text | f.MaxLength(50)
+   body = Text | f.MaxLength(2000)
+
+Every :py:class:`filters.FilterMapper` or :py:class:`filters.FilterRepeater`
+that ``Text`` is nested in holds those two instances as well.
+
+Where threads validate at the same time, do one of these:
+
+* Build the filters and the ``FilterRunner`` inside the function that uses
+  them, so each call has its own. Nothing may come from outside that function:
+  not a module-level chain or runner, and not a filter instance held as a
+  class attribute.
+* Hold one :py:class:`threading.RLock` around every run in the process. A lock
+  for each chain is not enough, because two chains can share filters. A
+  :py:class:`filters.FilterRunner` runs when you first read ``is_valid()``,
+  ``cleaned_data`` or ``errors``, not when you create it or call its
+  ``apply()``. So where threads share a runner, hold the lock from
+  ``apply()`` until you have read every result you need. Where each call
+  makes its own runner, hold it across the first read.
+
+`phx-filters-pydantic <https://phx-filters-pydantic.readthedocs.io/>`_ locks
+each ``FilterField`` on its own, which is a lock for each chain. Two fields
+built from the same filters, such as ``Text`` above, still need one of the two
+measures.
+
+This is tracked in
+`issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
+
 .. _none-is-special:
 
 Much Ado About None

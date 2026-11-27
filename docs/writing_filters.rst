@@ -179,16 +179,31 @@ the :py:class:`filters.Type` filter:
      def _apply(self, value):
         # The incoming value must be a byte string.
         value = self._filter(value, f.Type(bytes))
-        if self._has_errors:
+        if self._has_errors or value is None:
             return None
 
         extra_bytes = self.block_size - (len(value) % self.block_size)
         return value + bytes([extra_bytes] * extra_bytes)
 
-.. important::
+.. warning::
 
-   ``self._filter`` will not raise an exception if the value is invalid; your
-   filter *must* check ``self._has_errors`` after calling ``self._filter(...)``!
+   ``self._filter`` **does not raise when the value is invalid**
+
+   It reports the error and sets ``self._has_errors``, so your filter must
+   check ``self._has_errors`` after every ``self._filter(...)`` call. The
+   value it returns is usually ``None``, but not always, so the flag is the
+   check that counts. Check ``value is None`` in the same test as well, as the
+   example does. A type checker can't tell from ``self._has_errors`` that
+   ``value`` holds a result, so without the second check pyright reports each
+   later use of ``value``.
+
+These examples leave ``_apply`` without annotations. mypy accepts all three at
+its default rules. pyright accepts the first two, and reports
+``reportIncompatibleMethodOverride`` on the last one, because ``return None``
+isn't part of the ``bytes`` the filter declares. See
+:ref:`upgrading_to_v4:Known Limitations` for why a filter rejects a value that
+way, what to do about the error, and what else to expect if you run either
+checker in strict mode.
 
 Unit Tests
 ^^^^^^^^^^
@@ -213,12 +228,12 @@ Here's how to test ``Pkcs7Pad`` with pytest:
 
    def test_pass_none(assert_filter_passes):
        """``None`` always passes this filter."""
-       assert_filter_passes(f.Pkcs7Pad(), None)
+       assert_filter_passes(Pkcs7Pad(), None)
 
    def test_pass_padding(assert_filter_passes):
        """Padding a value to the correct length."""
        assert_filter_passes(
-           f.Pkcs7Pad(),
+           Pkcs7Pad(),
            b'Hello, world!',
            b'Hello, world!\x03\x03\x03',
        )
@@ -226,7 +241,7 @@ Here's how to test ``Pkcs7Pad`` with pytest:
    def test_fail_wrong_type(assert_filter_errors):
        """The incoming value is not a byte string."""
        assert_filter_errors(
-           f.Pkcs7Pad(),
+           Pkcs7Pad(),
            'Hello, world!',
            [f.Type.CODE_WRONG_TYPE],
        )

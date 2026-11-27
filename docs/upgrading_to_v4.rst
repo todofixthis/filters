@@ -484,6 +484,11 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
+* Two threads must not apply the same filter instance at the same time, or
+  one run can accept an invalid value. Filters v3 has the same limitation: it
+  is not new in v4, but it came to light during the v4 work, so it may be news
+  to you. :ref:`getting_started:Using Filters From Several Threads` says when
+  filters share an instance and what to do about it.
 * Filters checks its own code with mypy and pyright in strict mode, except for
   three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
   ``reportReturnType``. All three report the way a filter rejects a value,
@@ -494,6 +499,13 @@ Known Limitations
   under mypy and ``reportReturnType`` under pyright. Widening ``_apply`` to
   ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
   rules on those lines, or disable them as Filters does for its own code.
+  Leaving ``_apply`` without annotations doesn't avoid it under pyright, which
+  infers the return type and reports ``reportIncompatibleMethodOverride`` on
+  the ``def`` line at its default rules. Suppress it there, with
+  ``# pyright: ignore[reportIncompatibleMethodOverride]``. mypy doesn't check
+  an unannotated ``_apply`` at its default rules. In strict mode both checkers
+  ask for the annotations first: mypy reports ``no-untyped-def``, and pyright
+  reports ``reportMissingParameterType``.
   ``return self._invalid_value(...)`` reports neither, because
   ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
   it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
