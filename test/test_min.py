@@ -2,10 +2,14 @@
 Tests for the Min filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_min_pass_none(assert_filter_passes):
+def test_min_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this Filter.
 
@@ -14,21 +18,27 @@ def test_min_pass_none(assert_filter_passes):
     assert_filter_passes(f.Min(min_value=5), None)
 
 
-def test_min_pass_greater_value(assert_filter_passes):
+def test_min_pass_greater_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is greater than the min value.
     """
     assert_filter_passes(f.Min(min_value=5), 8)
 
 
-def test_min_pass_equal_value(assert_filter_passes):
+def test_min_pass_equal_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is equal to the min value.
     """
     assert_filter_passes(f.Min(min_value=5), 5)
 
 
-def test_min_fail_equal_value_exclusive_comparison(assert_filter_errors):
+def test_min_fail_equal_value_exclusive_comparison(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is equal to the min value, but the Filter is
     configured to use exclusive comparison.
@@ -45,7 +55,9 @@ def test_min_fail_equal_value_exclusive_comparison(assert_filter_errors):
     )
 
 
-def test_min_fail_lesser_value(assert_filter_errors):
+def test_min_fail_lesser_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is less than the min value.
     """
@@ -56,7 +68,9 @@ def test_min_fail_lesser_value(assert_filter_errors):
     )
 
 
-def test_min_string_comparison_oddness(assert_filter_errors):
+def test_min_string_comparison_oddness(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If the filter is being used on strings, the comparison is case
     sensitive.

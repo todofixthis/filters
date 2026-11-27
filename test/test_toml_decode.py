@@ -2,10 +2,16 @@
 Tests for the TomlDecode filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_toml_decode_pass_none(assert_filter_passes):
+def test_toml_decode_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +20,9 @@ def test_toml_decode_pass_none(assert_filter_passes):
     assert_filter_passes(f.TomlDecode(), None)
 
 
-def test_toml_decode_pass_valid_toml(assert_filter_passes):
+def test_toml_decode_pass_valid_toml(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a valid TOML string.
     """
@@ -25,14 +33,18 @@ def test_toml_decode_pass_valid_toml(assert_filter_passes):
     )
 
 
-def test_toml_decode_pass_empty_document(assert_filter_passes):
+def test_toml_decode_pass_empty_document(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An empty string is valid TOML (empty document).
     """
     assert_filter_passes(f.TomlDecode(), "", {})
 
 
-def test_toml_decode_fail_invalid_toml(assert_filter_errors):
+def test_toml_decode_fail_invalid_toml(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not valid TOML.
     """
@@ -43,7 +55,9 @@ def test_toml_decode_fail_invalid_toml(assert_filter_errors):
     )
 
 
-def test_toml_decode_fail_bytes(assert_filter_errors):
+def test_toml_decode_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Byte strings are not accepted; use a str instead.
     """
@@ -54,7 +68,9 @@ def test_toml_decode_fail_bytes(assert_filter_errors):
     )
 
 
-def test_toml_decode_fail_wrong_type(assert_filter_errors):
+def test_toml_decode_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Non-string values are rejected.
     """

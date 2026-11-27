@@ -91,7 +91,16 @@ def filter_macro(
     filter_partial = partial(func, *args, **kwargs)
 
     class FilterMacroMeta(FilterMeta):
-        def __new__(mcs, name, bases, attrs):
+        def __new__(
+            mcs,
+            name: str,
+            bases: tuple[type, ...],
+            attrs: dict[str, Any],
+            # Positional-only with ``**kwargs``, matching
+            # ``FilterMeta.__init__``, which receives the same arguments.
+            /,
+            **kwargs: Any,
+        ) -> "FilterMacroMeta":
             # This is as close as we can get to running
             # ``update_wrapper`` on a type.
             for attr in WRAPPER_ASSIGNMENTS:
@@ -100,16 +109,20 @@ def filter_macro(
 
             # Note that we ignore the ``name`` argument, passing in
             # ``func.__name__`` instead.
-            return super().__new__(mcs, func.__name__, bases, attrs)
+            return super().__new__(mcs, func.__name__, bases, attrs, **kwargs)
 
-        def __call__(cls, *runtime_args, **runtime_kwargs):
+        def __call__(
+            cls,
+            *runtime_args: Any,
+            **runtime_kwargs: Any,
+        ) -> FilterCompatible[T_out]:
             return filter_partial(*runtime_args, **runtime_kwargs)
 
     class FilterMacro(FilterMacroType, metaclass=FilterMacroMeta):
         # This method will probably never get called due to overloaded
         # ``__call__`` in the metaclass, but just in case, we'll include
         # it because it is an abstract method in `BaseFilter`.
-        def _apply(self, value):
+        def _apply(self, value: Any) -> T_out:
             # noinspection PyProtectedMember
             return self.__class__()._apply(value)
 

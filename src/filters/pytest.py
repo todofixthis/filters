@@ -13,12 +13,15 @@ pytest automatically.
 """
 
 import json
+from collections.abc import Callable, Mapping
 from itertools import starmap
 from pprint import pformat
 from traceback import format_exception
+from typing import Any
 
 import pytest
 
+from filters.base import FilterCompatible
 from filters.handlers import FilterRunner
 
 __all__ = [
@@ -35,8 +38,6 @@ class unmodified:
     ``expected_value`` parameter.
     """
 
-    pass
-
 
 class skip_value_check:
     """
@@ -48,12 +49,13 @@ class skip_value_check:
     to your test to make sure the filtered value conforms to expectations.
     """
 
-    pass
-
 
 def _run_filter_assertion(
-    filter_instance, test_value, expected_codes, expected_value
-) -> FilterRunner:
+    filter_instance: FilterCompatible[Any],
+    test_value: Any,
+    expected_codes: list[str] | Mapping[str, list[str]],
+    expected_value: Any,
+) -> FilterRunner[Any]:
     """
     Core assertion logic for filter testing.
 
@@ -71,25 +73,23 @@ def _run_filter_assertion(
 
     # Fail immediately if unhandled exceptions occurred.
     if runner.has_exceptions:
+        tracebacks = pformat(list(starmap(format_exception, runner.exc_info)))
+        messages = pformat(dict(runner.filter_messages))
         pytest.fail(
             "Unhandled exceptions occurred while filtering the "
-            "request payload:\\n\\n{tracebacks}\\n\\n"
-            "Filter Messages:\\n\\n{messages}".format(
-                messages=pformat(dict(runner.filter_messages)),
-                tracebacks=pformat(list(starmap(format_exception, runner.exc_info))),
-            )
+            f"request payload:\\n\\n{tracebacks}\\n\\n"
+            f"Filter Messages:\\n\\n{messages}"
         )
 
     if isinstance(expected_codes, list):
         expected_codes = {"": expected_codes}
 
     if runner.error_codes != expected_codes:
+        expected = json.dumps(expected_codes)
+        messages = pformat(dict(runner.filter_messages))
         pytest.fail(
             "Filter generated unexpected error codes (expected "
-            "{expected}):\\n\\n{messages}".format(
-                expected=json.dumps(expected_codes),
-                messages=pformat(dict(runner.filter_messages)),
-            ),
+            f"{expected}):\\n\\n{messages}",
         )
 
     if expected_value is not skip_value_check:
@@ -101,7 +101,7 @@ def _run_filter_assertion(
 
 
 @pytest.fixture
-def assert_filter_passes():
+def assert_filter_passes() -> Callable[..., FilterRunner[Any]]:
     """
     Assertion fixture for testing that a filter passes without errors.
 
@@ -114,14 +114,18 @@ def assert_filter_passes():
         expected_value: Expected filtered value (default: ``unmodified``).
     """
 
-    def _assert_passes(filter_instance, test_value, expected_value=unmodified):
+    def _assert_passes(
+        filter_instance: FilterCompatible[Any],
+        test_value: Any,
+        expected_value: Any = unmodified,
+    ) -> FilterRunner[Any]:
         return _run_filter_assertion(filter_instance, test_value, {}, expected_value)
 
     return _assert_passes
 
 
 @pytest.fixture
-def assert_filter_errors():
+def assert_filter_errors() -> Callable[..., FilterRunner[Any]]:
     """
     Assertion fixture for testing that a filter generates expected errors.
 
@@ -136,8 +140,11 @@ def assert_filter_errors():
     """
 
     def _assert_errors(
-        filter_instance, test_value, expected_codes, expected_value=None
-    ):
+        filter_instance: FilterCompatible[Any],
+        test_value: Any,
+        expected_codes: list[str] | Mapping[str, list[str]],
+        expected_value: Any = None,
+    ) -> FilterRunner[Any]:
         return _run_filter_assertion(
             filter_instance, test_value, expected_codes, expected_value
         )

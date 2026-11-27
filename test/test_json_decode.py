@@ -2,10 +2,16 @@
 Tests for the JsonDecode filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_json_decode_pass_none(assert_filter_passes):
+def test_json_decode_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +20,9 @@ def test_json_decode_pass_none(assert_filter_passes):
     assert_filter_passes(f.JsonDecode(), None)
 
 
-def test_json_decode_pass_valid_json(assert_filter_passes):
+def test_json_decode_pass_valid_json(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is valid JSON.
     """
@@ -25,7 +33,9 @@ def test_json_decode_pass_valid_json(assert_filter_passes):
     )
 
 
-def test_json_decode_fail_invalid_json(assert_filter_errors):
+def test_json_decode_fail_invalid_json(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not valid JSON.
     """
@@ -36,7 +46,9 @@ def test_json_decode_fail_invalid_json(assert_filter_errors):
     )
 
 
-def test_json_decode_fail_empty_string(assert_filter_errors):
+def test_json_decode_fail_empty_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty string.
 
@@ -46,7 +58,9 @@ def test_json_decode_fail_empty_string(assert_filter_errors):
     assert_filter_errors(f.JsonDecode(), "", [f.JsonDecode.CODE_INVALID])
 
 
-def test_json_decode_fail_bytes(assert_filter_errors):
+def test_json_decode_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -54,7 +68,9 @@ def test_json_decode_fail_bytes(assert_filter_errors):
     assert_filter_errors(f.JsonDecode(), b'{"blends": false}', [f.Type.CODE_WRONG_TYPE])
 
 
-def test_json_decode_fail_wrong_type(assert_filter_errors):
+def test_json_decode_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

@@ -2,10 +2,16 @@
 Tests for the Base64Decode filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_base64_decode_pass_none(assert_filter_passes):
+def test_base64_decode_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +20,9 @@ def test_base64_decode_pass_none(assert_filter_passes):
     assert_filter_passes(f.Base64Decode(), None)
 
 
-def test_base64_decode_pass_valid(assert_filter_passes):
+def test_base64_decode_pass_valid(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is Base64-encoded.
     """
@@ -22,7 +30,9 @@ def test_base64_decode_pass_valid(assert_filter_passes):
     assert_filter_passes(f.Base64Decode(), b"SGVsbG8sIHdvcmxkIQ==", b"Hello, world!")
 
 
-def test_base64_decode_pass_url_safe(assert_filter_passes):
+def test_base64_decode_pass_url_safe(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is Base64-encoded using a URL-safe variant.
     """
@@ -33,14 +43,18 @@ def test_base64_decode_pass_url_safe(assert_filter_passes):
     )
 
 
-def test_base64_decode_fail_mixed_dialects(assert_filter_errors):
+def test_base64_decode_fail_mixed_dialects(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value contains both URL-safe and URL-unsafe characters.
     """
     assert_filter_errors(f.Base64Decode(), b"+-_/_w==", [f.Base64Decode.CODE_INVALID])
 
 
-def test_base64_decode_pass_whitespace(assert_filter_passes):
+def test_base64_decode_pass_whitespace(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value includes whitespace characters.
 
@@ -56,7 +70,9 @@ def test_base64_decode_pass_whitespace(assert_filter_passes):
     )
 
 
-def test_base64_decode_pass_padding_missing(assert_filter_passes):
+def test_base64_decode_pass_padding_missing(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is Base64-encoded, but it has the wrong length.
 
@@ -72,7 +88,9 @@ def test_base64_decode_pass_padding_missing(assert_filter_passes):
     assert_filter_passes(f.Base64Decode(), b"SGVsbG8sIHdvcmxkIQ", b"Hello, world!")
 
 
-def test_base64_decode_pass_padding_excessive(assert_filter_passes):
+def test_base64_decode_pass_padding_excessive(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is Base64-encoded, but for some reason it has too
     much padding.
@@ -84,7 +102,9 @@ def test_base64_decode_pass_padding_excessive(assert_filter_passes):
     assert_filter_passes(f.Base64Decode(), b"SGVsbG8sIHdvcmxkIQ=====", b"Hello, world!")
 
 
-def test_base64_decode_fail_invalid(assert_filter_errors):
+def test_base64_decode_fail_invalid(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value contains values that are not compatible with
     Base64.
@@ -96,7 +116,9 @@ def test_base64_decode_fail_invalid(assert_filter_errors):
     )
 
 
-def test_base64_decode_fail_string(assert_filter_errors):
+def test_base64_decode_fail_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For parity with :py:func:`codecs.decode`, unicode strings are not
     allowed; only binary strings can be decoded.
@@ -115,7 +137,9 @@ def test_base64_decode_fail_string(assert_filter_errors):
     )
 
 
-def test_base64_decode_fail_wrong_type(assert_filter_errors):
+def test_base64_decode_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """

@@ -3,11 +3,16 @@ Tests for the FilterMapper filter.
 """
 
 import copy
+from collections.abc import Callable
+from typing import Any
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_filter_mapper_pass_none(assert_filter_passes):
+def test_filter_mapper_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For consistency with all the other Filter classes, ``None`` is
     considered a valid value to pass to a FilterMapper, even though it is
@@ -18,7 +23,9 @@ def test_filter_mapper_pass_none(assert_filter_passes):
     assert_filter_passes(filter_instance, None)
 
 
-def test_filter_mapper_pass_mapping(assert_filter_passes):
+def test_filter_mapper_pass_mapping(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a dict containing valid values.
     """
@@ -45,7 +52,9 @@ def test_filter_mapper_pass_mapping(assert_filter_passes):
     assert list(runner.cleaned_data.keys()) == ["id", "subject"]
 
 
-def test_filter_mapper_fail_mapping(assert_filter_errors):
+def test_filter_mapper_fail_mapping(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterRepeater is applied to a dict containing invalid values.
     """
@@ -73,7 +82,9 @@ def test_filter_mapper_fail_mapping(assert_filter_errors):
     )
 
 
-def test_filter_mapper_extra_keys_allowed(assert_filter_passes):
+def test_filter_mapper_extra_keys_allowed(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, FilterMappers pass-thru extra keys.
     """
@@ -107,7 +118,9 @@ def test_filter_mapper_extra_keys_allowed(assert_filter_passes):
     assert list(runner.cleaned_data.keys()) == ["id", "subject", "bird", "cat", "fox"]
 
 
-def test_filter_mapper_extra_keys_disallowed(assert_filter_errors):
+def test_filter_mapper_extra_keys_disallowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to treat any extra key as an invalid
     value.
@@ -140,7 +153,10 @@ def test_filter_mapper_extra_keys_disallowed(assert_filter_errors):
     )
 
 
-def test_filter_mapper_extra_keys_specified(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_extra_keys_specified(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured only to allow certain extra keys.
     """
@@ -190,7 +206,10 @@ def test_filter_mapper_extra_keys_specified(assert_filter_passes, assert_filter_
     )
 
 
-def test_filter_mapper_missing_keys_allowed(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_missing_keys_allowed(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, FilterMappers treat missing keys as `None`.
     """
@@ -230,7 +249,9 @@ def test_filter_mapper_missing_keys_allowed(assert_filter_passes, assert_filter_
     )
 
 
-def test_filter_mapper_missing_keys_disallowed(assert_filter_errors):
+def test_filter_mapper_missing_keys_disallowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to treat missing keys as invalid
     values.
@@ -259,8 +280,9 @@ def test_filter_mapper_missing_keys_disallowed(assert_filter_errors):
 
 
 def test_filter_mapper_missing_keys_specified(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to allow some missing keys but not
     others.
@@ -300,7 +322,10 @@ def test_filter_mapper_missing_keys_specified(
     )
 
 
-def test_filter_mapper_pass_thru_key(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_pass_thru_key(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If you want to make a key required but do not want to run any Filters
     on it, set its FilterChain to `None`.
@@ -354,7 +379,9 @@ def test_filter_mapper_pass_thru_key(assert_filter_passes, assert_filter_errors)
     )
 
 
-def test_filter_mapper_fail_non_mapping(assert_filter_errors):
+def test_filter_mapper_fail_non_mapping(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a mapping.
     """
@@ -373,7 +400,9 @@ def test_filter_mapper_fail_non_mapping(assert_filter_errors):
     )
 
 
-def test_filter_mapper_pass_sequence(assert_filter_passes):
+def test_filter_mapper_pass_sequence(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     When every key in ``filter_map`` is an int, a FilterMapper also accepts
     a list/tuple, applying each filter to the item at the corresponding
@@ -393,7 +422,9 @@ def test_filter_mapper_pass_sequence(assert_filter_passes):
     )
 
 
-def test_filter_mapper_fail_sequence(assert_filter_errors):
+def test_filter_mapper_fail_sequence(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterMapper is applied to a sequence containing invalid values; the
     error keys are the (stringified) indexes of the invalid values.
@@ -416,7 +447,9 @@ def test_filter_mapper_fail_sequence(assert_filter_errors):
     )
 
 
-def test_filter_mapper_sequence_result_is_always_a_list(assert_filter_passes):
+def test_filter_mapper_sequence_result_is_always_a_list(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Regardless of whether the incoming value is a list or a tuple, the
     filtered value is always a list.
@@ -428,7 +461,9 @@ def test_filter_mapper_sequence_result_is_always_a_list(assert_filter_passes):
     assert isinstance(runner.cleaned_data, list)
 
 
-def test_filter_mapper_sequence_extra_keys_allowed(assert_filter_passes):
+def test_filter_mapper_sequence_extra_keys_allowed(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, FilterMappers pass thru extra indexes.
     """
@@ -441,7 +476,9 @@ def test_filter_mapper_sequence_extra_keys_allowed(assert_filter_passes):
     )
 
 
-def test_filter_mapper_sequence_extra_keys_disallowed(assert_filter_errors):
+def test_filter_mapper_sequence_extra_keys_disallowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to treat any extra index as an invalid
     value.
@@ -461,7 +498,9 @@ def test_filter_mapper_sequence_extra_keys_disallowed(assert_filter_errors):
     )
 
 
-def test_filter_mapper_sequence_extra_keys_specified(assert_filter_errors):
+def test_filter_mapper_sequence_extra_keys_specified(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured only to allow certain extra indexes.
     """
@@ -480,7 +519,9 @@ def test_filter_mapper_sequence_extra_keys_specified(assert_filter_errors):
     )
 
 
-def test_filter_mapper_sequence_missing_keys_allowed(assert_filter_passes):
+def test_filter_mapper_sequence_missing_keys_allowed(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, FilterMappers treat missing indexes as ``None``.
     """
@@ -498,7 +539,9 @@ def test_filter_mapper_sequence_missing_keys_allowed(assert_filter_passes):
     )
 
 
-def test_filter_mapper_sequence_missing_keys_disallowed(assert_filter_errors):
+def test_filter_mapper_sequence_missing_keys_disallowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to treat missing indexes as invalid
     values.
@@ -521,7 +564,9 @@ def test_filter_mapper_sequence_missing_keys_disallowed(assert_filter_errors):
     )
 
 
-def test_filter_mapper_sequence_missing_keys_specified(assert_filter_passes):
+def test_filter_mapper_sequence_missing_keys_specified(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     FilterMappers can be configured to allow some missing indexes but not
     others; per the issue example, this lets a trailing, optional index be
@@ -543,7 +588,9 @@ def test_filter_mapper_sequence_missing_keys_specified(assert_filter_passes):
     )
 
 
-def test_filter_mapper_fail_non_sequence(assert_filter_errors):
+def test_filter_mapper_fail_non_sequence(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     An int-keyed FilterMapper still rejects an incoming value that is
     neither a Mapping nor a list/tuple.
@@ -558,7 +605,9 @@ def test_filter_mapper_fail_non_sequence(assert_filter_errors):
     )
 
 
-def test_filter_mapper_string_keyed_still_rejects_sequence(assert_filter_errors):
+def test_filter_mapper_string_keyed_still_rejects_sequence(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterMapper with any non-int key never accepts sequence input, even
     though an int-keyed FilterMapper does.
@@ -577,7 +626,9 @@ def test_filter_mapper_string_keyed_still_rejects_sequence(assert_filter_errors)
     )
 
 
-def test_filter_mapper_empty_filter_map_rejects_sequence(assert_filter_errors):
+def test_filter_mapper_empty_filter_map_rejects_sequence(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A FilterMapper with an empty ``filter_map`` has no keys to infer
     sequence support from, so it keeps accepting Mapping input only.
@@ -592,8 +643,9 @@ def test_filter_mapper_empty_filter_map_rejects_sequence(assert_filter_errors):
 
 
 def test_filter_mapper_bool_keys_reject_sequence(
-    assert_filter_passes, assert_filter_errors
-):
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``bool`` is a subclass of ``int``, but a FilterMapper keyed by ``True``/
     ``False`` is not treating those keys as indexes, so it keeps accepting
@@ -614,7 +666,10 @@ def test_filter_mapper_bool_keys_reject_sequence(
     )
 
 
-def test_filter_mapper_chained_with_mapper(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_chained_with_mapper(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Chaining two FilterMappers together has basically the same effect as
     combining their Filters.
@@ -674,7 +729,10 @@ def test_filter_mapper_chained_with_mapper(assert_filter_passes, assert_filter_e
     )
 
 
-def test_filter_mapper_chained_with_filter(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_chained_with_filter(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Chaining a Filter with a FilterMapper causes the chained Filter to
     operate on the entire mapping.
@@ -716,7 +774,10 @@ def test_filter_mapper_chained_with_filter(assert_filter_passes, assert_filter_e
 
 
 # noinspection SpellCheckingInspection
-def test_filter_mapper_mapperception(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_mapperception(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Want to filter dicts that contain other dicts?  We need to go deeper.
     """
@@ -797,7 +858,10 @@ def test_filter_mapper_mapperception(assert_filter_passes, assert_filter_errors)
     )
 
 
-def test_filter_mapper_copy(assert_filter_passes, assert_filter_errors):
+def test_filter_mapper_copy(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """FilterMapper can be shallow-copied via ``copy.copy()``.
 
     The copy keeps the original's configuration.
@@ -821,7 +885,7 @@ def test_filter_mapper_copy(assert_filter_passes, assert_filter_errors):
     )
 
 
-def test_filter_mapper_copy_is_independent():
+def test_filter_mapper_copy_is_independent() -> None:
     """Changing a copied FilterMapper's configuration leaves the original
     alone.
     """
@@ -831,10 +895,12 @@ def test_filter_mapper_copy_is_independent():
         allow_extra_keys={"foo"},
     )
     copied = copy.copy(original)
+    assert isinstance(copied.allow_missing_keys, set)
+    assert isinstance(copied.allow_extra_keys, set)
 
     copied.allow_missing_keys.add("bar")
     copied.allow_extra_keys.add("bar")
-    copied._filters["bar"] = f.Int
+    copied._filters["bar"] = f.Int()
 
     assert original.allow_missing_keys == {"id"}
     assert original.allow_extra_keys == {"foo"}

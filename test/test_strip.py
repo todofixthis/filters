@@ -2,10 +2,16 @@
 Tests for the Strip filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_strip_pass_none(assert_filter_passes):
+def test_strip_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +20,9 @@ def test_strip_pass_none(assert_filter_passes):
     assert_filter_passes(f.Strip(), None)
 
 
-def test_strip_pass_happy_path(assert_filter_passes):
+def test_strip_pass_happy_path(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter strips away all leading/trailing whitespace and unprintables
     from the incoming value.
@@ -26,7 +34,9 @@ def test_strip_pass_happy_path(assert_filter_passes):
     )
 
 
-def test_strip_pass_leading_only(assert_filter_passes):
+def test_strip_pass_leading_only(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can configure the filter to strip leading characters only.
     """
@@ -39,7 +49,9 @@ def test_strip_pass_leading_only(assert_filter_passes):
     )
 
 
-def test_strip_pass_trailing_only(assert_filter_passes):
+def test_strip_pass_trailing_only(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can configure the filter to strip trailing characters only.
     """
@@ -52,7 +64,9 @@ def test_strip_pass_trailing_only(assert_filter_passes):
     )
 
 
-def test_strip_pass_unicode(assert_filter_passes):
+def test_strip_pass_unicode(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Strip also catches non-ASCII characters that are classified as
     whitespace according to Unicode.
@@ -65,7 +79,9 @@ def test_strip_pass_unicode(assert_filter_passes):
     )
 
 
-def test_strip_pass_custom_regexes(assert_filter_passes):
+def test_strip_pass_custom_regexes(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can also use regexes to specify which characters get removed.
     """
@@ -79,7 +95,9 @@ def test_strip_pass_custom_regexes(assert_filter_passes):
     )
 
 
-def test_strip_fail_bytes(assert_filter_errors):
+def test_strip_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     For backwards-compatibility with previous versions of the library, byte
     strings are not allowed.
@@ -91,7 +109,9 @@ def test_strip_fail_bytes(assert_filter_errors):
     )
 
 
-def test_strip_fail_wrong_type(assert_filter_errors):
+def test_strip_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a string.
     """
@@ -102,7 +122,7 @@ def test_strip_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_strip_str_without_leading_regex():
+def test_strip_str_without_leading_regex() -> None:
     """
     Disabling one end's regex leaves it out of the string
     representation instead of raising.

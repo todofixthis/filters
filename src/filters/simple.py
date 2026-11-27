@@ -1,5 +1,6 @@
 from collections.abc import (
     Callable,
+    Hashable,
     Iterable,
     Mapping,
     MutableMapping,
@@ -8,7 +9,7 @@ from collections.abc import (
     Sized,
 )
 from datetime import date, datetime, time, tzinfo
-from typing import Any, Hashable, cast
+from typing import Any, cast
 
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzoffset
@@ -26,15 +27,13 @@ T_callable = TypeVar("T_callable", default=Any)
 argument.
 """
 
+# Deliberately *not* named ``T_widened``: ``filters.base`` declares its own
+# module-level ``T_widened`` with a different default (``default=Any``) for
+# the ``|`` overloads, so two type variables of the same name and different
+# meaning would otherwise be in play whenever both modules are read together.
 T_optional_default = TypeVar("T_optional_default", default=None)
 """The type :py:class:`Optional` returns, bound from its ``default``
 argument.
-
-Deliberately *not* named ``T_widened``: :py:mod:`filters.base` declares
-its own module-level ``T_widened`` with a different default
-(``default=Any``) for the ``|`` overloads, so two type variables of the
-same name and different meaning would otherwise be in play whenever both
-modules are read together.
 """
 
 __all__ = [
@@ -58,10 +57,17 @@ __all__ = [
 ]
 
 
+# Named with explicit type arguments, because pyright otherwise infers an
+# abstract collection's own type parameters as ``Unknown`` and reports every
+# use of the filtered value.
+_IterableType = Type[Iterable[Any]]
+_MappingOrSequenceType = Type[Mapping[Any, Any] | Sequence[Any]]
+
+
 def selective_copy_mapping(
-    source: Mapping,
-    keys: Iterable[Hashable],
-) -> Mapping:
+    source: Mapping[Any, Any],
+    keys: Iterable[Any],
+) -> Mapping[Any, Any]:
     """Creates a copy of a mapping, with the same type (if practical).
 
     Args:
@@ -99,9 +105,9 @@ def selective_copy_mapping(
 
 
 def selective_copy_sequence(
-    source: Sequence,
+    source: Sequence[Any],
     indices: Iterable[int],
-) -> Sequence:
+) -> Sequence[Any]:
     """Creates a copy of a sequence, with the same type (if practical).
 
     Args:
@@ -111,7 +117,7 @@ def selective_copy_sequence(
             in the copy. Any indices that don't exist in ``source`` will
             be set to ``None`` in the resulting sequence.
     """
-    values = []
+    values: list[Any] = []
 
     for idx in indices:
         try:
@@ -200,7 +206,7 @@ class ByteArray(BaseFilter[bytearray]):
         self.encoding = encoding
 
     def _apply(self, value: Any) -> bytearray:
-        value = self._filter(value, Type(Iterable))
+        value = self._filter(value, _IterableType(Iterable))
 
         if self._has_errors:
             return None
@@ -258,7 +264,10 @@ class Call(BaseFilter[T_callable]):
     """
 
     def __init__(
-        self, callable_: Callable[..., T_callable], *extra_args, **extra_kwargs
+        self,
+        callable_: Callable[..., T_callable],
+        *extra_args: Any,
+        **extra_kwargs: Any,
     ) -> None:
         """Initialises the Call filter.
 
@@ -279,7 +288,8 @@ class Call(BaseFilter[T_callable]):
     def _apply(self, value: Any) -> T_callable:
         try:
             return self.callable(value, *self.extra_args, **self.extra_kwargs)
-        except Exception as e:
+        # Any exception the callable raises becomes an invalid value.
+        except Exception as e:  # noqa: BLE001
             return self._invalid_value(
                 value,
                 reason=e,
@@ -305,7 +315,7 @@ class _BaseDatetime(BaseFilter[T_out]):
 
     def __init__(
         self,
-        timezone: tzinfo | int | float | None = None,
+        timezone: tzinfo | float | None = None,
         naive: bool = False,
     ) -> None:
         """Initialises the filter.
@@ -338,7 +348,7 @@ class _BaseDatetime(BaseFilter[T_out]):
         self.timezone = timezone
         self.naive = naive
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}(timezone={self.timezone!r}, naive={self.naive!r})"
         )
@@ -460,7 +470,7 @@ class Item(BaseFilter[Any]):
         # different name.
         self.target = key
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{type(self).__name__}({'' if self.target is None else repr(self.target)})"
         )
@@ -468,19 +478,21 @@ class Item(BaseFilter[Any]):
     def _apply(self, value: Any) -> Any:
         value = self._filter(
             value,
-            Type((Mapping, Sequence)) | NotEmpty,
+            _MappingOrSequenceType((Mapping, Sequence)) | NotEmpty,
         )
 
         if self._has_errors:
             return None
 
         return (
-            self._apply_mapping(value)
+            # ``isinstance`` also narrows the ``Sequence`` arm, to a
+            # ``Mapping`` whose type arguments pyright cannot know.
+            self._apply_mapping(value)  # pyright: ignore[reportUnknownArgumentType]
             if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: Mapping) -> Any:
+    def _apply_mapping(self, value: Mapping[Any, Any]) -> Any:
         """Extracts value from incoming mapping."""
         if self.target is None:
             for v in value.values():
@@ -495,7 +507,7 @@ class Item(BaseFilter[Any]):
                 sub_key=str(self.target),
             )
 
-    def _apply_sequence(self, value: Sequence) -> Any:
+    def _apply_sequence(self, value: Sequence[Any]) -> Any:
         """Extracts value from incoming sequence."""
         # Indexing ``value`` with a non-int target raises ``TypeError``,
         # which ``apply`` reports as an invalid value.
@@ -566,10 +578,10 @@ class Len(PassThrough):
         self.min = min
         self.max = max
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.exact is not None:
             return f"{type(self).__name__}({self.exact!r})"
-        parts = []
+        parts: list[str] = []
         if self.min is not None:
             parts.append(f"min={self.min!r}")
         if self.max is not None:
@@ -630,7 +642,7 @@ class Length(PassThrough):
 
         self.length = length
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(length={self.length!r})"
 
     def _apply(self, value: Any) -> Any:
@@ -681,7 +693,7 @@ class MaxLength(PassThrough):
         self.max_length = max_length
         self.truncate = truncate
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.max_length!r})"
 
     def _apply(self, value: Any) -> Any:
@@ -715,7 +727,7 @@ class MinLength(PassThrough):
 
         self.min_length = min_length
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.min_length!r})"
 
     def _apply(self, value: Any) -> Any:
@@ -777,7 +789,7 @@ class NotEmpty(PassThrough):
 
         self.allow_none = allow_none
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(allow_none={self.allow_none!r})"
 
     def _apply(self, value: Any) -> Any:
@@ -800,7 +812,7 @@ class Omit(BaseFilter[Any]):
     specified keys omitted. Any other items will be passed through.
     """
 
-    def __init__(self, keys: Iterable):
+    def __init__(self, keys: Iterable[Any]) -> None:
         """Initialises the Omit filter.
 
         Args:
@@ -813,29 +825,31 @@ class Omit(BaseFilter[Any]):
 
         self.keys = set(keys)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({sorted(self.keys)})"
 
     def _apply(self, value: Any) -> Any:
-        value = self._filter(value, Type((Mapping, Sequence)))
+        value = self._filter(value, _MappingOrSequenceType((Mapping, Sequence)))
 
         if self._has_errors:
             return None
 
         return (
-            self._apply_mapping(value)
+            # ``isinstance`` also narrows the ``Sequence`` arm, to a
+            # ``Mapping`` whose type arguments pyright cannot know.
+            self._apply_mapping(value)  # pyright: ignore[reportUnknownArgumentType]
             if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: Mapping) -> Mapping:
+    def _apply_mapping(self, value: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Filters items from an incoming mapping."""
         return selective_copy_mapping(
             value,
-            [key for key in value.keys() if key not in self.keys],
+            [key for key in value if key not in self.keys],
         )
 
-    def _apply_sequence(self, value: Sequence) -> Sequence:
+    def _apply_sequence(self, value: Sequence[Any]) -> Sequence[Any]:
         """Filters items from an incoming sequence."""
         return selective_copy_sequence(
             value,
@@ -912,7 +926,7 @@ class Optional(Widening[T_optional_default]):
             else None
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(default={self.actual_default!r})"
 
     def _apply(self, value: Any) -> Any:
@@ -961,9 +975,9 @@ class Pick(BaseFilter[Any]):
 
     def __init__(
         self,
-        keys: Iterable,
-        allow_missing_keys: bool | Iterable = True,
-    ):
+        keys: Iterable[Any],
+        allow_missing_keys: bool | Iterable[Any] = True,
+    ) -> None:
         """Initialises the Pick filter.
 
         Args:
@@ -987,24 +1001,26 @@ class Pick(BaseFilter[Any]):
             else bool(allow_missing_keys)
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.keys})"
 
     def _apply(self, value: Any) -> Any:
-        value = self._filter(value, Type((Mapping, Sequence)))
+        value = self._filter(value, _MappingOrSequenceType((Mapping, Sequence)))
 
         if self._has_errors:
             return None
 
         return (
-            self._apply_mapping(value)
+            # ``isinstance`` also narrows the ``Sequence`` arm, to a
+            # ``Mapping`` whose type arguments pyright cannot know.
+            self._apply_mapping(value)  # pyright: ignore[reportUnknownArgumentType]
             if isinstance(value, Mapping)
             else self._apply_sequence(value)
         )
 
-    def _apply_mapping(self, value: Mapping) -> Mapping:
+    def _apply_mapping(self, value: Mapping[Any, Any]) -> Mapping[Any, Any]:
         """Picks items out of an incoming mapping."""
-        picked_keys = []
+        picked_keys: list[Any] = []
 
         for key in self.keys:
             if not (key in value or self._missing_key_allowed(key)):
@@ -1018,9 +1034,9 @@ class Pick(BaseFilter[Any]):
 
         return selective_copy_mapping(value, picked_keys)
 
-    def _apply_sequence(self, value: Sequence) -> Sequence:
+    def _apply_sequence(self, value: Sequence[Any]) -> Sequence[Any]:
         """Picks items out of an incoming sequence."""
-        picked_indices = []
+        picked_indices: list[int] = []
 
         for idx in self.keys:
             if not (idx < len(value) or self._missing_key_allowed(idx)):
@@ -1059,5 +1075,5 @@ class Required(NotEmpty):
         NotEmpty.CODE_EMPTY: "This value is required.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(allow_none=False)

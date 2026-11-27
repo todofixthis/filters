@@ -7,7 +7,7 @@ from typing import get_type_hints
 import filters as f
 
 
-def test_filter_compatible_is_subscriptable():
+def test_filter_compatible_is_subscriptable() -> None:
     """
     ``FilterCompatible`` is genuinely generic at runtime, not just for a
     type checker.
@@ -20,7 +20,7 @@ def test_filter_compatible_is_subscriptable():
     assert repr(f.FilterCompatible[int]) == "FilterCompatible[int]"
 
 
-def test_filter_compatible_resolves_under_get_type_hints():
+def test_filter_compatible_resolves_under_get_type_hints() -> None:
     """
     Signatures naming ``FilterCompatible`` survive runtime introspection.
 

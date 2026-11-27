@@ -2,20 +2,26 @@ from collections.abc import Generator
 from importlib.metadata import entry_points
 from inspect import (
     getmembers as get_members,
+)
+from inspect import (
     isabstract as is_abstract,
+)
+from inspect import (
     isclass as is_class,
+)
+from inspect import (
     ismodule as is_module,
 )
 from logging import getLogger
-from typing import Any, Hashable, cast
+from typing import Any, cast
 
 from class_registry.entry_points import EntryPointClassRegistry
 
 from filters.base import BaseFilter
 
 __all__ = [
-    "FilterExtensionRegistry",
     "GROUP_NAME",
+    "FilterExtensionRegistry",
 ]
 
 GROUP_NAME = "filters.extensions"
@@ -65,10 +71,10 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         # without args, so the runtime type is type[BaseFilter], not BaseFilter.
         return cast(type[BaseFilter], self[item])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self._get_cache())
 
-    def _get_cache(self) -> dict[Hashable, type[BaseFilter]]:
+    def _get_cache(self) -> dict[str, type[BaseFilter]]:
         if self._cache is None:
             self._cache = {}
 
@@ -88,13 +94,14 @@ class FilterExtensionRegistry(EntryPointClassRegistry[BaseFilter]):
         return self._cache
 
     @staticmethod
-    def create_instance(class_: type, *args, **kwargs) -> Any:
+    def create_instance(class_: type, *args: Any, **kwargs: Any) -> Any:
         """Returns the class itself when called with no arguments.
 
         Overrides the default behaviour (which would instantiate the class)
-        so that extension filters behave consistently with
-        :py:meth:`filters.base.FilterMeta.__or__`, which chains uninstantiated
-        filter classes directly (e.g. ``filters.ext.MyFilter | OtherFilter``).
+        so that extension filters behave consistently with the ``|``
+        operator on :py:class:`filters.FilterMeta`, which chains
+        uninstantiated filter classes directly (e.g.
+        ``filters.ext.MyFilter | OtherFilter``).
 
         Args:
             class_: The filter class to return or instantiate.
@@ -127,7 +134,9 @@ def is_filter_type(target: Any) -> bool | str:
     if not issubclass(target, BaseFilter):
         return "does not extend BaseFilter"
 
-    if is_abstract(target):
+    # ``issubclass`` narrows ``target`` to a filter class whose type argument
+    # pyright cannot know.
+    if is_abstract(target):  # pyright: ignore[reportUnknownArgumentType]
         return "abstract class"
 
     return True

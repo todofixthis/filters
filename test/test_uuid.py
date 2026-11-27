@@ -2,12 +2,15 @@
 Tests for the Uuid filter.
 """
 
+from collections.abc import Callable
+from typing import Any
 from uuid import UUID
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_uuid_pass_none(assert_filter_passes):
+def test_uuid_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -16,7 +19,9 @@ def test_uuid_pass_none(assert_filter_passes):
     assert_filter_passes(f.Uuid(), None)
 
 
-def test_uuid_pass_uuid_value(assert_filter_passes):
+def test_uuid_pass_uuid_value(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value can be interpreted as a UUID.
     """
@@ -34,7 +39,7 @@ def test_uuid_pass_uuid_value(assert_filter_passes):
     assert uuid.version == 4
 
 
-def test_uuid_pass_hex(assert_filter_passes):
+def test_uuid_pass_hex(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     You can omit the dashes when specifying a UUID value.
     """
@@ -53,7 +58,9 @@ def test_uuid_pass_hex(assert_filter_passes):
 
 
 # noinspection SpellCheckingInspection
-def test_uuid_pass_curly_hex(assert_filter_passes):
+def test_uuid_pass_curly_hex(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can include curly braces around hex values.
 
@@ -74,7 +81,7 @@ def test_uuid_pass_curly_hex(assert_filter_passes):
     assert uuid.version == 5
 
 
-def test_uuid_pass_urn(assert_filter_passes):
+def test_uuid_pass_urn(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     You can also specify a URN.  The term (and format) is somewhat
     antiquated, but still valid.
@@ -100,7 +107,9 @@ def test_uuid_pass_urn(assert_filter_passes):
     assert uuid.version == 1
 
 
-def test_uuid_fail_wrong_version(assert_filter_errors):
+def test_uuid_fail_wrong_version(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Configuring the filter to only accept a specific UUID version.
     """
@@ -112,7 +121,7 @@ def test_uuid_fail_wrong_version(assert_filter_errors):
     )
 
 
-def test_uuid_fail_int(assert_filter_errors):
+def test_uuid_fail_int(assert_filter_errors: Callable[..., FilterRunner[Any]]) -> None:
     """
     The incoming value must be a HEX representation of a UUID. Decimal
     values are not valid.
@@ -124,7 +133,9 @@ def test_uuid_fail_int(assert_filter_errors):
     )
 
 
-def test_uuid_fail_wrong_type(assert_filter_errors):
+def test_uuid_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Attempting to filter anything other than a string value fails rather
     spectacularly.
@@ -139,14 +150,18 @@ def test_uuid_fail_wrong_type(assert_filter_errors):
     )
 
 
-def test_uuid_pass_uuid_object(assert_filter_passes):
+def test_uuid_pass_uuid_object(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is already a UUID object.
     """
     assert_filter_passes(f.Uuid(), UUID("e6bdc02c9d004991986d3c7c0730d105"))
 
 
-def test_uuid_fail_uuid_object_wrong_version(assert_filter_errors):
+def test_uuid_fail_uuid_object_wrong_version(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is already a UUID object, but its version doesn't
     match the expected one.

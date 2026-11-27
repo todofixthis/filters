@@ -106,14 +106,14 @@ def test_chain_inference_rejects_none() -> None:
     with pytest.raises(TypeError):
         # Annotated, or mypy reads a class `|` None as a type alias and
         # never checks the operator.
-        _class_form: object = _StubTransform | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
+        _class_form: object = _StubTransform | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue, reportUnknownVariableType]
 
     with pytest.raises(TypeError):
-        _instance_form = _StubTransform() | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
+        _instance_form = _StubTransform() | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue, reportUnknownVariableType]
 
     chain = _StubTransform() | _StubPassThrough()
     with pytest.raises(TypeError):
-        _chain_form = chain | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
+        _chain_form = chain | None  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue, reportUnknownVariableType]
 
 
 def test_chain_inference_callable_reports_what_it_returns() -> None:
@@ -141,7 +141,7 @@ def test_chain_inference_rejects_a_non_filter_operand() -> None:
     ``resolve_filter`` raises on an operand it cannot resolve.
     """
     with pytest.raises(TypeError):
-        _result = _StubTransform() | 42  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue]
+        _result = _StubTransform() | 42  # type: ignore[operator]  # pyright: ignore[reportOperatorIssue, reportUnknownVariableType]
 
 
 def test_chain_inference_widening_adds_to_output_type() -> None:
@@ -177,10 +177,12 @@ def test_chain_inference_filter_reports_its_argument_type() -> None:
     """``_filter`` is parameterised on the filter it is handed, not on the
     filter calling it.
     """
-    assert_type(
-        _StubTransform()._filter("42", _StubTransformInt),
-        Optional[int],
-    )
+    # ``_filter`` is protected, and this is the only place outside a filter
+    # that needs to call it.
+    stub = _StubTransform()
+    got = stub._filter("42", _StubTransformInt)  # pyright: ignore[reportPrivateUsage]
+
+    assert_type(got, Optional[int])
 
 
 def test_chain_inference_type_binds_from_its_argument() -> None:

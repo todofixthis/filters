@@ -5,8 +5,10 @@ Tests for the error handlers.
 import logging
 import sys
 import typing
+from collections.abc import Iterator
 from logging import WARNING, getLevelName
 from traceback import format_exc, format_exception
+from typing import Any
 
 import pytest
 
@@ -14,7 +16,7 @@ import filters as f
 from filters.base import ExceptionHandler
 
 
-def test_filter_runner_apply():
+def test_filter_runner_apply() -> None:
     """
     Calling a FilterRunner's ``apply()`` method reruns its filter chain
     against the specified input.
@@ -41,7 +43,7 @@ def test_filter_runner_apply():
     assert runner.cleaned_data == 86
 
 
-def test_filter_runner_rejects_none():
+def test_filter_runner_rejects_none() -> None:
     """
     A FilterRunner needs a filter to run; ``None`` is rejected up front
     rather than failing on first use.
@@ -53,7 +55,7 @@ def test_filter_runner_rejects_none():
         f.FilterRunner(None)
 
 
-def test_exception_handler_invalid_value():
+def test_exception_handler_invalid_value() -> None:
     """
     Sends an invalid value to the handler.
     """
@@ -75,7 +77,7 @@ def test_exception_handler_invalid_value():
     assert exc.value.context == context
 
 
-def test_exception_handler_exception():
+def test_exception_handler_exception() -> None:
     """
     Sends an exception to the handler.
     """
@@ -107,7 +109,9 @@ def test_exception_handler_exception():
         # Note that the ValueError's message will get replaced (but
         # it can still be accessed via the traceback).
         exc = ValueError("Needs more cowbell.")
-        exc.context = context
+        # ExceptionHandler reads a ``context`` attribute from any
+        # exception, so the test sets one on a plain ValueError.
+        exc.context = context  # type: ignore[attr-defined]
         raise exc
     except ValueError as e:
         with pytest.raises(f.FilterError) as ar_context:
@@ -147,20 +151,20 @@ class MemoryLogHandler(logging.Handler):
         """
         return iter(self._records)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Returns the number of log records collected.
         """
         return len(self._records)
 
     @property
-    def records(self) -> typing.List[logging.LogRecord]:
+    def records(self) -> list[logging.LogRecord]:
         """
         Returns all log messages that the handler has collected.
         """
         return self._records[:]
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Removes all log messages that this handler has collected.
         """
@@ -182,7 +186,7 @@ class MemoryLogHandler(logging.Handler):
 
 
 @pytest.fixture
-def log_handler_setup():
+def log_handler_setup() -> Iterator[tuple[MemoryLogHandler, f.LogHandler]]:
     """Set up logger and handler for LogHandler tests."""
     logs = MemoryLogHandler()
     logger = logging.getLogger(__name__)
@@ -196,7 +200,7 @@ def log_handler_setup():
     logger.removeHandler(logs)
 
 
-def test_log_handler_invalid_value(log_handler_setup):
+def test_log_handler_invalid_value(log_handler_setup: Any) -> None:
     """
     Sends an invalid value to the handler.
     """
@@ -211,7 +215,7 @@ def test_log_handler_invalid_value(log_handler_setup):
 
     assert len(logs.records) == 1
     assert logs[0].msg == message
-    assert getattr(logs[0], "context") == context
+    assert logs[0].context == context
 
     # The log message level is set in the handler's initialiser.
     assert logs[0].levelname == getLevelName(WARNING)
@@ -220,7 +224,7 @@ def test_log_handler_invalid_value(log_handler_setup):
     assert logs[0].exc_text is None
 
 
-def test_log_handler_exception(log_handler_setup):
+def test_log_handler_exception(log_handler_setup: Any) -> None:
     """
     Sends an exception to the handler.
     """
@@ -237,7 +241,9 @@ def test_log_handler_exception(log_handler_setup):
         # Note that the ValueError's message will get replaced (but
         # it can still be accessed via the traceback).
         exc = ValueError("Needs more cowbell.")
-        exc.context = context
+        # ExceptionHandler reads a ``context`` attribute from any
+        # exception, so the test sets one on a plain ValueError.
+        exc.context = context  # type: ignore[attr-defined]
         raise exc
     except ValueError as e:
         original_traceback = format_exc()
@@ -246,7 +252,7 @@ def test_log_handler_exception(log_handler_setup):
 
         assert len(logs.records) == 1
         assert logs[0].msg == message
-        assert getattr(logs[0], "context") == context
+        assert logs[0].context == context
 
         # The log message level is set in the handler's
         # initialiser.
@@ -258,7 +264,7 @@ def test_log_handler_exception(log_handler_setup):
         assert logs[0].exc_text == original_traceback
 
 
-def test_memory_handler_invalid_value():
+def test_memory_handler_invalid_value() -> None:
     """
     Sends an invalid value to the handler.
     """
@@ -314,7 +320,7 @@ def test_memory_handler_invalid_value():
     assert handler.exc_info == []
 
 
-def test_memory_handler_exception():
+def test_memory_handler_exception() -> None:
     """
     Sends an exception to the handler.
     """
@@ -334,7 +340,9 @@ def test_memory_handler_exception():
         # Note that the ValueError's message will get replaced (but
         # it can still be accessed via the traceback).
         exc = ValueError("Needs more cowbell.")
-        exc.context = context
+        # ExceptionHandler reads a ``context`` attribute from any
+        # exception, so the test sets one on a plain ValueError.
+        exc.context = context  # type: ignore[attr-defined]
         raise exc
     except ValueError as e:
         original_traceback = format_exc()
@@ -360,7 +368,7 @@ def test_memory_handler_exception():
         assert handler.exc_info == []
 
 
-def test_memory_handler_capture_exc_info():
+def test_memory_handler_capture_exc_info() -> None:
     """
     The handler is configured to capture :py:func:`sys.exc_info` in
     the event of an exception.

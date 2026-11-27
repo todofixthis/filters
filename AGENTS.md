@@ -1,72 +1,74 @@
-> `CLAUDE.md` is a symlink to this file — edit `AGENTS.md` only.
-
 ## Getting Started
 
 Before writing code, check:
 
-- `docs/plans/` — current implementation plan
 - `docs/adr/INDEX.md` — prior decisions (don't re-litigate)
-- `docs/future/` — deferred features (don't re-discuss)
+- `docs/superpowers/plans/` — current implementation plan, if one exists
+- `.agents/rules/` — further rules, some scoped to particular paths. `project.md` there holds this project's own conventions; it may add to, narrow or override a rule in this file or another file in `.agents/rules/`, and wins where the two conflict
+
+## Template-owned files
+
+This project is generated from the copier template `todofixthis/cookiecutter-py`; `.copier-answers.yml` records which release, and each release reaches this project as a Renovate PR running `copier update` (that repo's ADR 015). Before changing any file, check whether `.agents/rules/template-owned.md` lists it, and if so follow that rule. Claude Code loads the rule when you read a listed file; in another harness, read it yourself.
 
 ## Architecture Decision Records
 
-When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `phx:writing-adrs` skill (from the phx plugin, which `.claude/settings.json` enables) for the format, conventions and tooling: its `adr.py` allocates the number, generates `docs/adr/INDEX.md` and validates the corpus. Where the skill isn't available (outside Claude Code, or the plugin isn't loaded), read the [skill](https://github.com/todofixthis/phx-claude-siat/blob/0725567cec6bab6a227c2a3d569e64c226c33a4e/skills/writing-adrs/SKILL.md) and run the same tool as `phx-adr` (see Commands). Don't hand-edit the index, or add a repo-local ADR script, pre-commit hook or vendored copy of the tool (ADR 014). ADRs live in `docs/adr/`.
+When making significant decisions — choosing between libraries, patterns, tools, or conventions — you **must** write an ADR before implementing the decision. Use the `phx:writing-adrs` skill (from the phx plugin, which `.claude/settings.json` enables) for the format, conventions and tooling: its `adr.py` allocates the number, generates `docs/adr/INDEX.md` and validates the corpus. Where the skill isn't available (outside Claude Code, or the plugin isn't loaded), read the [skill](https://github.com/todofixthis/phx-claude-siat/blob/9.2.0/skills/writing-adrs/SKILL.md) and run the same tool as `phx-adr` (see Commands). Don't hand-edit the index, or add a repo-local ADR script, pre-commit hook or vendored copy of the tool (ADR 019 in todofixthis/cookiecutter-py). ADRs live in `docs/adr/`.
 
 If you find yourself about to establish a new cross-cutting pattern (something that will affect multiple domains or files, e.g. a testing convention, a shared utility, an error-handling approach), stop and write an ADR first even if the immediate task feels local. A pattern adopted once becomes the template for everything that follows.
 
 ## Commands
 
 ```bash
-uv run autohooks activate --mode=pythonpath            # install pre-commit hook (once per clone)
-uv run git commit                                      # ALWAYS use this — never bare `git commit` (autohooks won't run without `uv run`)
-uv add --bounds major <package>                        # add a runtime dependency at latest version
-uv add --bounds major --group dev <package>            # add a dev dependency at latest version
-uv sync --group=dev                                    # sync deps after pulling
-uv run pytest                                          # run tests (current Python)
-uv run tox -p                                          # run tests (all supported versions)
-uv run pytest --collect-only                           # verify test count (note at start of mahi; confirm it increases when done)
-uv run ruff check                                      # lint
-uv run make -C docs clean && uv run make -C docs html  # build docs
+# Install the pre-commit hook (once per clone)
+uv run autohooks activate --mode=pythonpath
+# Always use instead of git commit (runs autohooks)
+uv run git commit
+# Sync deps after pulling
+uv sync --group=dev
+# Add a runtime dependency at its latest version
+uv add --bounds major <package>
+# Add a dev dependency at its latest version
+uv add --bounds major --group dev <package>
+# Run tests (current Python)
+uv run pytest
+# Count tests: note it before adding behaviour, and check it has grown after
+uv run pytest --collect-only -q
+# Run tests (all supported versions)
+uv run tox -p
+# Type check
+uv run mypy src test
+# Lint
+uv run ruff check
+# Check formatting (the pre-commit hook reformats; CI only checks)
+uv run black --check .
+# Build docs: skip unless .readthedocs.yaml exists (a project without its own docs site has no Sphinx files)
+uv run make -C docs clean && uv run make -C docs html SPHINXOPTS=-W
 ```
 
-The phx plugin's ADR tool, for use where the skill isn't available (keep every ref in this file in step with the `adrs` CI job):
+uv resolves only releases at least 3 days old (`exclude-newer` under `[tool.uv]` in `pyproject.toml`), so "latest" above means the latest that old. To take a newer release of one package, exempt it there with `exclude-newer-package = { <package> = false }`, and remove the exemption once the release is 3 days old.
+
+**In a worktree:** the shell can silently reset to the main checkout, so always prefix state-mutating commands (`uv add`/`sync`/`run`) with `cd <worktree> &&` to ensure they hit the worktree.
+
+The phx plugin's ADR tool, for use where the skill isn't available. Renovate bumps these pins and the `adrs` CI job's together, matching each on its trailing `# X.Y.Z` comment (ADR 018 in todofixthis/cookiecutter-py) — keep that comment on the same line, despite the Code Comments rule below; moved or dropped, that pin silently stops being bumped.
 
 ```bash
 # Scaffold the next ADR
-uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr new "Title" --summary "…" --scope path/
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@86f320fb6af2894dafd30cbd1e0dc1cbdb5c4575#subdirectory=skills/writing-adrs' phx-adr new "Title" --summary "…" --scope path/ # 9.2.0
 # List the decisions binding a path, before changing it
-uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr for path/to/file
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@86f320fb6af2894dafd30cbd1e0dc1cbdb5c4575#subdirectory=skills/writing-adrs' phx-adr for path/to/file # 9.2.0
 # Mark an ADR superseded
-uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr supersede OLD --by NEW
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@86f320fb6af2894dafd30cbd1e0dc1cbdb5c4575#subdirectory=skills/writing-adrs' phx-adr supersede OLD --by NEW # 9.2.0
 # Regenerate docs/adr/INDEX.md
-uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr index
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@86f320fb6af2894dafd30cbd1e0dc1cbdb5c4575#subdirectory=skills/writing-adrs' phx-adr index # 9.2.0
 # Validate, as CI does
-uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@0725567cec6bab6a227c2a3d569e64c226c33a4e#subdirectory=skills/writing-adrs' phx-adr check
+uvx --from 'git+https://github.com/todofixthis/phx-claude-siat@86f320fb6af2894dafd30cbd1e0dc1cbdb5c4575#subdirectory=skills/writing-adrs' phx-adr check # 9.2.0
 ```
 
-## Architecture
-
-Composable validation pipeline library. Filters chain via `|`. Source in `src/filters/`; modules for each category: base, simple, number, complex, string, extensions.
-
-- Explicit imports with `__all__` throughout — no wildcard imports
-- Forward-reference type hints must use `typing.Optional`/`typing.Union` (not `X | None`) — `"ClassName" | None` raises a Python runtime `TypeError` (`str.__or__` unsupported) that Sphinx cannot recover from; this is not fixed in Sphinx 9 — add `# Use \`Optional\` instead of \`|\` for Sphinx compat` on the line preceding the annotation (for a return type, the line before `) ->`, splitting a one-line signature to make one)
-- Import collection ABCs from `collections.abc`; keep `Any` and `Hashable` from `typing`
-- A new `BaseFilter` subclass, or one whose `__init__` logic or signature changes, that stores a mutable container (e.g. `list`, `dict`, `set`) must override `__copy__` to copy it (the container only, not what it holds), because `BaseFilter.__copy__` shares containers with the original. Child filters stay shared. Follow `FilterRepeater.__copy__`: a classmethod taking `the_filter: Self` and returning `Self`, with `# pyright: ignore[reportIncompatibleMethodOverride]` on its `def` line (docs/adr/015-hold-the-type-checkers-to-their-default-rules.md), chaining through `super().__copy__(the_filter)`, copying with `.copy()` or `dict(...)` for a `Mapping`. A container shared on purpose gets a comment saying why at its assignment in `__init__`, not an override. Add a copy test for each override, asserting that mutating the copy leaves the original unchanged (docs/adr/013-copy-a-filters-own-mutable-containers-in-copy.md)
-
-## Tests
-
-One file per filter in `test/`, named `test_{filter_name}.py`. Always `import filters as f`.
-
-**Custom fixtures** (`test/conftest.py`):
-- `assert_filter_passes(filter_instance, value, expected)` — always pass an explicit `expected`; many filters return a different type than the input (e.g. `Uuid` returns `UUID`, not `str`)
-- `assert_filter_errors(filter_instance, value, expected_codes)`
-- Helper classes: `Lengthy`, `Bytesy`, `Unicody`
-
-Test functions: `test_{filter_name}_{scenario}`. Each test file needs a module-level docstring.
+If CI reports a stale index the session's own tool can't reproduce, the installed plugin (which tracks phx-claude-siat's `main`) and the pinned release differ. Compare the two versions: if the installed one is newer, merge Renovate's pending bump, or bump by hand: each pin to the release's commit, and its comment and the skill link above to the release's version. The commit is the `refs/tags/<version>^{}` line of `git ls-remote --tags https://github.com/todofixthis/phx-claude-siat`, not the tag object above it. Otherwise update the plugin.
 
 ## Docstrings
 
-Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` style. Max 80 chars per line. Escape backslashes (e.g. `'\\n'` not `'\n'`). Blank line before lists inside `Args:` sections to avoid Sphinx indentation warnings. ReadTheDocs treats all Sphinx warnings as errors — resolve them before pushing.
+Google/Napoleon format (`Args:`, `Returns:`, `Note:`) — not Sphinx `:param:` style. Max 80 chars per line. Escape backslashes (e.g. `'\\n'` not `'\n'`). Blank line before lists inside `Args:` sections to avoid Sphinx indentation warnings. Where the project has its own docs site (`.readthedocs.yaml` exists), ReadTheDocs treats all Sphinx warnings as errors — resolve them before pushing.
 
 ## Code Comments
 
@@ -90,7 +92,11 @@ reports `override` on an overloaded method at its first `@overload`. A
 misplaced ignore leaves the error standing and is itself reported unused.
 Keep these two forms trailing.
 
-`# noinspection` comments stay leading, and unlike the two forms above have
+**Exception: version pins.** A pin's `# X.Y.Z` (`uses: …@<SHA> # v7.0.1`,
+or the `phx-adr` pins in Commands) trails the line it pins, because
+Renovate reads the version from that line. Keep these trailing too.
+
+`# noinspection` comments stay leading, and unlike the forms above have
 no checker behind them: when you change or remove the code one covers (the
 next statement, or a whole function or class when it sits above one),
 re-check that it still applies, and delete it if not.
@@ -100,12 +106,6 @@ re-check that it still applies, and delete it if not.
 - NZ English; incorporate Te Reo Māori where natural (e.g. "mahi", "kaupapa")
 - Use "Initialises" not "Initializes"
 
-### Writing for coding agents
-
-- Do not document information that already exists in the coding agent's training data or could be easily discovered by reading the code.
-- Do not list individual files; list high-level directories so the agent knows where to look.
-- Aim for concise style that optimises token count without sacrificing clarity.
-
 ## Branches
 
 - `main` — releases only; merge from `develop` via PR
@@ -114,18 +114,10 @@ re-check that it still applies, and delete it if not.
 
 ## Git Worktrees
 
-Use `.claude/worktrees/` for isolated workspaces (project-local, gitignored).
+Use the `using-git-worktrees` skill; it creates worktrees via the native `EnterWorktree` tool under `.claude/worktrees/` (gitignored). Don't hand-roll `git worktree add` when the native tool is available. Keep `.claude/` a real directory (only `.claude/skills` and `.claude/rules` are symlinks, into `.agents/`) — the native tool refuses to run if `.claude` itself is a symlink.
 
-Keep `.claude/` a real directory — only `.claude/skills` is a symlink into `.agents/skills`. If `.claude/` itself is a symlink, the native worktree tool refuses to run.
+After creating a worktree, install its pre-commit hook (see the autohooks activate command in Commands). A fresh worktree has no per-worktree hooks directory, so create it first:
 
-After switching to a worktree, run the autohooks activate command (see Commands) to install the pre-commit hook for that worktree.
-
-## Package
-
-Package name is `phx-filters` (distinct from the `filters` import name).
-
-## Troubleshooting
-
-**conftest import errors**: use relative imports (`from .conftest import Bytesy`).
-
-**Sphinx forward reference errors** (`TypeError: unsupported operand type(s) for |`): `"ClassName" | None` fails at Python runtime because `str.__or__` is not supported — not a Sphinx bug, and not fixed in Sphinx 9. Use `typing.Optional["ClassName"]` — see Architecture above.
+```bash
+mkdir -p "$(git rev-parse --git-dir)/hooks"
+```

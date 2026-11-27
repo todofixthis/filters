@@ -2,13 +2,20 @@
 Tests for the MaxLength filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_max_length_pass_none(assert_filter_passes):
+def test_max_length_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``None`` always passes this filter.
 
@@ -20,7 +27,9 @@ def test_max_length_pass_none(assert_filter_passes):
     )
 
 
-def test_max_length_pass_short(assert_filter_passes):
+def test_max_length_pass_short(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is shorter than the max length.
     """
@@ -30,7 +39,9 @@ def test_max_length_pass_short(assert_filter_passes):
     )
 
 
-def test_max_length_pass_max_length(assert_filter_passes):
+def test_max_length_pass_max_length(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has the max allowed length.
     """
@@ -40,7 +51,9 @@ def test_max_length_pass_max_length(assert_filter_passes):
     )
 
 
-def test_max_length_fail_long(assert_filter_errors):
+def test_max_length_fail_long(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is longer than the max length.
     """
@@ -51,7 +64,9 @@ def test_max_length_fail_long(assert_filter_errors):
     )
 
 
-def test_max_length_pass_truncated(assert_filter_passes):
+def test_max_length_pass_truncated(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to truncate values that are too long.
     """
@@ -62,7 +77,10 @@ def test_max_length_pass_truncated(assert_filter_passes):
     )
 
 
-def test_max_length_multi_byte_characters(assert_filter_passes, assert_filter_errors):
+def test_max_length_multi_byte_characters(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Multibyte characters are treated differently depending on whether you
     pass in a unicode or a byte string.
@@ -94,7 +112,9 @@ def test_max_length_multi_byte_characters(assert_filter_passes, assert_filter_er
         # etc.
     ],
 )
-def test_max_length_pass_short_collection(assert_filter_passes, max_length, value):
+def test_max_length_pass_short_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], max_length: Any, value: Any
+) -> None:
     """
     The incoming value is a collection with length less than or equal to
     the max length.
@@ -111,7 +131,9 @@ def test_max_length_pass_short_collection(assert_filter_passes, max_length, valu
         # etc.
     ],
 )
-def test_max_length_fail_long_collection(assert_filter_errors, max_length, value):
+def test_max_length_fail_long_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], max_length: Any, value: Any
+) -> None:
     """
     The incoming value is a collection with length greater than the max
     length.

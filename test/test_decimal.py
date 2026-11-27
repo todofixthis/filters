@@ -2,14 +2,19 @@
 Tests for the Decimal filter.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
 
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_decimal_pass_none(assert_filter_passes):
+def test_decimal_pass_none(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     `None` always passes this Filter.
 
@@ -18,7 +23,9 @@ def test_decimal_pass_none(assert_filter_passes):
     assert_filter_passes(f.Decimal(), None)
 
 
-def test_decimal_pass_valid_decimal(assert_filter_passes):
+def test_decimal_pass_valid_decimal(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value can be interpreted as a Decimal.
     """
@@ -26,7 +33,9 @@ def test_decimal_pass_valid_decimal(assert_filter_passes):
     assert_filter_passes(f.Decimal(), value, Decimal(value))
 
 
-def test_decimal_pass_max_precision(assert_filter_passes):
+def test_decimal_pass_max_precision(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You can limit the max precision of the resulting Decimal
     object.
@@ -37,7 +46,9 @@ def test_decimal_pass_max_precision(assert_filter_passes):
     assert_filter_passes(f.Decimal(max_precision=3), "3.1415926", Decimal("3.142"))
 
 
-def test_decimal_max_precision_quantised(assert_filter_passes):
+def test_decimal_max_precision_quantised(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     ``max_precision`` can also be specified as a Decimal object.
     """
@@ -46,7 +57,9 @@ def test_decimal_max_precision_quantised(assert_filter_passes):
     )
 
 
-def test_decimal_pass_zero(assert_filter_passes):
+def test_decimal_pass_zero(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     0 is also considered a valid Decimal value.
     """
@@ -54,7 +67,9 @@ def test_decimal_pass_zero(assert_filter_passes):
     assert_filter_passes(f.Decimal(), value, Decimal(value))
 
 
-def test_decimal_pass_scientific_notation(assert_filter_passes):
+def test_decimal_pass_scientific_notation(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Scientific notation is considered valid, as in certain cases it
     may be the only way to represent a really large or small
@@ -64,7 +79,9 @@ def test_decimal_pass_scientific_notation(assert_filter_passes):
     assert_filter_passes(f.Decimal(), value, Decimal(value))
 
 
-def test_decimal_pass_boolean(assert_filter_passes):
+def test_decimal_pass_boolean(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Booleans are technically ints, so they can be converted to
     Decimals.
@@ -73,7 +90,9 @@ def test_decimal_pass_boolean(assert_filter_passes):
     assert_filter_passes(f.Decimal(), value, Decimal(value))
 
 
-def test_decimal_fail_invalid_value(assert_filter_errors):
+def test_decimal_fail_invalid_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value cannot be converted to a Decimal.
     """
@@ -93,7 +112,9 @@ def test_decimal_fail_invalid_value(assert_filter_errors):
         # There are a few other possible non-finite values out there, but you get the idea.
     ],
 )
-def test_decimal_fail_non_finite_value(assert_filter_errors, value):
+def test_decimal_fail_non_finite_value(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     Non-finite values like 'NaN' and 'Inf' are considered invalid,
     even though they are technically parseable.
@@ -101,7 +122,9 @@ def test_decimal_fail_non_finite_value(assert_filter_errors, value):
     assert_filter_errors(f.Decimal(), value, [f.Decimal.CODE_NON_FINITE])
 
 
-def test_decimal_pass_tuple(assert_filter_passes):
+def test_decimal_pass_tuple(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     You may pass a 3-tuple for more control over how the resulting
     Decimal object is created.
@@ -110,7 +133,9 @@ def test_decimal_pass_tuple(assert_filter_passes):
     assert_filter_passes(f.Decimal(), value, Decimal(value))
 
 
-def test_decimal_fail_tuple_invalid(assert_filter_errors):
+def test_decimal_fail_tuple_invalid(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     If you're going to use a tuple, you've got to make sure you get
     it right!
@@ -118,7 +143,9 @@ def test_decimal_fail_tuple_invalid(assert_filter_errors):
     assert_filter_errors(f.Decimal(), ("1", "2", "3"), [f.Decimal.CODE_INVALID])
 
 
-def test_decimal_fail_tuple_disallowed(assert_filter_errors):
+def test_decimal_fail_tuple_disallowed(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The filter is configured to disallow tuple values.
     """
@@ -129,7 +156,9 @@ def test_decimal_fail_tuple_disallowed(assert_filter_errors):
     )
 
 
-def test_decimal_fail_bytes(assert_filter_errors):
+def test_decimal_fail_bytes(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     To ensure that the filter behaves the same in Python 2 and
     Python 3, bytes are not allowed.
@@ -137,7 +166,9 @@ def test_decimal_fail_bytes(assert_filter_errors):
     assert_filter_errors(f.Decimal(), b"-12", [f.Type.CODE_WRONG_TYPE])
 
 
-def test_decimal_fail_unsupported_type(assert_filter_errors):
+def test_decimal_fail_unsupported_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value has an unsupported type.
     """

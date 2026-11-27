@@ -1550,7 +1550,7 @@ This filter returns a list of matches.
 
 Required
 --------
-Basically the same as :py:class:`NotEmpty`, except it also rejects ``None``.
+Basically the same as :py:class:`filters.NotEmpty`, except it also rejects ``None``.
 
 This filter is the only exception to the "``None`` always passes" rule (see
 :ref:`none-is-special` for more information).

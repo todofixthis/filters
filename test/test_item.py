@@ -2,10 +2,14 @@
 Tests for the Item filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import filters as f
+from filters.handlers import FilterRunner
 
 
-def test_item_pass_none(assert_filter_passes):
+def test_item_pass_none(assert_filter_passes: Callable[..., FilterRunner[Any]]) -> None:
     """
     ``None`` always passes this filter.
 
@@ -14,7 +18,9 @@ def test_item_pass_none(assert_filter_passes):
     assert_filter_passes(f.Item(), None)
 
 
-def test_item_pass_mapping_default(assert_filter_passes):
+def test_item_pass_mapping_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, returns the first item in a mapping.
     """
@@ -25,14 +31,18 @@ def test_item_pass_mapping_default(assert_filter_passes):
     )
 
 
-def test_item_fail_mapping_empty(assert_filter_errors):
+def test_item_fail_mapping_empty(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty mapping, so no value to extract.
     """
     assert_filter_errors(f.Item(), {}, [f.NotEmpty.CODE_EMPTY])
 
 
-def test_item_pass_mapping_specific_key(assert_filter_passes):
+def test_item_pass_mapping_specific_key(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Specify the key to extract from a mapping.
     """
@@ -43,7 +53,9 @@ def test_item_pass_mapping_specific_key(assert_filter_passes):
     )
 
 
-def test_item_fail_mapping_specific_key_missing(assert_filter_errors):
+def test_item_fail_mapping_specific_key_missing(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming mapping does not contain the specified key.
     """
@@ -54,7 +66,9 @@ def test_item_fail_mapping_specific_key_missing(assert_filter_errors):
     )
 
 
-def test_item_fail_mapping_non_string_key_missing(assert_filter_errors):
+def test_item_fail_mapping_non_string_key_missing(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     A missing non-string key is reported as missing, not as an exception
     from building the error's key.
@@ -66,21 +80,27 @@ def test_item_fail_mapping_non_string_key_missing(assert_filter_errors):
     )
 
 
-def test_item_pass_sequence_default(assert_filter_passes):
+def test_item_pass_sequence_default(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     By default, returns the first item in a sequence.
     """
     assert_filter_passes(f.Item(), ["foo", "bar", "baz", "luhrmann"], "foo")
 
 
-def test_item_fail_sequence_empty(assert_filter_errors):
+def test_item_fail_sequence_empty(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty sequence, so no value to extract.
     """
     assert_filter_errors(f.Item(), [], [f.NotEmpty.CODE_EMPTY])
 
 
-def test_item_pass_sequence_specific_index(assert_filter_passes):
+def test_item_pass_sequence_specific_index(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Specify the index to extract from a mapping.
     """
@@ -91,7 +111,9 @@ def test_item_pass_sequence_specific_index(assert_filter_passes):
     )
 
 
-def test_item_fail_sequence_specific_index_missing(assert_filter_errors):
+def test_item_fail_sequence_specific_index_missing(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming sequence does not contain the specified index.
     """
@@ -102,7 +124,9 @@ def test_item_fail_sequence_specific_index_missing(assert_filter_errors):
     )
 
 
-def test_item_fail_wrong_type(assert_filter_errors):
+def test_item_fail_wrong_type(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is not a mapping nor sequence.
     """

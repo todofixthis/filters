@@ -4,10 +4,10 @@ import socket
 import tomllib
 import unicodedata
 from base64 import standard_b64decode, urlsafe_b64decode
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Hashable, Iterable, Sequence
 from decimal import Decimal as DecimalType
 from itertools import zip_longest
-from typing import Any, Hashable, Optional, cast, overload
+from typing import Any, Optional, cast, overload
 from uuid import UUID
 from xml.etree.ElementTree import Element, tostring
 
@@ -56,7 +56,7 @@ class Base64Decode(BaseFilter[bytes]):
         CODE_INVALID: "Base64-encoded value expected.",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.whitespace_re = regex.compile(b"[ \t\r\n]+", regex.ASCII)
@@ -129,12 +129,12 @@ class CaseFold(BaseFilter[str]):
     """
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        return value.casefold()
+        return text.casefold()
 
 
 class Choice(BaseFilter[T_choice]):
@@ -182,7 +182,7 @@ class Choice(BaseFilter[T_choice]):
             else:
                 self.choice_map[CaseFold().apply(choice)] = choice
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({sorted(map(str, self.choice_map.values()))!r})"
 
     # Constructor-typed rather than pass-through: in case-insensitive mode the
@@ -229,7 +229,7 @@ class IpAddress(BaseFilter[str]):
         self.ipv4 = ipv4
         self.ipv6 = ipv6
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(ipv4={self.ipv4!r}, ipv6={self.ipv6!r})"
 
     @property
@@ -251,24 +251,24 @@ class IpAddress(BaseFilter[str]):
         )
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
         # http://stackoverflow.com/a/4017219
         if self.ipv4:
             try:
-                socket.inet_pton(socket.AF_INET, value)
-            except socket.error:
+                socket.inet_pton(socket.AF_INET, text)
+            except OSError:
                 pass
             else:
-                return value
+                return text
 
         if self.ipv6:
             try:
-                n = socket.inet_pton(socket.AF_INET6, value)
-            except socket.error:
+                n = socket.inet_pton(socket.AF_INET6, text)
+            except OSError:
                 pass
             else:
                 # Convert the binary value back into a string representation,
@@ -294,7 +294,7 @@ class JsonDecode(BaseFilter):
         CODE_INVALID: "This value is not valid JSON.",
     }
 
-    def __init__(self, decoder: Callable = json.loads) -> None:
+    def __init__(self, decoder: Callable[[str], Any] = json.loads) -> None:
         """Initialises the JsonDecode filter.
 
         Args:
@@ -375,7 +375,7 @@ class MaxBytes(BaseFilter[bytes]):
         self.suffix = suffix
         self.encoding = encoding
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.max_bytes!r}, encoding={self.encoding!r})"
 
     def _apply(self, value: Any) -> bytes:
@@ -387,15 +387,15 @@ class MaxBytes(BaseFilter[bytes]):
             Note: Might be a bit shorter than the max length, to avoid
             orphaning a multibyte sequence.
         """
-        value = self._filter(
+        text = self._filter(
             value=value,
             filter_chain=(Type((bytes, str)) | Unicode(encoding=self.encoding)),
         )
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        bytes_value = value.encode(self.encoding)
+        bytes_value = text.encode(self.encoding)
 
         if self.truncate:
             # Truncated values are considered valid.
@@ -404,7 +404,8 @@ class MaxBytes(BaseFilter[bytes]):
         if len(bytes_value) > self.max_bytes:
             # Else, too-long values are invalid.
             return self._invalid_value(
-                value=value,
+                # The decoded text, not the bytes that came in.
+                value=text,
                 reason=self.CODE_TOO_LONG,
                 context={
                     "encoding": self.encoding,
@@ -580,12 +581,12 @@ class MaxChars(BaseFilter[str]):
         self.suffix = suffix
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
-        if len(value) > self.max_chars:
+        if len(text) > self.max_chars:
             if self.truncate:
                 target_chars = self.max_chars - len(self.suffix)
 
@@ -594,7 +595,7 @@ class MaxChars(BaseFilter[str]):
                 if target_chars < 0:
                     return self.suffix[0 : self.max_chars]
 
-                return (self.prefix + value)[0:target_chars] + self.suffix
+                return (self.prefix + text)[0:target_chars] + self.suffix
 
             return self._invalid_value(
                 value=value,
@@ -604,7 +605,7 @@ class MaxChars(BaseFilter[str]):
                 },
             )
 
-        return value
+        return text
 
 
 class Regex(BaseFilter[list[str]]):
@@ -636,7 +637,7 @@ class Regex(BaseFilter[list[str]]):
 
     def __init__(
         self,
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
     ) -> None:
         """Initialises the Regex filter.
 
@@ -654,7 +655,7 @@ class Regex(BaseFilter[list[str]]):
             else regex.compile(pattern, regex.UNICODE)
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.regex.pattern!r})"
 
     def _apply(self, value: Any) -> list[str]:
@@ -693,21 +694,21 @@ class Split(BaseFilter[T_split]):
     @overload
     def __init__(
         self: "Split[list[str]]",
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: None = None,
     ) -> None: ...
 
     @overload
     def __init__(
         self: "Split[dict[str, str]]",
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: Sequence[str],
     ) -> None: ...
 
     # noinspection PyProtectedMember
     def __init__(
         self,
-        pattern: str | re.Pattern,
+        pattern: str | re.Pattern[str] | regex.Pattern[str],
         keys: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialises the Split filter.
@@ -745,7 +746,7 @@ class Split(BaseFilter[T_split]):
 
         self.keys = keys
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self.regex.pattern!r}, keys={self.keys!r})"
 
     def _apply(self, value: Any) -> T_split:
@@ -786,16 +787,21 @@ class Strip(BaseFilter[str]):
 
     def __init__(
         self,
-        leading: str = r"[\p{C}\s]+",
-        trailing: str = r"[\p{C}\s]+",
+        leading: str | None = r"[\p{C}\s]+",
+        trailing: str | None = r"[\p{C}\s]+",
     ) -> None:
         """Initialises the Strip filter.
 
         Args:
-            leading: Regex to match at the start of the string.
-            trailing: Regex to match at the end of the string.
+            leading: Regex to match at the start of the string, or ``None``
+                to leave the start alone.
+            trailing: Regex to match at the end of the string, or ``None``
+                to leave the end alone.
         """
         super().__init__()
+
+        self.leading: regex.Pattern[str] | None
+        self.trailing: regex.Pattern[str] | None
 
         if leading:
             self.leading = regex.compile(
@@ -813,24 +819,28 @@ class Strip(BaseFilter[str]):
         else:
             self.trailing = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         leading = self.leading.pattern if self.leading else None
         trailing = self.trailing.pattern if self.trailing else None
         return f"{type(self).__name__}(leading={leading!r}, trailing={trailing!r})"
 
     def _apply(self, value: Any) -> str:
-        value = self._filter(value, Type(str))
+        text = self._filter(value, Type(str))
 
-        if self._has_errors:
+        if self._has_errors or text is None:
             return None
 
+        # Declared ``str`` because ``regex`` ships no type information, so
+        # ``sub()`` would otherwise turn the result into ``Any``.
+        stripped: str = text
+
         if self.leading:
-            value = self.leading.sub("", value)
+            stripped = self.leading.sub("", stripped)
 
         if self.trailing:
-            value = self.trailing.sub("", value)
+            stripped = self.trailing.sub("", stripped)
 
-        return value
+        return stripped
 
 
 class TomlDecode(BaseFilter[dict[str, Any]]):
@@ -904,7 +914,7 @@ class _BaseDecoder(BaseFilter[T_out]):
             #
             self.npr = regex.compile(r"[^\P{C}\s]+", regex.UNICODE)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(encoding={self.encoding!r})"
 
     def _decode(self, value: Any) -> str:
@@ -930,7 +940,13 @@ class _BaseDecoder(BaseFilter[T_out]):
             elif isinstance(value, Element):
                 # There's no way (that I know of) to get
                 # :py:meth:`ElementTree.tostring` to return a str.
-                decoded = tostring(value, "utf-8").decode("utf-8")
+                #
+                # The cast supplies only the type argument: ``isinstance``
+                # narrows ``value`` to an ``Element`` whose tag type pyright
+                # cannot know, and a pyright suppression would not fit on
+                # the line it has to trail.
+                element = cast("Element[str]", value)
+                decoded = tostring(element, "utf-8").decode("utf-8")
 
             elif hasattr(value, "__bytes__"):
                 decoded = bytes(value).decode(self.encoding)
@@ -1075,7 +1091,7 @@ class Uuid(BaseFilter[UUID]):
 
         self.version = version
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}(version={self.version!r})"
 
     def _apply(self, value: Any) -> UUID:

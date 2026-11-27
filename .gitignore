@@ -1,14 +1,20 @@
+# Agent worktrees
+.claude/worktrees/
+
 # Byte-compiled / optimised / DLL files
-*.py[cod]
-__pycache__/
+__pycache__
+*.pyc
 
 # Distribution / packaging
-*.egg-info/
-dist/
+build
+dist
+*.egg-info
 
-# Git worktrees
-.agents/worktrees/
-.claude/worktrees/
+# dotenv
+.env
+
+# Linting cache
+.ruff_cache
 
 # Release artefacts (local working files)
 release-*-body.md
@@ -18,5 +24,8 @@ release-*.md.asc
 # Sphinx documentation
 docs/_build/
 
-# Testing
+# Tox
 .tox
+
+# virtualenv
+.venv.*/

@@ -4,20 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "phx-filters"
-version = "4.0.0a2"
+dynamic = ["version"]
 description = "Validation and data pipelines made easy!"
 authors = [{ name = "Phoenix Zerin", email = "phx@phx.nz" }]
-requires-python = ">=3.12, <4"
+requires-python = ">=3.12"
 readme = "README.rst"
 license = "MIT"
+
+# :see: https://pypi.org/classifiers/
 keywords = [
     "data processing",
     "pipeline",
     "transformation",
     "validation",
 ]
+
+# Leave out `Development Status`: the version's pre-release segment states it,
+# and a hand-kept classifier goes stale (see
+# https://github.com/todofixthis/cookiecutter-py/blob/main/docs/adr/023-leave-the-development-status-classifier-out-of-generated-projects.md).
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
@@ -28,8 +33,8 @@ classifiers = [
     "Topic :: Text Processing :: Filters",
 ]
 dependencies = [
-    "phx-class-registry>=5,<6",
-    "python-dateutil>=2,<3",
+    "phx-class-registry>=6,<7",
+    "python-dateutil>=4,<5",
     "pytz>=2025",
     "regex>=2024",
     "typing-extensions>=4.15.0,<5.0.0",
@@ -49,84 +54,85 @@ Changelog = "https://github.com/todofixthis/filters/releases"
 Issues = "https://github.com/todofixthis/filters/issues"
 
 [dependency-groups]
+# I'm only one person, so to keep from getting overwhelmed, I'm only committing
+# to supporting the 3 most recent versions of Python (see
+# https://github.com/todofixthis/cookiecutter-py/blob/main/docs/adr/015-propagate-template-changes-with-copier-and-rotate-python-from-agent-sessions.md).
 dev = [
     "autohooks>=26,<27",
     "autohooks-plugin-black>=23,<24",
     "autohooks-plugin-mypy>=23,<24",
     "autohooks-plugin-pytest>=23,<24",
     "autohooks-plugin-ruff>=25,<26",
-    "black>=26,<27",
-    # >=3.29 fixes an OSError on Docker/macOS volume mounts (fcntl file locking)
-    "filelock>=3.29",
-    # Pinned to patch level: a type checker can add diagnostics in a minor
-    # release, unlike an ordinary dependency, which only changes behaviour
-    # at a major one — so the range stops at today's minor, and only patch
-    # releases flow in without a manual bump. pyright ships every release
-    # as 1.1.x, so uv.lock is what holds it. See
-    # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-    "mypy>=2.4,<2.5",
+    "mypy>=2,<3",
+    # pyright ships every release as 1.1.x, so the weekly lock refresh moves it
+    # (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
     "sphinx>=9,<10",
     "sphinx_rtd_theme>=3.1,<4",
     "tox>=4,<5",
-    "tox-uv>=1.23.0,<2",
+    "tox-uv>=1,<2",
     "types-python-dateutil>=2,<3",
     "types-pytz>=2025",
+    # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
+    # Lift the cap, here, in the other group and with its renovate.json rule,
+    # once the locked pyright bundles `_typeshed.FloatInt`; ADR 018 says how.
+    "types-regex>=2026,<2026.11.19.20261122",
 ]
+
+# Used by GitHub Actions and ReadTheDocs.
 ci = [
-    # Same patch-level pin as the dev group above; see
-    # docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-    "mypy>=2.4,<2.5",
+    "black>=26,<27",
+    "mypy>=2,<3",
+    # pyright ships every release as 1.1.x, so the weekly lock refresh moves it
+    # (docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md).
     "pyright>=1.1.411,<1.2",
     "pytest>=9,<10",
+    "ruff>=0.17,<0.18",
     "sphinx>=9,<10",
     "sphinx_rtd_theme>=3.1,<4",
+    "tox-uv>=1,<2",
+    "types-python-dateutil>=2,<3",
+    "types-pytz>=2025",
+    # types-regex 2026.11.19.20261122 annotates `timeout` with typeshed's new
+    # `FloatInt`, which no released pyright's bundled typeshed has (1.1.411 to
+    # 1.1.414 share one), so strict pyright reports each regex call taking
+    # `timeout` as partially unknown.
+    # Lift the cap, here, in the other group and with its renovate.json rule,
+    # once the locked pyright bundles `_typeshed.FloatInt`; ADR 018 says how.
+    "types-regex>=2026,<2026.11.19.20261122",
 ]
 
 [tool.autohooks]
 mode = "pythonpath"
+# Comment on an entry here, above `pre-commit`, never inside the array:
+# `autohooks activate --force` rewrites the array sorted onto one line,
+# dropping any comment inside it. Hooks run in list order, but that sort
+# discards the order, so no hook may rely on running before another.
+#
+# `docs_build` runs a strict, full-reread Sphinx build on staged docs and
+# docstring changes (see
+# https://github.com/todofixthis/cookiecutter-py/blob/main/docs/adr/020-fail-generated-docs-builds-on-sphinx-warnings-in-ci-and-before-commit.md)
+# — removing it leaves a docs warning to CI, a push later.
 pre-commit = [
     "autohooks.plugins.black",
     "autohooks.plugins.mypy",
     "autohooks.plugins.pytest",
     "autohooks.plugins.ruff",
-    # Runs a strict, full-reread Sphinx build on staged docs/docstring
-    # changes (see docs/adr/012-check-the-docs-build-in-the-pre-commit-hook.md)
-    # — removing this reopens a gap neither CI nor the pre-commit chain
-    # otherwise catches.
     "docs_build",
 ]
 
-[tool.autohooks.plugins.mypy]
-# Matches the CI scope: `src` and the `test/typing` assert_type harness,
-# not the rest of `test/`. See
-# docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-include = ["src/*.py", "test/typing/*.py"]
-
-[tool.mypy]
-check_untyped_defs = true
-# A filter rejects a value by returning None from a non-Optional `_apply`;
-# re-enable once #121 makes rejection raise instead. See
-# docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-disable_error_code = ["return-value"]
-ignore_missing_imports = true
-warn_unused_ignores = true
-
-[tool.pyright]
-# Keeps each checker to its own suppressions. Most `# type: ignore[...]`
-# comments suppress mypy-only diagnostics, which
-# reportUnnecessaryTypeIgnoreComment below would otherwise misread as
-# unused; where both checkers report a line (test/typing's negative cases),
-# honouring the mypy comment would make the `# pyright: ignore` twin look
-# unused instead. Pyright-specific suppressions still use
-# `# pyright: ignore[code]`, which this setting does not affect.
-enableTypeIgnoreComments = false
-# The same exemption as mypy's `return-value` above, for the same reason.
-reportReturnType = false
-# Closes the gap where a suppression that stops being needed decays
-# silently. See docs/adr/015-hold-the-type-checkers-to-their-default-rules.md.
-reportUnnecessaryTypeIgnoreComment = "error"
+[tool.black]
+# Explicit, because black otherwise infers every version `requires-python`
+# allows, including ones newer than the running interpreter can parse.
+target-version = [
+    "py314",
+    "py313",
+    "py312",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -144,19 +150,66 @@ exclude = ["docs/_build"]
 [tool.hatch.build.targets.wheel.sources]
 "src/filters" = "filters"
 
+[tool.hatch.version]
+path = "src/filters/__init__.py"
+
+[tool.mypy]
+strict = true
+# A filter rejects a value by returning `_invalid_value()`'s result (`Any`,
+# `None` by default) from a non-Optional `_apply`. Re-enable both codes once
+# #121 makes rejection raise instead. See
+# docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md.
+disable_error_code = ["no-any-return", "return-value"]
+
+[tool.pyright]
+# Keeps each checker to its own suppressions. Most `# type: ignore[...]`
+# comments suppress mypy-only diagnostics, which
+# reportUnnecessaryTypeIgnoreComment below would otherwise misread as
+# unused; where both checkers report a line (test/typing's negative cases),
+# honouring the mypy comment would make the `# pyright: ignore` twin look
+# unused instead. Pyright-specific suppressions still use
+# `# pyright: ignore[code]`, which this setting does not affect.
+enableTypeIgnoreComments = false
+# The same exemption as mypy's two codes above, for the same reason.
+reportReturnType = false
+# Closes the gap where a suppression that stops being needed decays
+# silently. See docs/adr/017-defer-to-cookiecutter-py-s-template-decisions.md.
+reportUnnecessaryTypeIgnoreComment = "error"
+typeCheckingMode = "strict"
+
 [tool.pytest.ini_options]
 testpaths = ["test"]
 
+[tool.ruff.lint]
+ignore = [
+    # BaseFilter declares `templates` as an instance attribute, so a subclass
+    # annotating it `ClassVar`, as RUF012 asks, fails mypy's override check.
+    "RUF012",
+    # Keep `Optional` and `Union`: a forward reference needs them, since
+    # `"ClassName" | None` fails at runtime under Sphinx, and pyupgrade's
+    # rewrite of the quoted annotations in `__or__`'s overloads breaks
+    # pyright. Re-enable both once a ruff release leaves quoted forward
+    # references alone.
+    "UP007",
+    "UP045",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The package's imports and `__all__` are grouped by module, in the order the
+# modules depend on each other.
+"src/filters/__init__.py" = ["I001", "RUF022"]
+
 [tool.tox]
-env_list = ["py314", "py313", "py312"]
+env_list = [
+    "py314",
+    "py313",
+    "py312",
+]
 
 [tool.tox.env_run_base]
 commands = [
     ["pytest"],
-    ["mypy", "src"],
-    ["mypy", "test/typing"],
-    ["pyright", "src/filters"],
-    ["pyright", "test/typing"],
+    ["mypy", "src", "test"],
 ]
 runner = "uv-venv-lock-runner"
 
@@ -164,3 +217,8 @@ runner = "uv-venv-lock-runner"
 keyring-provider = "subprocess"
 # Fix SSL errors when running in Leash containers
 system-certs = true
+# Resolve only releases at least 3 days old, so a broken or malicious release
+# is usually yanked before a lock refresh picks it up (ADR 013 in
+# todofixthis/cookiecutter-py). Exempt one package with
+# `exclude-newer-package = { <package> = false }`.
+exclude-newer = "3 days"

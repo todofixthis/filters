@@ -34,8 +34,10 @@ def test_macro_decorator_accepts_wrapped_functions_keyword_argument() -> None:
     its output type; pyright infers the real ``str`` from the body.
     """
 
+    # Unannotated on purpose: this test pins what each checker infers
+    # without a return annotation.
     @filter_macro
-    def WithMinLength(min_length: int = 12):
+    def WithMinLength(min_length: int = 12):  # type: ignore[no-untyped-def]
         return f.Unicode | f.MinLength(min_length)
 
     assert_type(WithMinLength(min_length=6), FilterMacroType[str])  # type: ignore[assert-type]

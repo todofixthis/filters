@@ -8,7 +8,7 @@ class FilterAlpha(f.BaseFilter):
     A filter that can be used for testing.
     """
 
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> typing.Any:
         return value
 
 
@@ -22,12 +22,12 @@ class FilterBravo(f.BaseFilter):
 
         self.name = name
 
-    def _apply(self, value):
+    def _apply(self, value: typing.Any) -> typing.Any:
         return value
 
 
 @f.filter_macro
-def FilterCharlie():
+def FilterCharlie() -> type[f.NoOp]:
     """
     A filter macro that can be used for testing.
     """

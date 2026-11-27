@@ -2,13 +2,20 @@
 Tests for the Required filter.
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 import filters as f
+from filters.handlers import FilterRunner
+
 from .conftest import Lengthy
 
 
-def test_required_fail_none(assert_filter_errors):
+def test_required_fail_none(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     :py:class:`f.Required` is the only filter that does not allow null
     values.
@@ -16,7 +23,9 @@ def test_required_fail_none(assert_filter_errors):
     assert_filter_errors(f.Required(), None, [f.Required.CODE_EMPTY])
 
 
-def test_required_pass_non_empty_string(assert_filter_passes):
+def test_required_pass_non_empty_string(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is a non-empty string.
     """
@@ -34,21 +43,27 @@ def test_required_pass_non_empty_string(assert_filter_passes):
         # etc.
     ],
 )
-def test_required_pass_non_empty_collection(assert_filter_passes, value):
+def test_required_pass_non_empty_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length > 0.
     """
     assert_filter_passes(f.Required(), value)
 
 
-def test_required_pass_non_collection(assert_filter_passes):
+def test_required_pass_non_collection(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     Any value that does not have a length is assumed to be not empty.
     """
     assert_filter_passes(f.Required(), object())
 
 
-def test_required_fail_empty_string(assert_filter_errors):
+def test_required_fail_empty_string(
+    assert_filter_errors: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The incoming value is an empty string.
     """
@@ -64,21 +79,27 @@ def test_required_fail_empty_string(assert_filter_errors):
         # etc.
     ],
 )
-def test_required_fail_empty_collection(assert_filter_errors, value):
+def test_required_fail_empty_collection(
+    assert_filter_errors: Callable[..., FilterRunner[Any]], value: Any
+) -> None:
     """
     The incoming value is a collection with length < 1.
     """
     assert_filter_errors(f.Required(), value, [f.Required.CODE_EMPTY])
 
 
-def test_required_zero_is_not_empty(assert_filter_passes):
+def test_required_zero_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     PHP developers take note!
     """
     assert_filter_passes(f.Required(), 0)
 
 
-def test_required_false_is_not_empty(assert_filter_passes):
+def test_required_false_is_not_empty(
+    assert_filter_passes: Callable[..., FilterRunner[Any]],
+) -> None:
     """
     The boolean value ``False`` is NOT considered empty because it
     represents SOME kind of value.

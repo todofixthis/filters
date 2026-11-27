@@ -1,46 +1,65 @@
 Upgrading to Filters v4
 =======================
 
-`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0a2>`_ makes
+`Filters v4 <https://github.com/todofixthis/filters/releases/tag/4.0.0b1>`_ makes
 every filter generic over its output type, so a type checker can follow a value
 all the way through a chain. That part is free — your own filters need no
 changes. But three changes can break code that worked in Filters v3, and one of
 them fails silently. A few bug fixes also change results; see
-:ref:`upgrade-v4-bug-fixes`.
+:ref:`upgrade-v4-bug-fixes`. And if you run mypy, it checks your calls into
+Filters for the first time, which can report errors in code you haven't
+touched; see :ref:`upgrade-v4-type-parameters`.
 
 .. note::
 
-   This guide covers the v4 alpha. The typing surface may still shift before
+   This guide covers the v4 beta. The typing surface may still shift before
    4.0.0 final.
 
-Installing the alpha
---------------------
+Installing the beta
+-------------------
 Pre-release versions aren't selected by default, so ask for this one
-explicitly::
+explicitly by pinning it::
 
-    pip install --pre 'phx-filters==4.0.0a2'
+    pip install 'phx-filters==4.0.0b1'
 
 Or, with `uv <https://docs.astral.sh/uv/>`_::
 
-    uv add 'phx-filters==4.0.0a2'
+    uv add 'phx-filters==4.0.0b1'
 
-If the alpha bites, going back is just as explicit::
+If the beta bites, going back is just as explicit::
 
     pip install 'phx-filters<4'
 
-.. note::
+Or, with uv, which records the change in ``pyproject.toml`` and ``uv.lock`` so
+the next ``uv sync`` doesn't reinstall the beta::
 
-   Filters v4 adds ``typing-extensions>=4.15.0`` as a runtime dependency. If you
-   vendor your dependencies or install from a private mirror, add it before you
-   upgrade.
+    uv add 'phx-filters<4'
 
-.. note::
+.. warning::
 
-   The ``phx-filters[django]`` and ``phx-filters[iso]`` extras declare no upper
-   bound on ``phx-filters``, so both install alongside v4 without a resolver
-   conflict, and neither looks likely to trip the breaking changes below.
-   Neither has been exercised against v4 in anger yet, though, so test in a
-   throwaway environment before you rely on it.
+   **Filters v4 changes its runtime dependencies**
+
+   It raises two of them by a major version:
+
+   * ``python-dateutil>=4,<5``, where Filters v3 requires ``>=2,<3``
+   * ``phx-class-registry>=6,<7``, where Filters v3 requires ``>=5,<6``
+
+   If anything else in your project caps either package below these versions,
+   your resolver reports a conflict on that package and won't install
+   Filters v4. Upgrade or loosen that package first, or stay on Filters v3
+   until a release of it lifts the cap. If your own code uses
+   ``python-dateutil``, check its
+   `changelog <https://github.com/dateutil/dateutil/releases>`_ for the 3.0
+   and 4.0 changes too.
+
+   It also adds ``typing-extensions>=4.15.0``. If you vendor your dependencies
+   or install from a private mirror, add it before you upgrade.
+
+The ``phx-filters[django]`` and ``phx-filters[iso]`` extras declare no upper
+bound on ``phx-filters``, so both install alongside v4 without a resolver
+conflict, and neither looks likely to trip the breaking changes below.
+Neither has been exercised against v4 in anger yet, though, so test in a
+throwaway environment before you rely on it.
 
 At a Glance
 -----------
@@ -274,6 +293,8 @@ check your code if any of these apply:
   and reports another, it holds the reported one, whose traceback is ``None``
   unless it was raised.
 
+.. _upgrade-v4-type-parameters:
+
 Type Parameters
 ---------------
 Now for the good news 😺
@@ -293,6 +314,74 @@ Chains and :py:class:`filters.FilterRunner` infer real types instead of
 
 The library ships a ``py.typed`` marker, so you get this without installing a
 separate stubs package.
+
+.. warning::
+
+   The marker also makes mypy check your own calls into Filters for the first
+   time. Filters v3 had no marker, so mypy treated everything you imported from
+   it as :py:obj:`~typing.Any`. A project that type-checked cleanly against
+   Filters v3 can report new errors after you upgrade, without any change to
+   its code. A common one is a :py:class:`filters.FilterMapper` spec held
+   in a variable. Unless every value in the spec is a bare filter class, mypy
+   infers ``dict[str, object]`` for the variable, then reports ``arg-type``
+   where you pass it:
+
+   .. code-block:: python
+
+      spec = {"id": f.Int, "name": f.Unicode | f.Strip}
+
+      # error: Argument 1 to "FilterMapper" has incompatible type
+      # "dict[str, object]"
+      f.FilterMapper(spec)
+
+   Annotate the variable as ``dict[str, f.FilterCompatible]`` to clear the
+   error, or pass the spec inline. pyright infers a usable type either way.
+
+   These errors change nothing at runtime, where the code behaves as it did
+   under Filters v3.
+
+   If a ``# type: ignore`` comment on your ``import filters`` line silenced the
+   missing marker, mypy's ``warn_unused_ignores`` reports that comment as
+   unused, so remove it.
+
+.. tip::
+
+   To give each key a type of its own, try
+   `phx-filters-pydantic <https://phx-filters-pydantic.readthedocs.io/>`_. A
+   :py:class:`filters.FilterMapper` yields :py:obj:`~typing.Any`, so a type
+   checker learns nothing about the values in its output. With
+   ``phx-filters-pydantic``, you declare each key as a field of a
+   `pydantic <https://docs.pydantic.dev/>`_ model and attach its chain to the
+   field, so the checker knows the type of every field:
+
+   .. code-block:: python
+
+      from typing import Annotated
+
+      import filters as f
+      from filters_pydantic import FilterField
+      from pydantic import BaseModel
+
+      class Person(BaseModel):
+          id: Annotated[int, FilterField(f.Int)]
+          name: Annotated[str, FilterField(f.Unicode | f.Strip)]
+
+      person = Person.model_validate({"id": "42", "name": " Phoenix "})
+
+      # Inferred as ``int``.
+      person.id
+
+   A model is stricter than the mapper it replaces, so check these before you
+   port a spec. A model rejects a missing key or a ``None`` value unless you
+   declare the field as optional with a default, where a mapper passes
+   ``None`` through. A model drops keys that it doesn't declare, where a mapper
+   keeps them by default. And a model raises pydantic's ``ValidationError``,
+   which carries each filter's message but not its error code.
+
+   Its v1 is in alpha alongside the Filters v4 beta, so ask for the pre-release
+   explicitly by pinning it::
+
+       pip install 'phx-filters-pydantic==1.0.0a1'
 
 .. note::
 
@@ -412,26 +501,48 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
-* Neither mypy nor pyright runs at full strictness yet, so some strict typing
-  warnings or errors in your own filters go unreported. Full strictness is
-  expected by the 4.0.0 final release; progress is tracked in
-  `issue #146 <https://github.com/todofixthis/filters/issues/146>`_.
+* Two threads must not apply the same filter instance at the same time, or
+  one run can accept an invalid value. Filters v3 has the same limitation: it
+  is not new in v4, but it came to light during the v4 work, so it may be news
+  to you. :ref:`getting_started:Using Filters From Several Threads` says when
+  filters share an instance and what to do about it.
+* Filters checks its own code with mypy and pyright in strict mode, except for
+  three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
+  ``reportReturnType``. All three report the way a filter rejects a value,
+  which the next item covers.
 * A filter rejects a value by returning ``None``, which your ``_apply``'s return
   annotation doesn't include: subclass ``BaseFilter[str]``, annotate ``_apply``
   as returning :py:class:`str`, and ``return None`` reports ``return-value``
   under mypy and ``reportReturnType`` under pyright. Widening ``_apply`` to
   ``Optional[str]`` swaps that for an ``override`` error, so suppress the two
   rules on those lines, or disable them as Filters does for its own code.
-  ``_filter()`` returns an :py:obj:`~typing.Optional` too, so check
-  ``if self._has_errors or value is None:`` after it to narrow the result.
+  Leaving ``_apply`` without annotations doesn't avoid it under pyright, which
+  infers the return type and reports ``reportIncompatibleMethodOverride`` on
+  the ``def`` line at its default rules. Suppress it there, with
+  ``# pyright: ignore[reportIncompatibleMethodOverride]``. mypy doesn't check
+  an unannotated ``_apply`` at its default rules. In strict mode both checkers
+  ask for the annotations first: mypy reports ``no-untyped-def``, and pyright
+  reports ``reportMissingParameterType``.
+  ``return self._invalid_value(...)`` reports neither, because
+  ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
+  it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
+  ``no-any-return`` on those lines, or disable it for the modules that hold
+  your filters, as Filters does.
+  ``mypy --strict`` reports ``no-any-return`` on ``return value`` after
+  ``value = self._filter(value, ...)`` too, because ``value`` is still the
+  :py:obj:`~typing.Any` parameter. To clear that one, assign the result of
+  ``_filter()`` to a new name. That result is an :py:obj:`~typing.Optional`,
+  so check ``if self._has_errors or result is None:`` after it to narrow the
+  result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.
-* The two checkers disagree in two places, both covered above: an unannotated
-  macro, and a chain of bare classes assigned to a variable. pyright infers the
-  real type in each; mypy needs the annotation.
+* The two checkers infer different types in three places, all covered above:
+  an unannotated macro, a chain of bare classes assigned to a variable, and a
+  :py:class:`filters.FilterMapper` spec assigned to a variable. pyright infers
+  a usable type in each; mypy needs the annotation.
 
 If you hit something this guide doesn't cover,
 `post in the Filters issue tracker <https://github.com/todofixthis/filters/issues>`_
