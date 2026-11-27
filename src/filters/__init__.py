@@ -1,7 +1,7 @@
 # Make the base filters accessible from the top level of the package.
 # Note that the order is important here, due to dependencies.
 
-__version__ = "4.0.0a2"
+__version__ = "4.0.0b1"
 
 __all__ = [
     # base
