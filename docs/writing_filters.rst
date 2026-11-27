@@ -189,11 +189,13 @@ the :py:class:`filters.Type` filter:
 
    ``self._filter`` **does not raise when the value is invalid**
 
-   It returns ``None`` and sets ``self._has_errors``, so your filter must check
-   ``self._has_errors`` after every ``self._filter(...)`` call. Check
-   ``value is None`` in the same test, as the example does. A type checker
-   can't tell from ``self._has_errors`` that ``value`` holds a result, so
-   without the second check it reports each later use of ``value``.
+   It reports the error and sets ``self._has_errors``, so your filter must
+   check ``self._has_errors`` after every ``self._filter(...)`` call. The
+   value it returns is usually ``None``, but not always, so the flag is the
+   check that counts. Check ``value is None`` in the same test as well, as the
+   example does. A type checker can't tell from ``self._has_errors`` that
+   ``value`` holds a result, so without the second check pyright reports each
+   later use of ``value``.
 
 These examples leave ``_apply`` without annotations. mypy accepts all three at
 its default rules. pyright accepts the first two, and reports
@@ -226,12 +228,12 @@ Here's how to test ``Pkcs7Pad`` with pytest:
 
    def test_pass_none(assert_filter_passes):
        """``None`` always passes this filter."""
-       assert_filter_passes(f.Pkcs7Pad(), None)
+       assert_filter_passes(Pkcs7Pad(), None)
 
    def test_pass_padding(assert_filter_passes):
        """Padding a value to the correct length."""
        assert_filter_passes(
-           f.Pkcs7Pad(),
+           Pkcs7Pad(),
            b'Hello, world!',
            b'Hello, world!\x03\x03\x03',
        )
@@ -239,7 +241,7 @@ Here's how to test ``Pkcs7Pad`` with pytest:
    def test_fail_wrong_type(assert_filter_errors):
        """The incoming value is not a byte string."""
        assert_filter_errors(
-           f.Pkcs7Pad(),
+           Pkcs7Pad(),
            'Hello, world!',
            [f.Type.CODE_WRONG_TYPE],
        )

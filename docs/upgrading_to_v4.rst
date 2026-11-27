@@ -484,6 +484,34 @@ a :py:class:`str`, ``bool`` keys, or an empty ``filter_map`` — is unchanged.
 
 Known Limitations
 -----------------
+.. caution::
+
+   **Two threads must not apply the same filter instance at the same time**
+
+   A filter keeps the state of the run in progress on the instance, so two
+   threads that share one can swap errors: one run accepts an invalid value,
+   and the other rejects a valid one. Filters v3 has the same limitation.
+
+   Filters share an instance more often than it looks. After
+   ``Text = f.Unicode | f.Strip``, the chains ``Text | f.MaxLength(50)`` and
+   ``Text | f.MaxLength(2000)`` hold the same ``Unicode`` and ``Strip``
+   instances, and so does every :py:class:`filters.FilterMapper` or
+   :py:class:`filters.FilterRepeater` that ``Text`` is nested in.
+
+   Where threads validate at the same time, as most web frameworks do with
+   synchronous code, do one of these:
+
+   * Build the filters inside the function that uses them, so each call has
+     its own. No filter instance may come from outside that function: not a
+     module-level chain, and not a child filter stored on a class.
+   * Hold one lock around every run in the process. A lock for each chain is
+     not enough, because two chains can share filters. A
+     :py:class:`filters.FilterRunner` runs when you first read ``is_valid()``,
+     ``cleaned_data`` or ``errors``, not when you create it, so hold the lock
+     across that read.
+
+   Tracked in `issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
+
 * Filters checks its own code with mypy and pyright in strict mode, except for
   three rules: mypy's ``return-value`` and ``no-any-return``, and pyright's
   ``reportReturnType``. All three report the way a filter rejects a value,
@@ -496,8 +524,11 @@ Known Limitations
   rules on those lines, or disable them as Filters does for its own code.
   Leaving ``_apply`` without annotations doesn't avoid it under pyright, which
   infers the return type and reports ``reportIncompatibleMethodOverride`` on
-  the ``def`` line at its default rules. Suppress that rule there. mypy
-  doesn't check an unannotated ``_apply`` unless you run it in strict mode.
+  the ``def`` line at its default rules. Suppress it there, with
+  ``# pyright: ignore[reportIncompatibleMethodOverride]``. mypy doesn't check
+  an unannotated ``_apply`` at its default rules. In strict mode both checkers
+  ask for the annotations first: mypy reports ``no-untyped-def``, and pyright
+  reports ``reportMissingParameterType``.
   ``return self._invalid_value(...)`` reports neither, because
   ``_invalid_value()`` returns :py:obj:`~typing.Any`. Under ``mypy --strict``
   it reports ``no-any-return`` instead; pyright has no matching rule. Suppress
@@ -511,19 +542,6 @@ Known Limitations
   result.
   Filters will stop returning ``None`` to reject in
   `issue #121 <https://github.com/todofixthis/filters/issues/121>`_.
-* A filter instance must not be applied from two threads at the same time.
-  A filter keeps the state of the run in progress on the instance, so two
-  threads that share one can swap errors: one run accepts an invalid value,
-  and the other rejects a valid one. Filters share an instance more often than
-  it looks. After ``Text = f.Unicode | f.Strip``, the chains
-  ``Text | f.MaxLength(50)`` and ``Text | f.MaxLength(2000)`` hold the same
-  ``Unicode`` and ``Strip`` instances, and so does every
-  :py:class:`filters.FilterMapper` or :py:class:`filters.FilterRepeater` that
-  ``Text`` is nested in. Where threads validate at the same time, as most web
-  frameworks do with synchronous code, build each thread's filters inside a
-  function it calls, with no filter object defined outside that function, or
-  hold a lock around every run. Filters v3 has the same limitation. Tracked in
-  `issue #175 <https://github.com/todofixthis/filters/issues/175>`_.
 * There is no narrowing filter category yet, so :py:class:`filters.Required` and
   ``NotEmpty(allow_none=False)`` do not narrow ``T | None`` to ``T``. Tracked in
   `issue #122 <https://github.com/todofixthis/filters/issues/122>`_.
