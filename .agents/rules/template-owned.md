@@ -22,6 +22,7 @@ paths:
   - "LICENCE.txt"
   - "docs/Makefile"
   - "docs/conf.py"
+  - "infra/github/main.tf"
   - "pyproject.toml"
   - "renovate.json"
   - "src/filters/py.typed"
