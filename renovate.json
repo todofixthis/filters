@@ -36,16 +36,15 @@
       "matchDepNames": ["python"]
     },
     {
-<<<<<<< before updating
       "description": "Never raise types-regex's upper bound: it caps the stubs below the release that needs _typeshed.FloatInt, which the locked pyright lacked when capped, and lifting it is a manual check that removes this rule (ADR 018).",
       "enabled": false,
       "matchDepNames": ["types-regex"]
-=======
+    },
+    {
       "description": "Never bump the GitHub provider's major: the todofixthis Terraform module owns that constraint, so a new major arrives through a module release (ADR 001 in todofixthis/terraform-github-repository; ADR 025 in todofixthis/cookiecutter-py).",
       "enabled": false,
       "matchPackageNames": ["integrations/github"],
       "matchUpdateTypes": ["major"]
->>>>>>> after updating
     }
   ]
 }
